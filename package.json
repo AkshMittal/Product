@@ -1,0 +1,29 @@
+{
+  "name": "gpx-audit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AkshMittal/gpx-audit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AkshMittal/gpx-audit/issues"
+  },
+  "homepage": "https://github.com/AkshMittal/gpx-audit#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
+    "csv-parse": "^6.1.0",
+    "jsdom": "^28.1.0"
+  }
+}

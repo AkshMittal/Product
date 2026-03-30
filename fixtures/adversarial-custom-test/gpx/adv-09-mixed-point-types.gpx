@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="12.971600" lon="77.594600"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></wpt>
+  <rte><name>route-a</name><rtept lat="12.971700" lon="77.594700"><ele>101</ele><time>2026-02-14T00:00:05.000Z</time></rtept><rtept lat="12.971800" lon="77.594800"><ele>102</ele><time>2026-02-14T00:00:10.000Z</time></rtept></rte>
+  <trk><name>adv-09-mixed-point-types</name><trkseg><trkpt lat="12.971900" lon="77.594900"><ele>103</ele><time>2026-02-14T00:00:15.000Z</time></trkpt><trkpt lat="12.972000" lon="77.595000"><ele>104</ele><time>2026-02-14T00:00:20.000Z</time></trkpt></trkseg></trk>
+</gpx>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-17-time-parse-fuzz</name>
+    <trkseg>
+      <trkpt lat="12.9716" lon="77.5946"><ele>100</ele><time>2026-02-14T00:00:00Z</time></trkpt>
+      <trkpt lat="12.97163" lon="77.59462"><ele>100</ele><time>2026-02-14T00:00:05.123Z</time></trkpt>
+      <trkpt lat="12.97166" lon="77.59464"><ele>100</ele><time>2026-02-14T05:30:10+05:30</time></trkpt>
+      <trkpt lat="12.97169" lon="77.59466"><ele>100</ele><time>INVALID_X_1</time></trkpt>
+      <trkpt lat="12.97172" lon="77.59468"><ele>100</ele><time>INVALID_X_2</time></trkpt>
+      <trkpt lat="12.97175" lon="77.5947"><ele>100</ele></trkpt>
+      <trkpt lat="12.97178" lon="77.59472"><ele>100</ele><time>INVALID_X_3</time></trkpt>
+      <trkpt lat="12.97181" lon="77.59474"><ele>100</ele><time>2026-02-14T00:00:35Z</time></trkpt>
+      <trkpt lat="12.97184" lon="77.59476"><ele>100</ele><time>2026-13-99T99:99:99Z</time></trkpt>
+      <trkpt lat="12.97187" lon="77.59478"><ele>100</ele><time>2026-02-14T00:00:45Z</time></trkpt>
+      <trkpt lat="12.9719" lon="77.5948"><ele>100</ele><time>INVALID_X_4</time></trkpt>
+      <trkpt lat="12.97193" lon="77.59482"><ele>100</ele><time>2026-02-14T00:00:55Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

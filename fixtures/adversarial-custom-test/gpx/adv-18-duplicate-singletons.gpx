@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-18-duplicate-singletons</name>
+    <trkseg>
+      <trkpt lat="12.9716" lon="77.5946"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></trkpt>
+      <trkpt lat="12.97164" lon="77.59465"><ele>100</ele><time>2026-02-14T00:00:03.000Z</time></trkpt>
+      <trkpt lat="12.97168" lon="77.5947"><ele>100</ele><time>2026-02-14T00:00:06.000Z</time></trkpt>
+      <trkpt lat="12.97172" lon="77.59475"><ele>100</ele><time>2026-02-14T00:00:06.000Z</time></trkpt>
+      <trkpt lat="12.97176" lon="77.5948"><ele>100</ele><time>2026-02-14T00:00:12.000Z</time></trkpt>
+      <trkpt lat="12.9718" lon="77.59485"><ele>100</ele><time>2026-02-14T00:00:15.000Z</time></trkpt>
+      <trkpt lat="12.97184" lon="77.5949"><ele>100</ele><time>2026-02-14T00:00:18.000Z</time></trkpt>
+      <trkpt lat="12.97188" lon="77.59495"><ele>100</ele><time>2026-02-14T00:00:18.000Z</time></trkpt>
+      <trkpt lat="12.97192" lon="77.595"><ele>100</ele><time>2026-02-14T00:00:24.000Z</time></trkpt>
+      <trkpt lat="12.97196" lon="77.59505"><ele>100</ele><time>2026-02-14T00:00:27.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

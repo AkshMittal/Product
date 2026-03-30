@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-16-boundary-lat-lon-valid</name>
+    <trkseg>
+      <trkpt lat="90" lon="180"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></trkpt>
+      <trkpt lat="89.999" lon="179.999"><ele>100</ele><time>2026-02-14T00:00:05.000Z</time></trkpt>
+      <trkpt lat="-89.999" lon="-179.999"><ele>100</ele><time>2026-02-14T00:00:10.000Z</time></trkpt>
+      <trkpt lat="-90" lon="-180"><ele>100</ele><time>2026-02-14T00:00:15.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

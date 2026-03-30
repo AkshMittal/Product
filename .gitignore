@@ -1,0 +1,11 @@
+node_modules/
+runs/
+datasets/
+*.log
+.tools/
+.env
+.env.*
+.vscode/
+.vscode/*
+reference/
+reference/* 

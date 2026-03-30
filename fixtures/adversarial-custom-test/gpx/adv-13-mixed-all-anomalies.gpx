@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-13-mixed-all-anomalies</name>
+    <trkseg>
+      <trkpt lat="12.9716" lon="77.5946"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></trkpt>
+      <trkpt lat="12.97168" lon="77.59465"><ele>100</ele><time>2026-02-14T00:00:04.000Z</time></trkpt>
+      <trkpt lat="not-a-lat" lon="77.5948"><ele>100</ele><time>2026-02-14T00:00:08.000Z</time></trkpt>
+      <trkpt lat="12.97184" lon="77.59475"><ele>100</ele><time>2026-02-14T00:00:12.000Z</time></trkpt>
+      <trkpt lat="12.97192" lon="77.5948"><ele>100</ele></trkpt>
+      <trkpt lat="12.972" lon="77.59485"><ele>100</ele><time>INVALID_MIXED_TS</time></trkpt>
+      <trkpt lat="12.97208" lon="77.5949"><ele>100</ele><time>2026-02-14T00:00:24.000Z</time></trkpt>
+      <trkpt lat="12.97216" lon="77.59495"><ele>100</ele><time>2026-02-14T00:00:24.000Z</time></trkpt>
+      <trkpt lat="12.97224" lon="77.595"><ele>100</ele><time>2026-02-14T00:00:32.000Z</time></trkpt>
+      <trkpt lat="12.97232" lon="77.59505"><ele>100</ele><time>2026-02-14T00:00:36.000Z</time></trkpt>
+      <trkpt lat="12.9724" lon="77.5951"><ele>100</ele><time>2026-02-14T00:00:12.000Z</time></trkpt>
+      <trkpt lat="12.97248" lon="77.59515"><ele>100</ele><time>2026-02-14T00:00:44.000Z</time></trkpt>
+      <trkpt lat="12.97256" lon="77.5952"><ele>100</ele><time>2026-02-14T00:00:48.000Z</time></trkpt>
+      <trkpt lat="12.97264" lon="77.59525"><ele>100</ele><time>2026-02-14T00:00:52.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

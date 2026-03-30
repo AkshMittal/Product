@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-03-single-valid-timestamp</name>
+    <trkseg>
+      <trkpt lat="12.9716" lon="77.5946"><ele>100</ele></trkpt>
+      <trkpt lat="12.97167" lon="77.59464"><ele>100</ele><time>INVALID_TS_1</time></trkpt>
+      <trkpt lat="12.97174" lon="77.59468"><ele>100</ele></trkpt>
+      <trkpt lat="12.97181" lon="77.59472"><ele>100</ele><time>2026-02-14T00:00:06.000Z</time></trkpt>
+      <trkpt lat="12.97188" lon="77.59476"><ele>100</ele></trkpt>
+      <trkpt lat="12.97195" lon="77.5948"><ele>100</ele><time>INVALID_TS_5</time></trkpt>
+      <trkpt lat="12.97202" lon="77.59484"><ele>100</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

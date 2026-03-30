@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "schemaVersion": "2.0.0",
+    "generatedAtUtc": "2026-03-21T11:28:45.163Z",
+    "source": {
+      "fileName": "adv-03-single-valid-timestamp.gpx"
+    },
+    "summary": {
+      "totalPointCount": 7
+    }
+  },
+  "audit": {
+    "ingestion": {
+      "counts": {
+        "totalPointCount": 7,
+        "validPointCount": 7,
+        "rejectedPointCount": 0,
+        "pointTypeCounts": {
+          "wpt": 0,
+          "rtept": 0,
+          "trkpt": 7
+        }
+      },
+      "context": {
+        "hasMultiplePointTypes": false,
+        "hasAnyTimestampValues": true
+      },
+      "rejections": {
+        "events": []
+      }
+    },
+    "temporal": {
+      "totalPointsEvaluated": 7,
+      "session": {
+        "rawSessionDurationSec": 0,
+        "parseableTimestampPointCount": 1
+      },
+      "temporalOrder": {
+        "monotonicForwardCount": 0,
+        "missing": {
+          "pointCount": 4,
+          "pointCountOverTotalPointsRatio": 0.5714285714285714,
+          "maxBlockLength": 0,
+          "blocks": [],
+          "isolatedPointCount": 4,
+          "isolatedPointEvents": [
+            {
+              "index": 0
+            },
+            {
+              "index": 2
+            },
+            {
+              "index": 4
+            },
+            {
+              "index": 6
+            }
+          ]
+        },
+        "unparsable": {
+          "pointCount": 2,
+          "pointCountOverTotalPointsRatio": 0.2857142857142857,
+          "maxBlockLength": 0,
+          "blocks": [],
+          "isolatedPointCount": 2,
+          "isolatedPointEvents": [
+            {
+              "index": 1,
+              "rawTime": "INVALID_TS_1"
+            },
+            {
+              "index": 5,
+              "rawTime": "INVALID_TS_5"
+            }
+          ]
+        },
+        "duplicate": {
+          "pointCount": 0,
+          "pointCountOverTotalPointsRatio": 0,
+          "maxBlockLength": 0,
+          "blocks": [],
+          "isolatedPointCount": 0,
+          "isolatedPointEvents": []
+        },
+        "backtracking": {
+          "pointCount": 0,
+          "maxDepthFromAnchorMs": null,
+          "maxBlockLength": 0,
+          "blocks": [],
+          "isolatedPointCount": 0,
+          "isolatedPointEvents": []
+        }
+      }
+    },
+    "sampling": {
+      "time": {
+        "timestampContext": {
+          "hasAnyParseableTimestamp": true,
+          "hasAnyPositiveTimeDelta": false,
+          "timestampedPointsCount": 1,
+          "consecutiveTimestampPairsCount": 0,
+          "positiveTimeDeltaCount": 0,
+          "rejections": {
+            "nonPositiveTimeDeltaPairs": {
+              "nonPositivePairCount": 0,
+              "events": []
+            }
+          }
+        },
+        "deltaStatistics": {
+          "positiveDeltaCount": 0,
+          "minMs": null,
+          "maxMs": null,
+          "medianMs": null
+        },
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "sortedClusterCount": 0,
+          "sequentialClusterCount": 0,
+          "sortedClusterCountOverTotalDeltasRatio": 0,
+          "sequentialClusterCountOverTotalDeltasRatio": 0,
+          "sequentialOverSortedClusterCountRatio": 0,
+          "clusters": []
+        },
+        "normalization": null
+      },
+      "distance": {
+        "pairInspection": {
+          "consecutivePairCount": 6,
+          "rejections": {
+            "invalidDistance": {
+              "count": 0
+            }
+          }
+        },
+        "geometryConditioned": {
+          "deltaCount": 6
+        },
+        "timeConditioned": {
+          "deltaCount": 0
+        }
+      }
+    },
+    "motion": {
+      "evaluatedPairs": {
+        "consecutivePairCount": 3,
+        "forwardValidPairCount": 0
+      },
+      "rejections": {
+        "missingTimestampPairCount": 2,
+        "unparsableTimestampPairCount": 1,
+        "nonFiniteDistancePairCount": 0,
+        "backwardTimePairCount": 0,
+        "zeroTimeDeltaPairCount": 0,
+        "events": {
+          "missingTimestamp": [
+            {
+              "fromIndex": 3,
+              "toIndex": 4,
+              "rawTime": null,
+              "ddMeters": 8.909052126136771
+            },
+            {
+              "fromIndex": 3,
+              "toIndex": 6,
+              "rawTime": null,
+              "ddMeters": 26.727154598688266
+            }
+          ],
+          "unparsableTimestamp": [
+            {
+              "fromIndex": 3,
+              "toIndex": 5,
+              "rawTime": "INVALID_TS_5",
+              "ddMeters": 17.81810365941831
+            }
+          ],
+          "nonFiniteDistance": [],
+          "backward": [],
+          "zeroTimeDelta": []
+        }
+      },
+      "time": {
+        "validMotionTimeSeconds": 0,
+        "invalidTimeSeconds": 0,
+        "invalidTimeShareOfEvaluatedTime": 0
+      },
+      "distance": {
+        "totalForwardValidDistanceMeters": 0
+      },
+      "speed": {
+        "meanSpeedMps": null,
+        "medianSpeedMps": null,
+        "maxSpeedMps": null
+      }
+    }
+  }
+}

@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPX Audit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        /* Theme aligned with reference/case-study.html (workbench only) */
+        :root {
+            --bg: #1d1917;
+            --panel: #25201d;
+            --panel-2: #2d2723;
+            --line: #4a403a;
+            --text: #e9e0d6;
+            --muted: #bcaea2;
+            --accent: #cfb394;
+            --accent-soft: rgba(207, 179, 148, 0.15);
+            --danger: #cd9999;
+            --ok: #a8bf9e;
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #e9e0d6 transparent;
+        }
+        *::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+            background: transparent;
+        }
+        *::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        *::-webkit-scrollbar-thumb {
+            background: #e9e0d6;
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        *::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+        }
+        body {
+            font-family: "Spline Sans Mono", monospace;
+            letter-spacing: 0.1px;
+            background-image:
+                radial-gradient(circle at 82% 14%, rgba(207, 179, 148, 0.11), transparent 42%),
+                radial-gradient(circle at 14% 80%, rgba(170, 145, 120, 0.12), transparent 36%),
+                linear-gradient(135deg, #1e1a18, #211c19 48%, #221d1a);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: transparent;
+        }
+        .header-row {
+            display: flex;
+            justify-content: flex-start;
+            align-items: baseline;
+            margin-bottom: 0.5em;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line);
+        }
+        .header-row h1 {
+            margin: 0;
+        }
+        h1 {
+            font-family: "Fraunces", serif;
+            font-size: clamp(28px, 5vw, 48px);
+            line-height: 0.95;
+            font-weight: 500;
+            color: #efe5db;
+        }
+        h2, h3 {
+            font-family: "Fraunces", serif;
+            font-weight: 400;
+            color: #ece1d5;
+        }
+        .file-input-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: linear-gradient(170deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            box-shadow: 0 16px 25px rgba(0, 0, 0, 0.24);
+        }
+        input[type="file"] {
+            margin: 10px 0;
+            color: var(--text);
+        }
+        button {
+            border: 1px solid var(--line);
+            background: #28221f;
+            color: #ddd2c6;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        #output {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: #231d1a;
+            border: 1px solid var(--line);
+            white-space: pre;
+            font-family: inherit;
+            font-size: 12px;
+            color: var(--muted);
+            display: none;
+        }
+        .plot-container {
+            margin: 20px 0;
+            padding: 15px;
+            background: linear-gradient(170deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            box-shadow: 0 16px 25px rgba(0, 0, 0, 0.24);
+            overflow: visible;
+        }
+        .plot-container h2 {
+            margin-top: 0;
+            color: #ece1d5;
+        }
+        .plot-container svg {
+            overflow: visible;
+        }
+        .plot-container svg text {
+            fill: var(--text);
+        }
+        .plot-container svg line {
+            stroke: var(--text);
+        }
+        .plot-container svg path {
+            stroke: var(--text);
+        }
+        .plot-container svg circle:not(.sequence-scatter-point) {
+            fill: var(--text);
+        }
+        #visualization-section {
+            margin-top: 30px;
+        }
+        .download-button {
+            background: #28221f;
+            margin-top: 10px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+        .download-button:hover {
+            background: linear-gradient(to right, var(--accent-soft), transparent 74%);
+        }
+        .reset-button {
+            background: #28221f;
+            color: #ddd2c6;
+            border: 1px solid var(--line);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .reset-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .bandwidth-control {
+            margin: 15px 0;
+            padding: 10px;
+            background: #29231f;
+            border: 1px solid var(--line);
+        }
+        .bandwidth-control label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: normal;
+            color: var(--muted);
+            font-size: 0.9em;
+        }
+        .bandwidth-control .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bandwidth-control input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: #433932;
+            outline: none;
+        }
+        .bandwidth-control input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            cursor: pointer;
+            border-radius: 999px;
+        }
+        .bandwidth-control input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            border-radius: 999px;
+        }
+        .bandwidth-value {
+            min-width: 80px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text);
+        }
+        /* block-audit popup */
+        #block-audit-popup {
+            position: fixed;
+            z-index: 1000;
+            min-width: 260px;
+            max-width: 90vw;
+            background: linear-gradient(170deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            box-shadow: 0 16px 25px rgba(0, 0, 0, 0.4);
+            font-family: inherit;
+            font-size: 13px;
+        }
+        #block-audit-popup .block-audit-header {
+            padding: 8px 12px;
+            background: #302924;
+            border-bottom: 1px solid var(--line);
+            cursor: move;
+            user-select: none;
+            color: var(--text);
+        }
+        #block-audit-popup .block-audit-header:hover {
+            background: #362f2a;
+        }
+        #block-audit-popup .block-audit-body {
+            padding: 12px;
+            color: var(--muted);
+        }
+        #block-audit-popup .block-audit-body.hidden {
+            display: none;
+        }
+        #block-audit-popup label {
+            display: block;
+            margin-top: 8px;
+            color: var(--text);
+        }
+        #block-audit-popup input[type="number"] {
+            width: 80px;
+            margin-left: 8px;
+            background: #231d1a;
+            border: 1px solid var(--line);
+            color: var(--text);
+            padding: 4px;
+            font-family: inherit;
+        }
+        #block-audit-popup button.block-audit-run {
+            margin-top: 10px;
+            background: #28221f;
+            color: #ddd2c6;
+            border: 1px solid var(--line);
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        #block-audit-popup button.block-audit-run:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        #block-audit-popup .block-audit-result {
+            margin-top: 12px;
+            padding: 8px;
+            background: #231d1a;
+            border: 1px solid var(--line);
+            white-space: pre-wrap;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        /* scratchpad */
+        #scratchpad-popup {
+            position: fixed;
+            z-index: 1000;
+            min-width: 260px;
+            max-width: 90vw;
+            width: 280px;
+            background: linear-gradient(170deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            box-shadow: 0 16px 25px rgba(0, 0, 0, 0.4);
+            font-family: inherit;
+            font-size: 13px;
+        }
+        #scratchpad-popup .scratchpad-header {
+            padding: 8px 12px;
+            background: #302924;
+            border-bottom: 1px solid var(--line);
+            cursor: move;
+            user-select: none;
+            color: var(--text);
+        }
+        #scratchpad-popup .scratchpad-header:hover {
+            background: #362f2a;
+        }
+        #scratchpad-popup .scratchpad-body {
+            padding: 12px;
+            color: var(--muted);
+        }
+        #scratchpad-popup .scratchpad-body.hidden {
+            display: none;
+        }
+        #scratchpad-popup .scratchpad-note {
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        #scratchpad-popup .scratchpad-textarea {
+            width: 100%;
+            min-height: 120px;
+            box-sizing: border-box;
+            background: #231d1a;
+            border: 1px solid var(--line);
+            color: var(--text);
+            padding: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            resize: vertical;
+        }
+        /* audit-map */
+        #audit-map-container {
+            position: fixed;
+            z-index: 1000;
+            width: 420px;
+            background: linear-gradient(170deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--line);
+            box-shadow: 0 16px 25px rgba(0, 0, 0, 0.4);
+            font-family: inherit;
+            font-size: 13px;
+            right: 24px;
+            top: 24px;
+        }
+        #audit-map-container .audit-map-bar {
+            padding: 8px 12px;
+            background: #302924;
+            border-bottom: 1px solid var(--line);
+            cursor: move;
+            user-select: none;
+            color: var(--text);
+        }
+        #audit-map-container .audit-map-bar:hover {
+            background: #362f2a;
+        }
+        #audit-map-container .audit-map-body {
+            height: 360px;
+            display: flex;
+            flex-direction: column;
+        }
+        #audit-map-container .audit-map-body.hidden {
+            display: none;
+        }
+        #audit-map-container .audit-map-search {
+            display: flex;
+            padding: 6px 8px;
+            background: #29231f;
+            border-bottom: 1px solid var(--line);
+        }
+        #audit-map-container .audit-map-search input {
+            flex: 1;
+            background: #231d1a;
+            border: 1px solid var(--line);
+            color: var(--text);
+            padding: 4px 6px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        #audit-map-container .audit-map-search button {
+            margin-left: 4px;
+            background: #28221f;
+            color: #ddd2c6;
+            border: 1px solid var(--line);
+            padding: 4px 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        #audit-map-container .audit-map-search button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        #audit-map-div {
+            flex: 1;
+        }
+        .page-meta {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .page-meta a {
+            color: var(--muted);
+            text-decoration: none;
+            border-bottom: 1px solid #6f655d;
+        }
+        .page-meta a:hover {
+            color: var(--text);
+            border-bottom-color: var(--text);
+        }
+        #json-viewer-section {
+            margin-top: 20px;
+        }
+        #json-viewer-section .plot-container {
+            position: relative;
+        }
+        #json-viewer-section h2 {
+            margin: 0;
+        }
+        #json-viewer-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        #raw-json-output {
+            background: #231d1a;
+            border: 1px solid var(--line);
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 12px;
+            padding: 12px;
+            max-height: 480px;
+            overflow-y: auto;
+            white-space: pre;
+            word-break: normal;
+            overflow-x: auto;
+        }
+        #json-download-btn {
+            font-size: 12px;
+            padding: 6px 14px;
+        }
+        #tools-launcher {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999;
+            display: flex;
+            gap: 6px;
+        }
+        #tools-launcher button {
+            background: #28221f;
+            color: #ddd2c6;
+            border: 1px solid var(--line);
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #tools-launcher button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        #tools-launcher button.active {
+            background: linear-gradient(to right, var(--accent-soft), transparent 74%);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        .detail-body {
+            padding: 10px;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-size: 12px;
+        }
+        .detail-empty {
+            color: var(--muted);
+            font-size: 12px;
+            padding: 12px;
+            border: 1px dashed #6f6154;
+            background: #2b2521;
+        }
+        .detail-section {
+            border: 1px solid var(--line);
+            margin-bottom: 9px;
+            background: #2a2420;
+        }
+        .detail-section h4 {
+            margin: 0;
+            padding: 8px 9px;
+            border-bottom: 1px solid var(--line);
+            color: #e3d6c8;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .kv-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 5px 8px;
+            padding: 8px;
+        }
+        .kv {
+            border: 1px solid #544840;
+            padding: 6px;
+            background: #312a25;
+            min-width: 0;
+        }
+        .kv .k {
+            color: var(--muted);
+            font-size: 10px;
+            margin-bottom: 4px;
+            text-transform: lowercase;
+        }
+        .kv .v {
+            color: var(--text);
+            font-size: 12px;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .artifact-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            padding: 8px;
+        }
+        .modal {
+            position: fixed;
+            inset: 18px;
+            background: linear-gradient(180deg, #2a2420, #332b26);
+            border: 1px solid #594d44;
+            box-shadow: 0 24px 34px rgba(0, 0, 0, 0.36);
+            z-index: 1500;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(8px) scale(0.99);
+            transition: transform 180ms ease, opacity 180ms ease;
+            overscroll-behavior: contain;
+        }
+        .modal.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid var(--line);
+        }
+        .modal-head h3 {
+            margin: 0;
+            font-size: 14px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .inspector-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--line);
+        }
+        .inspector-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            min-height: 0;
+        }
+        .anomaly-list {
+            border-right: 1px solid var(--line);
+            padding: 8px;
+            overflow: auto;
+            overscroll-behavior: contain;
+        }
+        .anomaly-item {
+            border: 1px solid #5a4d44;
+            padding: 7px;
+            background: #2d2621;
+            margin-bottom: 7px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .anomaly-item:hover { border-color: var(--accent); }
+        .anomaly-item.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-soft); }
+        .anomaly-item strong { display: block; color: #eadac7; margin-bottom: 3px; }
+        .finding-badge {
+            display: inline-block;
+            margin-bottom: 6px;
+            padding: 2px 5px;
+            font-size: 9px;
+            text-transform: lowercase;
+            border: 1px solid #6b6159;
+            color: #d7cabd;
+            background: #312923;
+        }
+        .finding-badge.diagnostic {
+            border-color: #5c6f78;
+            color: #d6e6ee;
+            background: #27333a;
+        }
+        .finding-badge.anomaly {
+            border-color: #6b6159;
+            color: #eadac7;
+            background: #352a23;
+        }
+        .anomaly-item code { color: #d7cabd; font-size: 10px; }
+        .json-view {
+            margin: 0;
+            padding: 10px;
+            overflow: auto;
+            font-size: 11px;
+            line-height: 1.46;
+            color: #ddd2c7;
+            white-space: pre;
+            font-family: "Spline Sans Mono", monospace;
+            background: #271f1b;
+            overscroll-behavior: contain;
+        }
+        .json-highlight {
+            background: rgba(207, 179, 148, 0.33);
+            color: #fff;
+            border-radius: 2px;
+        }
+        .chip {
+            font-size: 10px;
+            border: 1px solid #6f6257;
+            color: #dfd0bf;
+            padding: 3px 6px;
+            background: #2e2722;
+        }
+        .tool-hidden {
+            display: none !important;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div id="audit-map-container" class="tool-hidden">
+        <div class="audit-map-bar" id="audit-map-bar">audit-map</div>
+        <div class="audit-map-body hidden" id="audit-map-body">
+            <div class="audit-map-search">
+                <input type="number" id="audit-map-search-input" placeholder="gpxIndex" min="0" />
+                <button type="button" id="audit-map-search-btn">Go</button>
+                <button type="button" id="audit-map-recenter-btn" title="Fit to route bounds">Recenter</button>
+            </div>
+            <div id="audit-map-div"></div>
+        </div>
+    </div>
+    <div id="scratchpad-popup" aria-label="scratchpad" class="tool-hidden">
+        <div class="scratchpad-header" id="scratchpad-header">scratchpad</div>
+        <div class="scratchpad-body hidden" id="scratchpad-body">
+            <p class="scratchpad-note">clears on refresh</p>
+            <textarea class="scratchpad-textarea" id="scratchpad-textarea" placeholder="free-form notes…"></textarea>
+        </div>
+    </div>
+    <div id="block-audit-popup" aria-label="block-audit" class="tool-hidden">
+        <div class="block-audit-header" id="block-audit-header">block-audit</div>
+        <div class="block-audit-body hidden" id="block-audit-body">
+            <label>fromIndex <input type="number" id="block-audit-from" min="0" value="0" /></label>
+            <label>toIndex <input type="number" id="block-audit-to" min="0" value="0" /></label>
+            <button type="button" class="block-audit-run" id="block-audit-run">Run</button>
+            <pre class="block-audit-result" id="block-audit-result"></pre>
+        </div>
+    </div>
+    <div class="container">
+        <div class="header-row">
+            <h1>GPX Audit</h1>
+        </div>
+        <div class="page-meta">
+            <span>observational audit — no correction performed</span>
+            <a href="https://github.com/AkshMittal/gpx-audit/tree/main/docs/project" target="_blank" rel="noopener">audit methodology ↗</a>
+            <a href="visualization-notes.html" target="_blank" rel="noopener">visualization notes ↗</a>
+        </div>
+        
+        <div class="file-input-section">
+            <label for="gpxFile">Select GPX File:</label>
+            <input type="file" id="gpxFile" accept=".gpx" />
+            <button onclick="loadAndParseGPX()">Run Audit</button>
+        </div>
+
+        <div id="output"></div>
+
+        <div id="json-viewer-section" class="plot-container">
+            <div id="json-viewer-header-row">
+                <h2>Track Details</h2>
+                <small id="selectedTrackLabel">none loaded</small>
+            </div>
+            <div class="detail-body" id="detailBody">
+                <div class="detail-empty">Load a GPX file to inspect per-track metrics.</div>
+            </div>
+        </div>
+        
+        <div id="visualization-section">
+            <div class="plot-container">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Time Delta KDE</h2>
+                    <button class="reset-button" onclick="resetChart('time-kde-plot')">Reset View</button>
+                </div>
+                <div class="bandwidth-control">
+                    <label for="time-bandwidth-slider">KDE Bandwidth (seconds)</label>
+                    <div class="slider-container">
+                        <input type="range" id="time-bandwidth-slider" 
+                               oninput="updateTimeKDE(parseFloat(this.value))">
+                        <span class="bandwidth-value" id="time-bandwidth-value">-</span>
+                    </div>
+                </div>
+                <div id="time-kde-plot"></div>
+            </div>
+            
+            <div class="plot-container">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Distance Delta KDE</h2>
+                    <button class="reset-button" onclick="resetChart('distance-kde-plot')">Reset View</button>
+                </div>
+                <div class="bandwidth-control">
+                    <label for="distance-bandwidth-slider">KDE Bandwidth (meters)</label>
+                    <div class="slider-container">
+                        <input type="range" id="distance-bandwidth-slider" 
+                               oninput="updateDistanceKDE(parseFloat(this.value))">
+                        <span class="bandwidth-value" id="distance-bandwidth-value">-</span>
+                    </div>
+                </div>
+                <div id="distance-kde-plot"></div>
+            </div>
+            
+            <div class="plot-container">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Time-Distance Scatterplot</h2>
+                    <button class="reset-button" onclick="resetChart('time-distance-scatter')">Reset View</button>
+                </div>
+                <div id="time-distance-scatter"></div>
+            </div>
+
+            <div class="plot-container">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Sequence-aware scatter (windowed)</h2>
+                    <button class="reset-button" onclick="resetChart('index-time-delta-scatter')">Reset View</button>
+                </div>
+                <div id="index-time-delta-scatter"></div>
+                <p style="margin: 10px 0 0; font-size: 11px; color: var(--muted);">
+                    Note: this view is built from valid joint pairs only (points where both time and distance deltas are usable). For anomaly context and excluded points, check <strong>Track Details</strong> and <strong>Deep Inspector</strong>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="tools-launcher">
+        <button id="toggle-audit-map-container" onclick="toggleTool('audit-map-container')">map</button>
+        <button id="toggle-block-audit-popup" onclick="toggleTool('block-audit-popup')">block-audit</button>
+        <button id="toggle-scratchpad-popup" onclick="toggleTool('scratchpad-popup')">scratchpad</button>
+    </div>
+
+    <section class="modal" id="inspectorModal" aria-label="deep inspector">
+        <div class="modal-head">
+            <h3>Deep Inspector (Local Audit JSON)</h3>
+            <button type="button" id="closeInspectorBtn">Close</button>
+        </div>
+        <div class="inspector-toolbar">
+            <select id="anomalyTypeSelect"></select>
+            <button type="button" id="prevAnomalyBtn">Prev item</button>
+            <button type="button" id="nextAnomalyBtn">Next item</button>
+            <button type="button" id="copyPathBtn">Copy path</button>
+            <button type="button" id="json-download-btn" onclick="downloadAuditJson()" title="Download">Download JSON</button>
+            <span id="inspectorSummary" class="chip">0 findings</span>
+        </div>
+        <div class="inspector-grid">
+            <div class="anomaly-list" id="anomalyList"></div>
+            <pre class="json-view" id="jsonView"></pre>
+        </div>
+    </section>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="js/pipeline/gpx-ingestion-module.js"></script>
+    <script src="js/pipeline/timestamp-audit.js"></script>
+    <script src="js/pipeline/sampling-audit.js"></script>
+    <script src="js/pipeline/motion-audit.js"></script>
+    <script src="js/pipeline/audit-export-module.js"></script>
+    <script src="js/pipeline/local-block-audit.js"></script>
+    <script src="js/pipeline/kde-visualization-module.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/pipeline/map-audit-module.js"></script>
+    <script>
+        function buildVisualizationSeries(points) {
+            const timeDeltasMs = [];
+            const distanceDeltasGeometry = [];
+            const distanceDeltasTimeConditioned = [];
+            const timeDistancePairs = [];
+            let hasTimeProgression = false;
+            let previousPoint = null;
+            let previousTimestampMs = null;
+            let previousTimestampGpxIndex = null;
+            
+            const haversineForViz = (lat1, lon1, lat2, lon2) => {
+                if (typeof haversineDistance === 'function') {
+                    return haversineDistance(lat1, lon1, lat2, lon2);
+                }
+                const R = 6371000;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            };
+
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                let distanceFromPrev = null;
+                let distanceFromPrevValid = false;
+
+                if (previousPoint) {
+                    distanceFromPrev = haversineForViz(previousPoint.lat, previousPoint.lon, point.lat, point.lon);
+                    distanceFromPrevValid = isFinite(distanceFromPrev) && distanceFromPrev >= 0;
+                    if (distanceFromPrevValid) {
+                        distanceDeltasGeometry.push({
+                            fromIndex: previousPoint.gpxIndex,
+                            toIndex: point.gpxIndex,
+                            ddMeters: distanceFromPrev
+                        });
+                    }
+                }
+
+                const timestampMs = point.timeRaw !== null ? Date.parse(point.timeRaw) : NaN;
+                const hasValidTimestamp = !isNaN(timestampMs);
+
+                if (hasValidTimestamp && previousTimestampMs !== null) {
+                    const deltaMs = timestampMs - previousTimestampMs;
+                    if (deltaMs > 0) {
+                        hasTimeProgression = true;
+                        const dtSec = deltaMs / 1000;
+                        timeDeltasMs.push({
+                            fromIndex: previousTimestampGpxIndex,
+                            toIndex: point.gpxIndex,
+                            dtSec: dtSec
+                        });
+
+                        if (distanceFromPrevValid) {
+                            distanceDeltasTimeConditioned.push({
+                                fromIndex: previousPoint.gpxIndex,
+                                toIndex: point.gpxIndex,
+                                ddMeters: distanceFromPrev
+                            });
+                            timeDistancePairs.push({
+                                fromIndex: previousPoint.gpxIndex,
+                                toIndex: point.gpxIndex,
+                                dtSec: dtSec,
+                                ddMeters: distanceFromPrev
+                            });
+                        }
+                    }
+                }
+
+                if (hasValidTimestamp) {
+                    previousTimestampMs = timestampMs;
+                    previousTimestampGpxIndex = point.gpxIndex;
+                }
+                previousPoint = point;
+            }
+
+            return {
+                timeDeltasMs: timeDeltasMs,
+                distanceDeltasM: hasTimeProgression ? distanceDeltasTimeConditioned : distanceDeltasGeometry,
+                timeDistancePairs: timeDistancePairs
+            };
+        }
+
+        function asArray(value) {
+            return Array.isArray(value) ? value : [];
+        }
+
+        function hasOwn(obj, key) {
+            return Boolean(obj && Object.prototype.hasOwnProperty.call(obj, key));
+        }
+
+        function addTemporalAnomalies(auditJson, out) {
+            const temporalOrder = auditJson?.audit?.temporal?.temporalOrder || {};
+            const groups = ["missing", "unparsable", "duplicate", "backtracking"];
+
+            for (const group of groups) {
+                const groupObj = temporalOrder[group] || {};
+                const blocks = asArray(groupObj.blocks);
+                const singles = asArray(groupObj.singlePoints);
+
+                blocks.forEach((block, idx) => {
+                    const fromIndex = block?.fromIndex ?? block?.startIndex ?? null;
+                    const toIndex = block?.toIndex ?? block?.endIndex ?? null;
+                    const length = block?.length ?? (fromIndex !== null && toIndex !== null ? toIndex - fromIndex + 1 : null);
+                    const blockHighlightTerm = fromIndex !== null
+                        ? hasOwn(block, "fromIndex") ? `"fromIndex": ${fromIndex}` : `"startIndex": ${fromIndex}`
+                        : toIndex !== null
+                            ? hasOwn(block, "toIndex") ? `"toIndex": ${toIndex}` : `"endIndex": ${toIndex}`
+                            : length !== null
+                                ? `"length": ${length}`
+                                : `"${group}"`;
+                    out.push({
+                        type: "temporal",
+                        subtype: group,
+                        kind: "block",
+                        findingClass: "anomaly",
+                        label: `${group}.blocks[${idx}]`,
+                        path: `audit.temporal.temporalOrder.${group}.blocks[${idx}]`,
+                        summary: `len=${length ?? "?"}, from=${fromIndex ?? "?"}, to=${toIndex ?? "?"}`,
+                        highlightTerm: blockHighlightTerm
+                    });
+                });
+
+                singles.forEach((single, idx) => {
+                    const gpxIndex = single?.gpxIndex ?? single?.index ?? single;
+                    const singleHighlightTerm = gpxIndex !== null && gpxIndex !== undefined
+                        ? hasOwn(single, "gpxIndex")
+                            ? `"gpxIndex": ${gpxIndex}`
+                            : hasOwn(single, "index")
+                                ? `"index": ${gpxIndex}`
+                                : `"${gpxIndex}"`
+                        : `"${group}"`;
+                    out.push({
+                        type: "temporal",
+                        subtype: group,
+                        kind: "single",
+                        findingClass: "anomaly",
+                        label: `${group}.singlePoints[${idx}]`,
+                        path: `audit.temporal.temporalOrder.${group}.singlePoints[${idx}]`,
+                        summary: `gpxIndex=${gpxIndex ?? "?"}`,
+                        highlightTerm: singleHighlightTerm
+                    });
+                });
+            }
+        }
+
+        function addSamplingAnomalies(auditJson, out) {
+            const clustering = auditJson?.audit?.sampling?.time?.clustering || {};
+            const candidates = [
+                { key: "clustersSorted", title: "clustersSorted" },
+                { key: "clustersSequential", title: "clustersSequential" },
+                { key: "clusters", title: "clusters" }
+            ];
+
+            for (const candidate of candidates) {
+                const clusters = asArray(clustering[candidate.key]);
+                if (!clusters.length) continue;
+                clusters.forEach((cluster, idx) => {
+                    const count = cluster?.count ?? cluster?.membersCount ?? (Array.isArray(cluster?.members) ? cluster.members.length : null);
+                    const centerSec = cluster?.centerSec ?? (typeof cluster?.centerMs === "number" ? cluster.centerMs / 1000 : null) ?? null;
+                    out.push({
+                        type: "sampling",
+                        subtype: "clustering",
+                        kind: "cluster",
+                        findingClass: "diagnostic",
+                        label: `${candidate.title}[${idx}]`,
+                        path: `audit.sampling.time.clustering.${candidate.key}[${idx}]`,
+                        summary: `centerSec=${centerSec ?? "?"}, count=${count ?? "?"}`,
+                        highlightTerm: centerSec !== null ? `"centerSec": ${centerSec}` : count !== null ? `"count": ${count}` : `"${candidate.key}"`
+                    });
+                });
+            }
+        }
+
+        function buildAnomalyIndex(auditJson) {
+            const out = [];
+            addTemporalAnomalies(auditJson, out);
+            addSamplingAnomalies(auditJson, out);
+            return out;
+        }
+
+        function prettyJson(value) {
+            return JSON.stringify(value, null, 2);
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;");
+        }
+
+        function highlightFirstMatch(rawJsonText, term) {
+            const escaped = escapeHtml(rawJsonText);
+            if (!term) return escaped;
+            const escapedTerm = escapeHtml(term);
+            const idx = escaped.indexOf(escapedTerm);
+            if (idx < 0) return escaped;
+            return escaped.slice(0, idx) +
+                `<mark class="json-highlight">${escaped.slice(idx, idx + escapedTerm.length)}</mark>` +
+                escaped.slice(idx + escapedTerm.length);
+        }
+
+        function groupAnomalies(anomalies, selectedType) {
+            if (!selectedType || selectedType === "all") return anomalies;
+            return anomalies.filter((item) => `${item.type}:${item.subtype}` === selectedType);
+        }
+
+        function kvCard(key, value) {
+            return `<div class="kv"><div class="k">${key}</div><div class="v">${value ?? "—"}</div></div>`;
+        }
+
+        function humanizeKey(key) {
+            return String(key || "").replaceAll("_", " ").trim();
+        }
+
+        function formatDetailValue(key, value) {
+            if (value === null || value === undefined) return "—";
+            if (typeof value === "boolean") return value ? "true" : "false";
+            if (typeof value === "number") {
+                const name = String(key || "");
+                if (name.includes("ratio") || name.includes("share") || name.includes("deviation")) return value.toFixed(3);
+                if (Number.isInteger(value)) return value.toLocaleString();
+                return value.toFixed(3);
+            }
+            if (typeof value === "object") return escapeHtml(JSON.stringify(value));
+            return String(value);
+        }
+
+        function flattenObject(obj, prefix = "", out = {}) {
+            if (!obj || typeof obj !== "object") return out;
+            Object.entries(obj).forEach(([k, v]) => {
+                const nextKey = prefix ? `${prefix}.${k}` : k;
+                if (Array.isArray(v)) {
+                    out[nextKey] = `[${v.length} items]`;
+                } else if (v && typeof v === "object") {
+                    flattenObject(v, nextKey, out);
+                } else {
+                    out[nextKey] = v;
+                }
+            });
+            return out;
+        }
+
+        function renderMetricSection(title, obj) {
+            if (!obj) {
+                return `<section class="detail-section"><h4>${title}</h4><div class="kv-grid">${kvCard("status", "—")}</div></section>`;
+            }
+            const flattened = flattenObject(obj);
+            const entries = Object.entries(flattened).sort(([a], [b]) => a.localeCompare(b));
+            const cells = entries.map(([k, v]) => kvCard(humanizeKey(k), formatDetailValue(k, v))).join("");
+            return `<section class="detail-section"><h4>${title}</h4><div class="kv-grid">${cells || kvCard("status", "—")}</div></section>`;
+        }
+
+        function buildLocalDetailFromPayload(payload, fileName) {
+            return {
+                track_uid: (fileName || "local-track").replace(/\.gpx$/i, ""),
+                schema_version: payload?.metadata?.schemaVersion ?? null,
+                generated_at_utc: payload?.metadata?.generatedAtUtc ?? null,
+                source_file_name: payload?.metadata?.source?.fileName ?? fileName ?? null,
+                summary_total_point_count: payload?.metadata?.summary?.totalPointCount ?? null,
+                ingestion: payload?.audit?.ingestion ?? null,
+                temporal: payload?.audit?.temporal ?? null,
+                sampling: payload?.audit?.sampling ?? null,
+                motion: payload?.audit?.motion ?? null
+            };
+        }
+
+        function renderDetailPanel(detail) {
+            const body = document.getElementById("detailBody");
+            const label = document.getElementById("selectedTrackLabel");
+            if (!detail) {
+                label.textContent = "none loaded";
+                body.innerHTML = `<div class="detail-empty">Load a GPX file to inspect per-track metrics.</div>`;
+                return;
+            }
+            label.textContent = detail.track_uid;
+            const trackSection = renderMetricSection("track", {
+                track_uid: detail.track_uid,
+                schema_version: detail.schema_version,
+                generated_at_utc: detail.generated_at_utc,
+                source_file_name: detail.source_file_name,
+                summary_total_point_count: detail.summary_total_point_count
+            });
+            const ingestionSection = renderMetricSection("ingestion_metrics", detail.ingestion);
+            const temporalSection = renderMetricSection("temporal_metrics", detail.temporal);
+            const samplingSection = renderMetricSection("sampling_metrics", detail.sampling);
+            const motionSection = renderMetricSection("motion_metrics", detail.motion);
+            body.innerHTML = `
+                ${trackSection}
+                ${ingestionSection}
+                ${temporalSection}
+                ${samplingSection}
+                ${motionSection}
+                <section class="detail-section">
+                    <h4>Artifacts</h4>
+                    <div class="artifact-actions">
+                        <button type="button" id="openInspectorBtn">Open deep inspector</button>
+                    </div>
+                </section>
+            `;
+            document.getElementById("openInspectorBtn").addEventListener("click", () => openInspector());
+        }
+
+        let inspectorState = {
+            rawJson: "",
+            anomalies: [],
+            filteredType: "all",
+            selectedIdx: -1
+        };
+
+        function getFilteredInspectorAnomalies() {
+            const grouped = groupAnomalies(inspectorState.anomalies, inspectorState.filteredType);
+            return grouped.map((item, idx) => ({
+                item,
+                globalIdx: inspectorState.anomalies.indexOf(item),
+                filteredIdx: idx
+            }));
+        }
+
+        function renderInspector() {
+            const typeSelect = document.getElementById("anomalyTypeSelect");
+            const summary = document.getElementById("inspectorSummary");
+            const listEl = document.getElementById("anomalyList");
+            const jsonView = document.getElementById("jsonView");
+
+            const typeEntries = [{ value: "all", label: "all finding types" }];
+            const findingTypeMap = new Map();
+            inspectorState.anomalies.forEach((item) => {
+                const key = `${item.type}:${item.subtype}`;
+                if (!findingTypeMap.has(key)) {
+                    findingTypeMap.set(key, item.findingClass === "diagnostic" ? "diagnostic" : "anomaly");
+                }
+            });
+            [...findingTypeMap.entries()].forEach(([key, findingClass]) =>
+                typeEntries.push({ value: key, label: `${findingClass} | ${key}` })
+            );
+
+            typeSelect.innerHTML = "";
+            typeEntries.forEach((entry) => {
+                const opt = document.createElement("option");
+                opt.value = entry.value;
+                opt.textContent = entry.label;
+                typeSelect.appendChild(opt);
+            });
+            typeSelect.value = inspectorState.filteredType;
+
+            const filtered = getFilteredInspectorAnomalies();
+            summary.textContent = `${filtered.length} findings`;
+            listEl.innerHTML = "";
+            filtered.forEach((entry) => {
+                const div = document.createElement("article");
+                div.className = "anomaly-item";
+                if (entry.globalIdx === inspectorState.selectedIdx) div.classList.add("selected");
+                const findingClass = entry.item.findingClass === "diagnostic" ? "diagnostic" : "anomaly";
+                div.innerHTML = `<strong>${entry.item.label}</strong><span class="finding-badge ${findingClass}">${findingClass}</span><div>${entry.item.summary}</div><code>${entry.item.path}</code>`;
+                div.addEventListener("click", () => {
+                    inspectorState.selectedIdx = entry.globalIdx;
+                    renderInspector();
+                });
+                listEl.appendChild(div);
+            });
+
+            let highlighted = inspectorState.rawJson;
+            let selectedPath = "";
+            const selected = inspectorState.anomalies[inspectorState.selectedIdx];
+            if (selected) {
+                highlighted = highlightFirstMatch(inspectorState.rawJson, selected.highlightTerm || "");
+                selectedPath = selected.path;
+            } else {
+                highlighted = highlightFirstMatch(inspectorState.rawJson, "");
+            }
+
+            jsonView.innerHTML = highlighted;
+            requestAnimationFrame(() => {
+                const mark = jsonView.querySelector("mark");
+                if (mark) mark.scrollIntoView({ block: "center" });
+            });
+            const copyPathBtn = document.getElementById("copyPathBtn");
+            copyPathBtn.disabled = !selectedPath;
+        }
+
+        function openInspector() {
+            const payload = window.currentAuditPayload;
+            if (!payload) {
+                alert("No audit JSON available. Please run an audit first.");
+                return;
+            }
+            const modal = document.getElementById("inspectorModal");
+            modal.classList.add("open");
+            document.body.style.overflow = "hidden";
+            inspectorState.rawJson = prettyJson(payload);
+            inspectorState.anomalies = buildAnomalyIndex(payload);
+            inspectorState.filteredType = "all";
+            inspectorState.selectedIdx = inspectorState.anomalies.length ? 0 : -1;
+            renderInspector();
+        }
+
+        function bindInspectorEvents() {
+            document.getElementById("closeInspectorBtn").addEventListener("click", () => {
+                document.getElementById("inspectorModal").classList.remove("open");
+                document.body.style.overflow = "";
+            });
+            document.getElementById("anomalyTypeSelect").addEventListener("change", (event) => {
+                inspectorState.filteredType = event.target.value;
+                inspectorState.selectedIdx = -1;
+                const filtered = getFilteredInspectorAnomalies();
+                if (filtered.length) inspectorState.selectedIdx = filtered[0].globalIdx;
+                renderInspector();
+            });
+            document.getElementById("prevAnomalyBtn").addEventListener("click", () => {
+                const filtered = getFilteredInspectorAnomalies();
+                if (!filtered.length) return;
+                const current = filtered.findIndex((x) => x.globalIdx === inspectorState.selectedIdx);
+                const next = current <= 0 ? filtered[filtered.length - 1] : filtered[current - 1];
+                inspectorState.selectedIdx = next.globalIdx;
+                renderInspector();
+            });
+            document.getElementById("nextAnomalyBtn").addEventListener("click", () => {
+                const filtered = getFilteredInspectorAnomalies();
+                if (!filtered.length) return;
+                const current = filtered.findIndex((x) => x.globalIdx === inspectorState.selectedIdx);
+                const next = current < 0 || current >= filtered.length - 1 ? filtered[0] : filtered[current + 1];
+                inspectorState.selectedIdx = next.globalIdx;
+                renderInspector();
+            });
+            document.getElementById("copyPathBtn").addEventListener("click", async () => {
+                const selected = inspectorState.anomalies[inspectorState.selectedIdx];
+                if (!selected) return;
+                await navigator.clipboard.writeText(selected.path);
+            });
+        }
+
+        async function loadAndParseGPX() {
+            const fileInput = document.getElementById('gpxFile');
+            const output = document.getElementById('output');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                output.textContent = 'Please select a GPX file first.';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            output.textContent = 'Loading and parsing GPX file...\n';
+            
+            try {
+                const result = await parseGPXFile(file);
+                const points = result.points;
+                const auditMetadata = auditTimestamps(points);
+                const samplingMetadata = auditSampling(points, file.name);
+                const motionMetadata = auditMotion(points);
+                const visualizationSeries = buildVisualizationSeries(points);
+
+                window.currentSamplingMetadata = visualizationSeries;
+                window.currentGpxFilename = file.name;
+                window.currentPoints = points;
+                window.currentIngestionAudit = result && result.audit ? result.audit.ingestion : null;
+                window.currentTemporalAudit = auditMetadata && auditMetadata.audit ? auditMetadata.audit.temporal : null;
+                window.currentSamplingAudit = samplingMetadata && samplingMetadata.audit ? samplingMetadata.audit.sampling : null;
+                window.currentMotionAudit = motionMetadata && motionMetadata.audit ? motionMetadata.audit.motion : null;
+                
+                // Clear any existing graphs before rendering new ones
+                const timeKdePlot = document.getElementById('time-kde-plot');
+                const distanceKdePlot = document.getElementById('distance-kde-plot');
+                const timeDistanceScatter = document.getElementById('time-distance-scatter');
+                const indexTimeDeltaScatter = document.getElementById('index-time-delta-scatter');
+                
+                if (timeKdePlot && timeKdePlot.querySelector('svg')) {
+                    timeKdePlot.innerHTML = '';
+                }
+                if (distanceKdePlot && distanceKdePlot.querySelector('svg')) {
+                    distanceKdePlot.innerHTML = '';
+                }
+                if (timeDistanceScatter && timeDistanceScatter.querySelector('svg')) {
+                    timeDistanceScatter.innerHTML = '';
+                }
+                if (indexTimeDeltaScatter && indexTimeDeltaScatter.querySelector('svg')) {
+                    indexTimeDeltaScatter.innerHTML = '';
+                }
+                // Clear global chart data variables to prevent slider from reloading old charts
+                window.kdeTimeDeltasSec = null;
+                window.kdeDistanceDeltasM = null;
+                window.kdeTimeBandwidthLog = null;
+                window.kdeDistanceBandwidthLog = null;
+                
+                visualizeSamplingData({
+                    timeDeltasMs: visualizationSeries.timeDeltasMs || [],
+                    distanceDeltasM: visualizationSeries.distanceDeltasM || [],
+                    timeDistancePairs: visualizationSeries.timeDistancePairs || []
+                });
+                
+                document.getElementById('visualization-section').style.display = 'block';
+                
+                const counts = result && result.audit && result.audit.ingestion && result.audit.ingestion.counts
+                    ? result.audit.ingestion.counts
+                    : null;
+                output.textContent = `${file.name}  ·  total: ${counts ? counts.totalPointCount : 0}  valid: ${counts ? counts.validPointCount : 0}  rejected: ${counts ? counts.rejectedPointCount : 0}`;
+
+                initializeAuditMap(points);
+
+                // Populate raw JSON viewer
+                const auditPayload = buildAuditExportPayload({
+                    fileName: file.name,
+                    ingestionAudit: window.currentIngestionAudit,
+                    temporalAudit: window.currentTemporalAudit,
+                    samplingAudit: window.currentSamplingAudit,
+                    motionAudit: window.currentMotionAudit
+                });
+                window.currentAuditPayload = auditPayload;
+                window.currentDetailView = buildLocalDetailFromPayload(auditPayload, file.name);
+                renderDetailPanel(window.currentDetailView);
+                
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+                console.error('GPX parsing error:', error);
+            }
+        }
+        
+        
+        function downloadAuditJson() {
+            if (!window.currentAuditPayload) {
+                alert('No audit data available. Please run an audit first.');
+                return;
+            }
+            const baseFilename = window.currentGpxFilename
+                ? window.currentGpxFilename.replace(/\.gpx$/i, '')
+                : 'gpx';
+            exportAuditPayloadJSON(window.currentAuditPayload, `${baseFilename}.audit.json`);
+        }
+
+        function toggleTool(toolId) {
+            var bodyMap = {
+                'audit-map-container': 'audit-map-body',
+                'block-audit-popup':   'block-audit-body',
+                'scratchpad-popup':    'scratchpad-body'
+            };
+            function clampToViewport(container, left, top) {
+                var r = container.getBoundingClientRect();
+                left = Math.max(0, Math.min(left, window.innerWidth - r.width));
+                top = Math.max(0, Math.min(top, window.innerHeight - r.height));
+                return { left: left, top: top };
+            }
+            var bodyId = bodyMap[toolId];
+            if (!bodyId) return;
+            var container = document.getElementById(toolId);
+            var body = document.getElementById(bodyId);
+            if (!container || !body) return;
+            var willOpen = container.classList.contains('tool-hidden');
+            if (willOpen) {
+                container.classList.remove('tool-hidden');
+                body.classList.remove('hidden');
+                // Hidden-at-load tools can have invalid initial positions; place safely when opening.
+                if (toolId === 'audit-map-container') {
+                    container.style.right = 'auto';
+                    container.style.left = (window.innerWidth - container.offsetWidth - 24) + 'px';
+                    container.style.top = '24px';
+                } else if (toolId === 'scratchpad-popup') {
+                    container.style.left = '24px';
+                    container.style.top = (window.innerHeight - container.offsetHeight - 24) + 'px';
+                } else if (toolId === 'block-audit-popup' && !container.dataset.defaultPlaced) {
+                    // Default block-audit away from launcher/tool buttons.
+                    container.style.left = '24px';
+                    container.style.top = '96px';
+                    container.dataset.defaultPlaced = '1';
+                }
+                var clamped = clampToViewport(container, container.offsetLeft, container.offsetTop);
+                container.style.left = clamped.left + 'px';
+                container.style.top = clamped.top + 'px';
+                if (typeof window._floatingToolZIndex !== 'number') { window._floatingToolZIndex = 1000; }
+                container.style.zIndex = ++window._floatingToolZIndex;
+            } else {
+                container.classList.add('tool-hidden');
+            }
+            var launcher = document.getElementById('toggle-' + toolId);
+            if (launcher) launcher.classList.toggle('active', willOpen);
+            if (toolId === 'audit-map-container' && willOpen) {
+                if (typeof _auditMapInstance !== 'undefined' && _auditMapInstance) {
+                    setTimeout(function () { _auditMapInstance.invalidateSize(); }, 0);
+                }
+            }
+        }
+
+        // Make parser/audit/export functions available globally for console usage
+        window.parseGPX = parseGPX;
+        window.parseGPXFile = parseGPXFile;
+        window.auditTimestamps = auditTimestamps;
+        window.auditSampling = auditSampling;
+        window.auditMotion = auditMotion;
+        window.buildAuditExportPayload = buildAuditExportPayload;
+        window.exportAuditPayloadJSON = exportAuditPayloadJSON;
+        window.visualizeSamplingData = visualizeSamplingData;
+        window.resetChart = resetChart;
+        window.updateTimeKDE = updateTimeKDE;
+        window.updateDistanceKDE = updateDistanceKDE;
+        
+        // console.log('GPX Ingestion Module loaded. Use parseGPX(gpxString) or parseGPXFile(file) in console.');
+        // console.log('Timestamp Audit Module loaded. Use auditTimestamps(points) in console.');
+        // console.log('Sampling Audit Module loaded. Use auditSampling(points) in console.');
+        
+        // Render empty placeholder graphs on page load
+        function renderPlaceholderGraphs() {
+            const margin = { top: 40, right: 30, bottom: 60, left: 80 };
+            const width = 800 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+            
+            // Placeholder for Time Delta KDE
+            const timeContainer = d3.select("#time-kde-plot");
+            timeContainer.selectAll("*").remove();
+            const timeSvg = timeContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+            const timeG = timeSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            // Draw axes
+            const timeXScale = d3.scaleLinear().domain([0.1, 100]).range([0, width]);
+            const timeYScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
+            timeG.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(timeXScale).tickFormat(d => d.toFixed(1)))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            timeG.append("g")
+                .call(d3.axisLeft(timeYScale))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            timeG.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 45)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Time Delta (seconds)");
+            timeG.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Density");
+            
+            // Placeholder for Distance Delta KDE
+            const distContainer = d3.select("#distance-kde-plot");
+            distContainer.selectAll("*").remove();
+            const distSvg = distContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+            const distG = distSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            const distXScale = d3.scaleLinear().domain([1, 1000]).range([0, width]);
+            const distYScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
+            distG.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(distXScale).tickFormat(d => d.toFixed(0)))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            distG.append("g")
+                .call(d3.axisLeft(distYScale))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            distG.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 45)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Distance Delta (meters)");
+            distG.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Density");
+            
+            // Placeholder for Time-Distance Scatterplot
+            const scatterContainer = d3.select("#time-distance-scatter");
+            scatterContainer.selectAll("*").remove();
+            const scatterSvg = scatterContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+            const scatterG = scatterSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            const scatterXScale = d3.scaleLinear().domain([0, 100]).range([0, width]);
+            const scatterYScale = d3.scaleLinear().domain([0, 1000]).range([height, 0]);
+            scatterG.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(scatterXScale))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            scatterG.append("g")
+                .call(d3.axisLeft(scatterYScale))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            scatterG.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 45)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Time Delta (seconds)");
+            scatterG.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Distance Delta (meters)");
+            
+            // Placeholder for Index–Time Delta Scatterplot
+            const indexScatterContainer = d3.select("#index-time-delta-scatter");
+            indexScatterContainer.selectAll("*").remove();
+            const indexScatterSvg = indexScatterContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+            const indexScatterG = indexScatterSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            const indexScatterXScale = d3.scaleLinear().domain([0, 100]).range([0, width]);
+            const indexScatterYScale = d3.scaleLinear().domain([0, 1000]).range([height, 0]);
+            indexScatterG.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(indexScatterXScale))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            indexScatterG.append("g")
+                .call(d3.axisLeft(indexScatterYScale))
+                .attr("stroke", "#ffffff")
+                .attr("color", "#ffffff");
+            indexScatterG.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 45)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Index");
+            indexScatterG.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .attr("fill", "#ffffff")
+                .style("text-anchor", "middle")
+                .text("Time delta (seconds, log-scaled)");
+        }
+        
+        // Render placeholders when page loads
+        window.addEventListener('DOMContentLoaded', function () {
+            renderPlaceholderGraphs();
+            bindInspectorEvents();
+            renderDetailPanel(null);
+        });
+    </script>
+    <script>
+        /* ── Scratchpad: drag + toggle + bring-to-front ── */
+        (function () {
+            function initScratchpadPopup() {
+                var popup = document.getElementById('scratchpad-popup');
+                var header = document.getElementById('scratchpad-header');
+                var body = document.getElementById('scratchpad-body');
+                if (!popup || !header || !body) return;
+                var dragging = false, dragStartX = 0, dragStartY = 0, popupStartLeft = 0, popupStartTop = 0, headerClicked = false;
+                // Position: bottom-left
+                popup.style.left = '24px';
+                popup.style.top = (window.innerHeight - (body.classList.contains('hidden') ? header.offsetHeight : popup.offsetHeight) - 24) + 'px';
+                function clampToViewport(left, top) {
+                    var r = popup.getBoundingClientRect();
+                    left = Math.max(0, Math.min(left, window.innerWidth - r.width));
+                    top = Math.max(0, Math.min(top, window.innerHeight - r.height));
+                    return { left: left, top: top };
+                }
+                // Bring to front on any interaction
+                popup.addEventListener('mousedown', function () {
+                    if (typeof window._floatingToolZIndex !== 'number') { window._floatingToolZIndex = 1000; }
+                    popup.style.zIndex = ++window._floatingToolZIndex;
+                });
+                header.addEventListener('mousedown', function (e) {
+                    if (e.button !== 0) return;
+                    dragging = true;
+                    headerClicked = true;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    popupStartLeft = popup.offsetLeft;
+                    popupStartTop = popup.offsetTop;
+                });
+                window.addEventListener('mousemove', function (e) {
+                    if (!dragging) return;
+                    if (Math.abs(e.clientX - dragStartX) > 2 || Math.abs(e.clientY - dragStartY) > 2) headerClicked = false;
+                    var pos = clampToViewport(popupStartLeft + (e.clientX - dragStartX), popupStartTop + (e.clientY - dragStartY));
+                    popup.style.left = pos.left + 'px';
+                    popup.style.top = pos.top + 'px';
+                });
+                window.addEventListener('mouseup', function (e) {
+                    if (e.button !== 0) return;
+                    if (dragging && headerClicked) body.classList.toggle('hidden');
+                    dragging = false;
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initScratchpadPopup);
+            } else {
+                initScratchpadPopup();
+            }
+        })();
+
+        /* ── Audit-map: drag + toggle + bring-to-front (runs on page load, before GPX) ── */
+        (function () {
+            function initAuditMapPopup() {
+                var container = document.getElementById('audit-map-container');
+                var bar = document.getElementById('audit-map-bar');
+                var body = document.getElementById('audit-map-body');
+                if (!container || !bar || !body) return;
+                var dragging = false, dragStartX = 0, dragStartY = 0, popupStartLeft = 0, popupStartTop = 0, headerClicked = false;
+                // Position: top-right (convert CSS right:24 to left-based)
+                container.style.left = (window.innerWidth - container.offsetWidth - 24) + 'px';
+                container.style.top = '24px';
+                container.style.right = 'auto';
+                function clampToViewport(left, top) {
+                    var r = container.getBoundingClientRect();
+                    left = Math.max(0, Math.min(left, window.innerWidth - r.width));
+                    top = Math.max(0, Math.min(top, window.innerHeight - r.height));
+                    return { left: left, top: top };
+                }
+                // Bring to front on any interaction
+                container.addEventListener('mousedown', function () {
+                    if (typeof window._floatingToolZIndex !== 'number') { window._floatingToolZIndex = 1000; }
+                    container.style.zIndex = ++window._floatingToolZIndex;
+                });
+                bar.addEventListener('mousedown', function (e) {
+                    if (e.button !== 0) return;
+                    dragging = true;
+                    headerClicked = true;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    popupStartLeft = container.offsetLeft;
+                    popupStartTop = container.offsetTop;
+                });
+                window.addEventListener('mousemove', function (e) {
+                    if (!dragging) return;
+                    if (Math.abs(e.clientX - dragStartX) > 2 || Math.abs(e.clientY - dragStartY) > 2) headerClicked = false;
+                    var pos = clampToViewport(popupStartLeft + (e.clientX - dragStartX), popupStartTop + (e.clientY - dragStartY));
+                    container.style.left = pos.left + 'px';
+                    container.style.top = pos.top + 'px';
+                });
+                window.addEventListener('mouseup', function (e) {
+                    if (e.button !== 0) return;
+                    if (dragging && headerClicked) {
+                        body.classList.toggle('hidden');
+                        // If Leaflet map exists and panel just expanded, invalidate so tiles render
+                        if (!body.classList.contains('hidden') && typeof _auditMapInstance !== 'undefined' && _auditMapInstance) {
+                            setTimeout(function () { _auditMapInstance.invalidateSize(); }, 0);
+                        }
+                    }
+                    dragging = false;
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initAuditMapPopup);
+            } else {
+                initAuditMapPopup();
+            }
+        })();
+    </script>
+</body>
+</html>

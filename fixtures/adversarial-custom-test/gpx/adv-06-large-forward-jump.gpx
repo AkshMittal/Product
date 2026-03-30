@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-06-large-forward-jump</name>
+    <trkseg>
+      <trkpt lat="12.9716" lon="77.5946"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></trkpt>
+      <trkpt lat="12.97168" lon="77.59464"><ele>100</ele><time>2026-02-14T00:00:01.000Z</time></trkpt>
+      <trkpt lat="12.97176" lon="77.59468"><ele>100</ele><time>2026-02-14T00:00:02.000Z</time></trkpt>
+      <trkpt lat="12.97184" lon="77.59472"><ele>100</ele><time>2026-02-14T00:00:03.000Z</time></trkpt>
+      <trkpt lat="12.97192" lon="77.59476"><ele>100</ele><time>2026-02-14T00:00:04.000Z</time></trkpt>
+      <trkpt lat="12.972" lon="77.5948"><ele>100</ele><time>2026-02-14T00:05:04.000Z</time></trkpt>
+      <trkpt lat="12.97208" lon="77.59484"><ele>100</ele><time>2026-02-14T00:05:05.000Z</time></trkpt>
+      <trkpt lat="12.97216" lon="77.59488"><ele>100</ele><time>2026-02-14T00:05:06.000Z</time></trkpt>
+      <trkpt lat="12.97224" lon="77.59492"><ele>100</ele><time>2026-02-14T00:05:07.000Z</time></trkpt>
+      <trkpt lat="12.97232" lon="77.59496"><ele>100</ele><time>2026-02-14T00:05:08.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

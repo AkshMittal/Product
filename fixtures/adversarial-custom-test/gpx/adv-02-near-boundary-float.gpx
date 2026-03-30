@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-02-near-boundary-float</name>
+    <trkseg>
+      <trkpt lat="12.9716" lon="77.5946"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></trkpt>
+      <trkpt lat="12.97169" lon="77.59465"><ele>100</ele><time>2026-02-14T00:00:10.000Z</time></trkpt>
+      <trkpt lat="12.97178" lon="77.5947"><ele>100</ele><time>2026-02-14T00:00:20.200Z</time></trkpt>
+      <trkpt lat="12.97187" lon="77.59475"><ele>100</ele><time>2026-02-14T00:00:30.400Z</time></trkpt>
+      <trkpt lat="12.97196" lon="77.5948"><ele>100</ele><time>2026-02-14T00:00:40.400Z</time></trkpt>
+      <trkpt lat="12.97205" lon="77.59485"><ele>100</ele><time>2026-02-14T00:00:50.600Z</time></trkpt>
+      <trkpt lat="12.97214" lon="77.5949"><ele>100</ele><time>2026-02-14T00:01:00.800Z</time></trkpt>
+      <trkpt lat="12.97223" lon="77.59495"><ele>100</ele><time>2026-02-14T00:01:10.800Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
