@@ -75,22 +75,30 @@ For non-null timestamps, the module attempts to parse using `Date.parse(timeRaw)
 
 ### 3. Timestamp Comparison
 
-Only successfully parsed timestamps are compared. The module maintains a `lastValidTimestampMs` to track the previous valid timestamp for comparison.
+Only successfully parsed timestamps are compared. The module maintains:
+
+- `lastValidTimestampMs`: previous parseable timestamp in original point order (for **adjacent duplicate** detection)
+- `anchorTimestampMs`: a monotonic **high-water mark** (for **backtracking** detection). This anchor only advances when the stream reaches or exceeds it.
 
 For each valid timestamp (after the first one), the module checks:
 
-- **Duplicate**: `timestampMs === lastValidTimestampMs`
-- **Backward**: `timestampMs < lastValidTimestampMs`
-- **Strictly Increasing**: `timestampMs > lastValidTimestampMs` (correct chronological order)
+- **Adjacent duplicate (primary duplicate family)**: `timestampMs === lastValidTimestampMs`
+- **Backtracking (primary backtracking family)**: `timestampMs < anchorTimestampMs`
+- **Monotonic forward (non-backtracking)**: `timestampMs >= anchorTimestampMs` (and then `anchorTimestampMs = timestampMs`)
 
-### 4. Maximum Backward Jump Tracking
+Notes:
 
-When a backward timestamp is detected, the module calculates the backward jump:
+- Adjacent duplicates remain their own anomaly family even if they occur inside a backtracking region.
+- Non-adjacent repeated timestamps that occur *within* a backtracking region remain **primary backtracking**; repeat structure may be recorded only as a secondary annotation.
+
+### 4. Maximum Backtracking Depth Tracking
+
+When a backtracking timestamp is detected, the module calculates the depth from the monotonic anchor:
 ```
-backwardJump = lastValidTimestampMs - timestampMs
+depthFromAnchor = anchorTimestampMs - timestampMs
 ```
 
-The maximum backward jump observed across all points is tracked and reported.
+The maximum depth observed across all points is tracked and reported.
 
 ## Important Behaviors
 
@@ -107,7 +115,7 @@ The maximum backward jump observed across all points is tracked and reported.
 2. **Unparsable timestamps are not compared**: Points where `Date.parse()` fails are skipped
 3. **Only valid timestamps are compared**: Comparison only occurs between successfully parsed timestamps
 4. **Equal timestamps are allowed**: Duplicate timestamps are logged but not treated as errors
-5. **Backward timestamps are logged but not fixed**: The module reports issues but does not attempt to correct them
+5. **Backtracking timestamps are logged but not fixed**: The module reports issues but does not attempt to correct them
 
 ### First Point Handling
 
@@ -161,10 +169,44 @@ Points passed to this module must have a `timeRaw` property:
 
 - Browser `Date.parse()` API (native, no external dependencies)
 
+## Classification Precedence and Design Decisions
+
+These are the explicit design choices made in the classification logic. They are recorded here so that anyone reviewing audit output — or reconsidering these rules later — knows what was decided and why.
+
+### Decision 1: Duplicate check runs before backtracking check
+
+The check `timestampMs === lastValidTimestampMs` (adjacent duplicate) runs before `timestampMs < anchorTimestampMs` (backtracking). A point that satisfies both conditions is classified as **duplicate**, not backtracking.
+
+**Rationale**: Adjacent duplicates are the simplest and most structurally distinct anomaly. They are the most likely to be identified and corrected first in downstream layers. Keeping them as their own primary family — even when they sit below the monotonic anchor — means the audit output is pre-sorted by the natural correction order of later layers. This is observational, not policy: the audit is describing what the stream contains in a way that maps cleanly to how downstream layers encounter it.
+
+### Decision 2: Adjacent duplicates can shorten or terminate a backtracking block
+
+When a backtracking point is immediately followed by a point with the same timestamp value, the follower is classified as **duplicate** (not backtracking). This means an adjacent duplicate peels off the trailing edge of a backtracking block.
+
+Concretely: a stream like `T=12, T=8, T=8, T=15` produces one backtracking singleton (the first `T=8`) and one duplicate singleton (the second `T=8`). The backtracking block ends at length 1 even though both `T=8` points are below the anchor.
+
+A reviewer seeing a backtracking singleton immediately adjacent to a duplicate singleton at the same timestamp value should read this as: the first point entered the backtracking region; the second point was an adjacent repeat of the previous parseable point. Both observations are true. The dup-first rule separates them into their natural families.
+
+### Decision 3: The anchor does not advance on duplicate points
+
+A duplicate is caught by the `=== lastValidTimestampMs` check before it can reach the `>= anchorTimestampMs` branch. This means `anchorTimestampMs` is not updated when duplicates are processed.
+
+Consequence: a long run of adjacent duplicates at the current anchor value "stalls" the anchor rather than advancing it. The anchor only advances when a strictly new high-water mark is observed. This is correct behavior: the anchor is a monotonic high-water mark over *distinct forward progress* in the timestamp stream, and adjacent repetitions do not constitute forward progress.
+
+Concretely: a stream like `T=10, T=10, T=10, T=10, T=8` produces a duplicate block of length 3 (the three repeated `T=10` points), then one backtracking singleton (`T=8`). The backtracking is measured against anchor `T=10`, which never moved during the duplicate run.
+
+### Decision 4: Non-adjacent repeated timestamps inside a backtracking block remain primary backtracking
+
+When the same timestamp value appears more than once within a contiguous backtracking block, but not as adjacent duplicates, those repeat occurrences are classified as **backtracking** (not duplicate). The repeat structure is recorded only as a secondary annotation (`repeatInBacktrackingBlock` on the event, `nonAdjacentRepeatPointCount` and `repeats` on the block) and does not affect the primary anomaly family.
+
+**Rationale**: inside a backtracking region, the stream has already departed from monotonic order. The salient observable is the backtracking itself. The fact that a particular timestamp value recurs within that region is secondary structural information, not a new anomaly class.
+
+---
+
 ## Notes
 
 - This module is purely observational and does not modify data
 - Parsed milliseconds are calculated temporarily and never stored
 - The module processes points sequentially in array order
-- All counters are independent (a point can only contribute to one comparison counter)
+- A point contributes to exactly one primary comparison counter (duplicate, backtracking, or monotonic forward)
 - The first valid timestamp establishes the baseline for subsequent comparisons

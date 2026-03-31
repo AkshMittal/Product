@@ -35,6 +35,10 @@ function auditTimestamps(points) {
   let currentBlockEndIndex = null;
   let currentBlockLength = 0;
   let currentBlockMaxDepthMs = 0;
+  // Repeat structure inside a backtracking block (secondary annotation only).
+  // Keyed by timestampMs, values record first occurrence and later repeats.
+  /** @type {Map<number, { firstIndex: number, time: string, repeatIndices: number[] }>|null} */
+  let currentBlockRepeatMap = null;
   
   // Contiguous duplicate timestamp block detection
   const duplicateTimestampBlocks = [];
@@ -207,11 +211,29 @@ function auditTimestamps(points) {
         // Close open backtracking block if any (only keep blocks with length > 1)
         if (inBlock) {
           if (currentBlockLength > 1) {
+            const repeats = [];
+            let nonAdjacentRepeatPointCount = 0;
+            if (currentBlockRepeatMap) {
+              for (const [timeMs, info] of currentBlockRepeatMap.entries()) {
+                if (info.repeatIndices.length > 0) {
+                  nonAdjacentRepeatPointCount += info.repeatIndices.length;
+                  repeats.push({
+                    timeMs: timeMs,
+                    time: info.time,
+                    firstIndex: info.firstIndex,
+                    repeatIndices: info.repeatIndices
+                  });
+                }
+              }
+              repeats.sort((a, b) => a.firstIndex - b.firstIndex);
+            }
             backtrackingBlocks.push({
               startIndex: currentBlockStartIndex,
               endIndex: currentBlockEndIndex,
               length: currentBlockLength,
-              maxDepthFromAnchorMs: currentBlockMaxDepthMs
+              maxDepthFromAnchorMs: currentBlockMaxDepthMs,
+              nonAdjacentRepeatPointCount: nonAdjacentRepeatPointCount,
+              repeats: repeats.length > 0 ? repeats : undefined
             });
           }
           inBlock = false;
@@ -219,6 +241,7 @@ function auditTimestamps(points) {
           currentBlockEndIndex = null;
           currentBlockLength = 0;
           currentBlockMaxDepthMs = 0;
+          currentBlockRepeatMap = null;
         }
         
         // Update anchor to new high-water mark
@@ -244,7 +267,31 @@ function auditTimestamps(points) {
         }
         
         totalBacktrackingPoints++;
-        
+
+        // Secondary repeat annotation inside a backtracking region.
+        // Note: adjacent duplicates are handled as their own primary anomaly family above.
+        let repeatInBacktrackingBlock = undefined;
+        if (!inBlock) {
+          currentBlockRepeatMap = new Map();
+        }
+        if (currentBlockRepeatMap) {
+          const existing = currentBlockRepeatMap.get(timestampMs);
+          if (existing) {
+            existing.repeatIndices.push(currentGpxIndex);
+            repeatInBacktrackingBlock = {
+              firstIndex: existing.firstIndex,
+              time: existing.time,
+              repeatOrdinal: existing.repeatIndices.length
+            };
+          } else {
+            currentBlockRepeatMap.set(timestampMs, {
+              firstIndex: currentGpxIndex,
+              time: formatTime(timeRaw),
+              repeatIndices: []
+            });
+          }
+        }
+
         const depth = anchorTimestampMs - timestampMs;
         
         // Update maxBacktrackingDepthMs (global max across all blocks)
@@ -270,12 +317,16 @@ function auditTimestamps(points) {
         }
         
         // Log backtracking event
-        backtrackingPointEvents.push({
+        const backtrackingEvent = {
           index: currentGpxIndex,
           prevIndex: lastValidTimestampGpxIndex,
           prevTime: formatTime(lastValidTimestampRaw),
           currTime: formatTime(timeRaw)
-        });
+        };
+        if (repeatInBacktrackingBlock) {
+          backtrackingEvent.repeatInBacktrackingBlock = repeatInBacktrackingBlock;
+        }
+        backtrackingPointEvents.push(backtrackingEvent);
       }
     } else {
       // First valid timestamp: initialize anchor
@@ -325,11 +376,29 @@ function auditTimestamps(points) {
   
   // Close any open backtracking block at end of file (only keep blocks with length > 1)
   if (inBlock && currentBlockLength > 1) {
+    const repeats = [];
+    let nonAdjacentRepeatPointCount = 0;
+    if (currentBlockRepeatMap) {
+      for (const [timeMs, info] of currentBlockRepeatMap.entries()) {
+        if (info.repeatIndices.length > 0) {
+          nonAdjacentRepeatPointCount += info.repeatIndices.length;
+          repeats.push({
+            timeMs: timeMs,
+            time: info.time,
+            firstIndex: info.firstIndex,
+            repeatIndices: info.repeatIndices
+          });
+        }
+      }
+      repeats.sort((a, b) => a.firstIndex - b.firstIndex);
+    }
     backtrackingBlocks.push({
       startIndex: currentBlockStartIndex,
       endIndex: currentBlockEndIndex,
       length: currentBlockLength,
-      maxDepthFromAnchorMs: currentBlockMaxDepthMs
+      maxDepthFromAnchorMs: currentBlockMaxDepthMs,
+      nonAdjacentRepeatPointCount: nonAdjacentRepeatPointCount,
+      repeats: repeats.length > 0 ? repeats : undefined
     });
   }
   
