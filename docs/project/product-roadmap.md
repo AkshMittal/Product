@@ -18,6 +18,12 @@ Core thesis:
 - Never silently smooth/repair and present output as raw truth.
 - Every metric should expose quality context (coverage, exclusions, reason tags).
 
+#### Raw vs processed outputs (contract rule)
+- Preserve **raw audit** output as immutable and exportable.
+- Any cleaning / smoothing must be **explicit, versioned, and reversible**, producing separate processed views/exports with clear parameters and exclusion masks.
+- The product surface may operate on a **versioned canonical geometry** derived from raw observations, while preserving raw audit as the immutable reference.
+- Elevation should be treated as an **attached channel** (recorded vs terrain-model vs future fusion), never silently overwritten.
+
 ### 2) Advanced user control
 - Keep sensible defaults for most users.
 - Provide expert controls for users who need terrain-aware tuning.
@@ -52,6 +58,15 @@ Positioning:
 - Time and distance sampling diagnostics should both be emitted; relevance decisions belong to later layers, not audit suppression logic.
 - Audit output should remain descriptive and non-causal: report what happened in the stream, not why it happened.
 
+#### v1 audit completion targets (explicit)
+- Backtracking **subtype taxonomy** with deterministic evidence rules (e.g., stitched-behind-anchor vs linear regression vs duplicates-behind-anchor vs mixed).
+- Distance-based sampling clustering at parity with time-based clustering (emit both without inferring device intent).
+- Elevation audit module: observational elevation integrity + export contract (even if downstream elevation metrics ship later).
+
+#### Timestamp anomaly semantics (explicit)
+- Keep **adjacent duplicate timestamps** (duplicate vs previous parseable anchor) as the primary “duplicate” anomaly group.
+- If needed, represent **non-adjacent timestamp repeats** as a separate anomaly family (different semantics; not naturally a contiguous block concept).
+
 ### Post-audit processing order
 - Pipeline order should be:
   `audit -> objective data correction/flagging -> interpretation -> kinematic plausibility/advanced behavior checks`.
@@ -68,10 +83,42 @@ Positioning:
 - For time-based metrics, confidently state where values are undefined or unreliable instead of forcing inference.
 - Keep interpretation claims conservative until a versioned, explicit policy layer is in place.
 
+#### Cleaning outputs (MVP intent)
+- Cleaning must not be one-size-fits-all; “bad for one metric” is not “bad for all metrics.”
+- Cleaning should emit **versioned, reversible masks/exclusions** with **reason tags**, so metrics can report:
+  - computed-on coverage ratio
+  - excluded portion + reason breakdown
+  - parameters used
+- Prefer objective domain boundaries early; avoid deep kinematic correction/smoothing before real user data exists.
+
 ### Product scope focus (not generic activity platform)
 - Product should stay mountain-focused rather than broad multi-sport parity.
 - User input should prioritize selecting mountain-engaged sections of a track (domain scoping), not a large generic activity taxonomy.
 - Optional segment declarations should act as explicit context for later policy/interpretation, while raw audit remains unchanged.
+
+---
+
+## MVP Definition (Product v1)
+
+MVP goal:
+- Ship a mountain-focused product that can attract an initial userbase and produce high-signal data for iterative algorithm refinement.
+
+Core wedge:
+- A **personal mountain log** built on top of the audit engine.
+- Users can attach **notes and photos** anchored to their route (index/time/nearest-point anchoring), enabling:
+  - personal route memory (“what happened here?”)
+  - contextual labeling for later pattern study (rest, crux, weather, route-finding, navigation error)
+
+MVP constraints:
+- Audit layer must be “complete” for v1 (objective, deterministic observables + stable schema + adversarial coverage).
+- Cleaning/processing should be explicit and conservative:
+  - focus on objective usability masks and confidence/coverage reporting
+  - avoid deep kinematic correction and avoid silent smoothing
+- Keep privacy and trust central (private-by-default behavior, clear retention/deletion, explicit opt-in for research use).
+
+Adoption reality check:
+- “Free” reduces price friction but not effort/trust/habit friction.
+- Early adoption needs a repeated win + privacy trust + low-friction upload; tracks are sensitive location+time data.
 
 ---
 
@@ -88,16 +135,22 @@ Exit criteria:
 - deterministic reruns
 - no ambiguity between block and single-point anomaly views
 
-## Phase 1: Queryable Case Study Platform
+## Phase 1: User-Facing Logging Platform + Data Loop
 - Load case-study outputs into a queryable database.
-- Build controlled query API + frontend explorer.
-- Surface dataset-level anomaly prevalence/intensity in interactive form.
+- Build controlled query API + frontend explorer (internal and/or user-facing).
+- Ship the personal mountain log experience (notes/photos anchored to route).
+- Establish an explicit data loop:
+  - what anomalies are common in real uploads
+  - what users label as rest/crux/slowdown
+  - where audit gaps block desired metrics
+  - which interpretation policies are worth building next
 
 Minimum deliverables:
-- filterable track list
+- private-by-default track library
 - per-track audit detail view
 - block/single-point anomaly inspection
-- export of filtered query results
+- anchored notes + optional photo attachments
+- export of track + audit + user annotations
 
 ## Phase 2: Processing Layer (Explicit, Not Silent)
 - Add optional processing profiles after audit.
@@ -142,10 +195,10 @@ This keeps outputs trustworthy and interpretable.
 
 ## Immediate Next Actions
 
-1) Complete fresh 12k rerun on finalized schema.
-2) Set up DB-backed case-study explorer (Phase 1 MVP).
-3) Define first metric spec in full detail (suggested: `steepestWindow`).
-4) Write short product vision note from this roadmap for internship use.
+1) Complete audit-layer contract (including remaining backtracking distinctions, distance clustering parity, and elevation audit coverage if in v1).
+2) Regenerate 12k outputs on finalized schema + keep adversarial suite passing.
+3) Stand up DB-backed track library + per-track audit view (private-by-default).
+4) Add anchored notes (and optionally photos) to create a labeled data loop.
 
 ---
 
