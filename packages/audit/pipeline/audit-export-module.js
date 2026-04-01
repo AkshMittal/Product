@@ -12,6 +12,7 @@
  * @param {Object|null} [input.temporalAudit]
  * @param {Object|null} [input.samplingAudit]
  * @param {Object|null} [input.motionAudit]
+ * @param {Object|null} [input.elevationAudit]
  * @returns {Object}
  */
 function buildAuditExportPayload(input) {
@@ -19,6 +20,7 @@ function buildAuditExportPayload(input) {
   var temporalAudit = input && input.temporalAudit ? input.temporalAudit : null;
   var samplingAudit = input && input.samplingAudit ? input.samplingAudit : null;
   var motionAudit = input && input.motionAudit ? input.motionAudit : null;
+  var elevationAudit = input && input.elevationAudit ? input.elevationAudit : null;
 
   var derivedTotalPointCount = ingestionAudit &&
     ingestionAudit.counts &&
@@ -45,7 +47,8 @@ function buildAuditExportPayload(input) {
       ingestion: ingestionAudit,
       temporal: temporalAudit,
       sampling: samplingAudit,
-      motion: motionAudit
+      motion: motionAudit,
+      elevation: elevationAudit
     }
   };
 }

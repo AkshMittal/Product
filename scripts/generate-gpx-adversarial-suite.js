@@ -95,11 +95,12 @@ function loadBrowserModules() {
   global.URL = dom.window.URL;
 
   const moduleFiles = [
-    path.join(ROOT, "js", "pipeline", "gpx-ingestion-module.js"),
-    path.join(ROOT, "js", "pipeline", "timestamp-audit.js"),
-    path.join(ROOT, "js", "pipeline", "sampling-audit.js"),
-    path.join(ROOT, "js", "pipeline", "motion-audit.js"),
-    path.join(ROOT, "js", "pipeline", "audit-export-module.js")
+    path.join(ROOT, "packages", "audit", "pipeline", "gpx-ingestion-module.js"),
+    path.join(ROOT, "packages", "audit", "pipeline", "timestamp-audit.js"),
+    path.join(ROOT, "packages", "audit", "pipeline", "sampling-audit.js"),
+    path.join(ROOT, "packages", "audit", "pipeline", "motion-audit.js"),
+    path.join(ROOT, "packages", "audit", "pipeline", "elevation-audit.js"),
+    path.join(ROOT, "packages", "audit", "pipeline", "audit-export-module.js")
   ];
 
   for (const filePath of moduleFiles) {
@@ -113,6 +114,7 @@ function metric(payload) {
   const temporal = payload.audit.temporal || {};
   const sampling = payload.audit.sampling || {};
   const motion = payload.audit.motion || {};
+  const elevation = payload.audit.elevation || {};
   return {
     totalPoints: ingestion.counts ? ingestion.counts.totalPointCount : null,
     hasMultiplePointTypes: ingestion.context ? ingestion.context.hasMultiplePointTypes : null,
@@ -137,7 +139,14 @@ function metric(payload) {
     motionZeroDelta: motion.rejections ? motion.rejections.zeroTimeDeltaPairCount : null,
     motionInvalidDistance: motion.rejections ? motion.rejections.nonFiniteDistancePairCount : null,
     motionInvalidTimeRatio: motion.time ? motion.time.invalidTimeShareOfEvaluatedTime : null,
-    motionTotalValidDistanceMeters: motion.distance ? motion.distance.totalForwardValidDistanceMeters : null
+    motionTotalValidDistanceMeters: motion.distance ? motion.distance.totalForwardValidDistanceMeters : null,
+    eleMissing: elevation.missing ? elevation.missing.pointCount : null,
+    eleOutOfBounds: elevation.outOfBounds ? elevation.outOfBounds.pointCount : null,
+    eleValidCount: typeof elevation.validElevationPointCount === 'number' ? elevation.validElevationPointCount : null,
+    eleAdjacentDuplicates: elevation.adjacentDuplicate ? elevation.adjacentDuplicate.pointCount : null,
+    eleSpanM: elevation.channelStatistics ? elevation.channelStatistics.elevationSpanM : null,
+    eleMaxAbsDeltaM: elevation.consecutiveDeltas ? elevation.consecutiveDeltas.maxAbsoluteDeltaM : null,
+    eleCoPresenceBoth: elevation.coPresenceWithTime ? elevation.coPresenceWithTime.pointsWithBothValidEleAndParseableTime : null
   };
 }
 
@@ -162,6 +171,7 @@ function runCase(caseDef) {
   const temporalResult = auditTimestamps(points);
   const samplingResult = auditSampling(points, caseDef.id);
   const motionResult = auditMotion(points);
+  const elevationResult = auditElevation(points);
 
   const payload = buildAuditExportPayload({
     fileName: `${caseDef.id}.gpx`,
@@ -169,7 +179,8 @@ function runCase(caseDef) {
     ingestionAudit: parsed.audit.ingestion,
     temporalAudit: temporalResult.audit.temporal,
     samplingAudit: samplingResult.audit.sampling,
-    motionAudit: motionResult.audit.motion
+    motionAudit: motionResult.audit.motion,
+    elevationAudit: elevationResult.audit.elevation
   });
 
   const jsonPath = path.join(FIXTURE_JSON_DIR, `${caseDef.id}.audit.v2.json`);
