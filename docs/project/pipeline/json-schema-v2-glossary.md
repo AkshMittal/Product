@@ -32,23 +32,60 @@ Path: `audit.ingestion`
 
 Path: `audit.temporal`
 
+Tag-based per-point labeling. Tags are non-exclusive; a point carries every applicable tag simultaneously. Only anomalous points appear in `pointAnnotations`. Nominal points produce no entry.
+
+### Top-level fields
+
 - `totalPointsEvaluated`: points seen by temporal audit.
-- `session.rawSessionDurationSec`: last valid timestamp minus first valid timestamp.
-- `session.parseableTimestampPointCount`: points with parseable timestamps.
-- `temporalOrder.monotonicForwardCount`: forward/non-backtracking progression count.
+- `session.rawSessionDurationSec`: (lastValidMs - firstValidMs) / 1000; null if fewer than two valid timestamps.
+- `session.parseableTimestampPointCount`: points where `Date.parse()` succeeded.
 
-Per anomaly group (`missing`, `unparsable`, `duplicate`, `backtracking`):
+### tagCounts
 
-- `pointCount`
-- `pointCountOverTotalPointsRatio`
-- `maxBlockLength`
-- `blocks`
-- `isolatedPointCount`
-- `isolatedPointEvents`
+Count of points carrying each tag. Tags are non-exclusive; sums can exceed `totalPointsEvaluated`.
 
-Backtracking-only:
+- `tagCounts.missing`: `timeRaw === null`.
+- `tagCounts.unparsable`: `Date.parse(timeRaw)` is NaN.
+- `tagCounts.adjacentDuplicate`: `timestampMs === prevValidTimestampMs`. Mutually exclusive with `nonAdjacentRepeat`.
+- `tagCounts.belowAnchor`: `timestampMs < anchorTimestampMs` (behind the monotonic high-water mark).
+- `tagCounts.belowPrevValid`: `timestampMs < prevValidTimestampMs` (actively retreating from immediate predecessor).
+- `tagCounts.nonAdjacentRepeat`: value appeared earlier in stream AND is not the immediately preceding valid point. Mutually exclusive with `adjacentDuplicate`.
 
-- `maxDepthFromAnchorMs`: max depth below monotonic anchor.
+### tagIndex
+
+Per-tag arrays of `gpxIndex` values. Mirrors `tagCounts` but provides the actual point set for downstream queries.
+
+- `tagIndex.missing`, `tagIndex.unparsable`, `tagIndex.adjacentDuplicate`, `tagIndex.belowAnchor`, `tagIndex.belowPrevValid`, `tagIndex.nonAdjacentRepeat`
+
+### pointAnnotations
+
+Sparse array of per-point objects (only anomalous points). Fields present only when the tag applies:
+
+- `gpxIndex` (always present)
+- `missing: true` - for missing points (no other fields)
+- `unparsable: true` - for unparsable points (no other fields)
+- `timestampMs` - valid parsed milliseconds (comparative-tag points only)
+- `anchorMs` - monotonic anchor value at time of this point
+- `belowAnchor: true` + `depthFromAnchorMs` - how far below the anchor
+- `belowPrevValid: true`
+- `adjacentDuplicate: true`
+- `nonAdjacentRepeat: true` + `firstOccurrenceGpxIndex`
+
+### Anchor semantics
+
+`anchorTimestampMs` advances only when `timestampMs > anchorTimestampMs`. Adjacent duplicates and below-anchor points do not move the anchor. The anchor is a strict monotonic high-water mark over distinct forward progress.
+
+### belowAnchor vs belowPrevValid distinction
+
+- `belowAnchor` only: still behind the high-water mark but locally moving forward ("in the hole, but recovering").
+- `belowAnchor + belowPrevValid` together: behind the high-water mark AND retreating further from the preceding valid point ("actively digging deeper").
+
+### Design decisions (semantics, important)
+
+- **Tags are non-exclusive**: the old adjacent-duplicate priority over backtracking is removed. A point that is both an adjacent duplicate and below the anchor carries both tags.
+- **No "large forward jump" tag**: cannot be distinguished from a valid recording pause without geometry. Raw deltas are available via the sampling audit.
+- **nonAdjacentRepeat is stream-wide**: uses `Map<timestampMs, firstGpxIndex>` for O(1) per-point lookup (avoids O(N^2)). First occurrence is not assumed correct.
+- **Time-period overlap is downstream**: whether a backtracking region's time range overlaps a prior time range is a range-analysis problem (e.g., `[1,3,5,7]` vs `[2,4,6]` overlap despite no identical values). Requires global view and geometry.
 
 ## Sampling
 

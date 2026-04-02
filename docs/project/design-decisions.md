@@ -20,6 +20,37 @@ Each entry is tagged with its current status:
 
 ---
 
+### Decision: Timestamp audit uses per-point label-based architecture (not block / primary-category classification)
+**Area**: audit / temporal (timestamp ordering and quality)  
+**Status**: decided  
+
+**Decision**: The timestamp audit emits **non-exclusive boolean tags** on anomalous points (`missing`, `unparsable`, `adjacentDuplicate`, `belowAnchor`, `belowPrevValid`, `nonAdjacentRepeat`), plus a hybrid payload: `tagCounts`, `tagIndex`, and sparse `pointAnnotations`. It does **not** classify each point into exactly one primary bucket (e.g. “duplicate vs backtracking”), and it does not maintain block/singleton summaries as the primary contract.
+
+**Reasoning — why the model changed:**
+
+1. **Downstream correction needs the full overlap, not a winner.** The correction layer must know *all* observables that apply simultaneously — for example a point that is both an adjacent duplicate *and* below the monotonic high-water mark. The old precedence model (adjacent-duplicate check before backtracking) could assign only one “primary” family, which hid structurally true facts from consumers that assumed “backtracking = everything below anchor.” Labels make every applicable fact explicit without inventing intersection types like “duplicate inside backtrack.”
+
+2. **Fewer interpreted buckets, more facts.** Block-level summaries and mutually exclusive categories implicitly encouraged readers to treat the audit as having already decided “what kind of problem this is.” The label model stays closer to observation: each tag is a mechanical predicate on the stream at that index. Combining tags into repair strategies is explicitly deferred to later layers, which also hold geometry and continuity context.
+
+3. **No “first occurrence is correct” leakage.** Non-adjacent repeat detection records *that* a value reappeared and *where* it first appeared (`firstOccurrenceGpxIndex`), as ordering facts only — not as a verdict on which copy is the true time. The monotonic anchor is likewise a running maximum, not a claim that any particular forward jump was valid.
+
+4. **What was deliberately left untagged** (still non-interpretive): there is no “large forward jump” or similar timestamp-only anomaly class, because a big positive step is indistinguishable from a normal recording pause without non-audit context.
+
+**Reasoning — computational efficiency:**
+
+- **Stream-wide repeat detection**: `nonAdjacentRepeat` uses a `Map<timestampMs, firstGpxIndex>` for O(1) amortized lookup per point. A naive “scan all prior points for this value” approach is O(N²) in the worst case on tracks with few or no repeats.
+- **Single pass**: All tags for a point are evaluated in one forward scan; no separate block-coalescing pass is required for the core contract. Block continuity remains derivable downstream if needed.
+
+**What the new contract offers vs the old:**
+
+- **Sparse annotations**: Only anomalous points appear in `pointAnnotations`; nominal points add no noise.
+- **Dual access patterns**: `tagIndex` supports fast set queries (“all belowAnchor indices”); `pointAnnotations` supports ordered walks for correction pipelines.
+- **Determinism preserved**: Same points, same order, same algorithm → same output; no randomness or policy thresholds in the temporal module.
+
+**Cross-references**: `pipeline/timestamp-audit.md`, `pipeline/json-schema-v2-glossary.md` (`audit.temporal`)
+
+---
+
 ### Decision: Time delta clustering uses non-adjacent pairs; elevation delta chain uses adjacent-only
 **Area**: audit / sampling / elevation  
 **Status**: decided  
