@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-03-21T11:29:10.748Z",
+    "generatedAtUtc": "2026-04-02T10:45:04.960Z",
     "source": {
       "fileName": "adv-20-seeded-random-walk.gpx"
     },
@@ -35,187 +35,229 @@
         "rawSessionDurationSec": 998,
         "parseableTimestampPointCount": 475
       },
-      "temporalOrder": {
-        "monotonicForwardCount": 463,
-        "missing": {
-          "pointCount": 12,
-          "pointCountOverTotalPointsRatio": 0.024,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 12,
-          "isolatedPointEvents": [
-            {
-              "index": 33
-            },
-            {
-              "index": 63
-            },
-            {
-              "index": 82
-            },
-            {
-              "index": 89
-            },
-            {
-              "index": 273
-            },
-            {
-              "index": 275
-            },
-            {
-              "index": 341
-            },
-            {
-              "index": 348
-            },
-            {
-              "index": 372
-            },
-            {
-              "index": 447
-            },
-            {
-              "index": 455
-            },
-            {
-              "index": 459
-            }
-          ]
+      "tagCounts": {
+        "missing": 12,
+        "unparsable": 13,
+        "adjacentDuplicate": 11,
+        "belowAnchor": 0,
+        "belowPrevValid": 0,
+        "nonAdjacentRepeat": 0
+      },
+      "tagIndex": {
+        "missing": [
+          33,
+          63,
+          82,
+          89,
+          273,
+          275,
+          341,
+          348,
+          372,
+          447,
+          455,
+          459
+        ],
+        "unparsable": [
+          11,
+          28,
+          52,
+          95,
+          138,
+          148,
+          163,
+          263,
+          377,
+          379,
+          391,
+          397,
+          415
+        ],
+        "adjacentDuplicate": [
+          19,
+          115,
+          152,
+          217,
+          261,
+          294,
+          311,
+          335,
+          428,
+          446,
+          473
+        ],
+        "belowAnchor": [],
+        "belowPrevValid": [],
+        "nonAdjacentRepeat": []
+      },
+      "pointAnnotations": [
+        {
+          "gpxIndex": 11,
+          "unparsable": true
         },
-        "unparsable": {
-          "pointCount": 13,
-          "pointCountOverTotalPointsRatio": 0.026,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 13,
-          "isolatedPointEvents": [
-            {
-              "index": 11,
-              "rawTime": "INVALID_RAND_11"
-            },
-            {
-              "index": 28,
-              "rawTime": "INVALID_RAND_28"
-            },
-            {
-              "index": 52,
-              "rawTime": "INVALID_RAND_52"
-            },
-            {
-              "index": 95,
-              "rawTime": "INVALID_RAND_95"
-            },
-            {
-              "index": 138,
-              "rawTime": "INVALID_RAND_138"
-            },
-            {
-              "index": 148,
-              "rawTime": "INVALID_RAND_148"
-            },
-            {
-              "index": 163,
-              "rawTime": "INVALID_RAND_163"
-            },
-            {
-              "index": 263,
-              "rawTime": "INVALID_RAND_263"
-            },
-            {
-              "index": 377,
-              "rawTime": "INVALID_RAND_377"
-            },
-            {
-              "index": 379,
-              "rawTime": "INVALID_RAND_379"
-            },
-            {
-              "index": 391,
-              "rawTime": "INVALID_RAND_391"
-            },
-            {
-              "index": 397,
-              "rawTime": "INVALID_RAND_397"
-            },
-            {
-              "index": 415,
-              "rawTime": "INVALID_RAND_415"
-            }
-          ]
+        {
+          "gpxIndex": 19,
+          "timestampMs": 1771027239000,
+          "anchorMs": 1771027239000,
+          "adjacentDuplicate": true
         },
-        "duplicate": {
-          "pointCount": 11,
-          "pointCountOverTotalPointsRatio": 0.022,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 11,
-          "isolatedPointEvents": [
-            {
-              "index": 19,
-              "prevIndex": 18,
-              "time": "05:30:39"
-            },
-            {
-              "index": 115,
-              "prevIndex": 114,
-              "time": "05:33:56"
-            },
-            {
-              "index": 152,
-              "prevIndex": 151,
-              "time": "05:35:16"
-            },
-            {
-              "index": 217,
-              "prevIndex": 216,
-              "time": "05:37:26"
-            },
-            {
-              "index": 261,
-              "prevIndex": 260,
-              "time": "05:38:55"
-            },
-            {
-              "index": 294,
-              "prevIndex": 293,
-              "time": "05:39:53"
-            },
-            {
-              "index": 311,
-              "prevIndex": 310,
-              "time": "05:40:33"
-            },
-            {
-              "index": 335,
-              "prevIndex": 334,
-              "time": "05:41:19"
-            },
-            {
-              "index": 428,
-              "prevIndex": 427,
-              "time": "05:44:19"
-            },
-            {
-              "index": 446,
-              "prevIndex": 445,
-              "time": "05:44:54"
-            },
-            {
-              "index": 473,
-              "prevIndex": 472,
-              "time": "05:45:42"
-            }
-          ]
+        {
+          "gpxIndex": 28,
+          "unparsable": true
         },
-        "backtracking": {
-          "pointCount": 0,
-          "maxDepthFromAnchorMs": null,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 0,
-          "isolatedPointEvents": []
+        {
+          "gpxIndex": 33,
+          "missing": true
+        },
+        {
+          "gpxIndex": 52,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 63,
+          "missing": true
+        },
+        {
+          "gpxIndex": 82,
+          "missing": true
+        },
+        {
+          "gpxIndex": 89,
+          "missing": true
+        },
+        {
+          "gpxIndex": 95,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 115,
+          "timestampMs": 1771027436000,
+          "anchorMs": 1771027436000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 138,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 148,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 152,
+          "timestampMs": 1771027516000,
+          "anchorMs": 1771027516000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 163,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 217,
+          "timestampMs": 1771027646000,
+          "anchorMs": 1771027646000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 261,
+          "timestampMs": 1771027735000,
+          "anchorMs": 1771027735000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 263,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 273,
+          "missing": true
+        },
+        {
+          "gpxIndex": 275,
+          "missing": true
+        },
+        {
+          "gpxIndex": 294,
+          "timestampMs": 1771027793000,
+          "anchorMs": 1771027793000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 311,
+          "timestampMs": 1771027833000,
+          "anchorMs": 1771027833000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 335,
+          "timestampMs": 1771027879000,
+          "anchorMs": 1771027879000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 341,
+          "missing": true
+        },
+        {
+          "gpxIndex": 348,
+          "missing": true
+        },
+        {
+          "gpxIndex": 372,
+          "missing": true
+        },
+        {
+          "gpxIndex": 377,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 379,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 391,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 397,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 415,
+          "unparsable": true
+        },
+        {
+          "gpxIndex": 428,
+          "timestampMs": 1771028059000,
+          "anchorMs": 1771028059000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 446,
+          "timestampMs": 1771028094000,
+          "anchorMs": 1771028094000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 447,
+          "missing": true
+        },
+        {
+          "gpxIndex": 455,
+          "missing": true
+        },
+        {
+          "gpxIndex": 459,
+          "missing": true
+        },
+        {
+          "gpxIndex": 473,
+          "timestampMs": 1771028142000,
+          "anchorMs": 1771028142000,
+          "adjacentDuplicate": true
         }
-      }
+      ]
     },
     "sampling": {
       "time": {
@@ -408,6 +450,7 @@
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 463,
           "sortedClusterCount": 6,
           "sequentialClusterCount": 341,
           "meanFinalAbsoluteDeviationSec": 0,
@@ -430,12 +473,1059 @@
             }
           }
         },
-        "geometryConditioned": {
-          "deltaCount": 499
+        "deltaStatistics": {
+          "deltaCount": 499,
+          "minMeters": 1.0239503036286597,
+          "maxMeters": 15.071394031238428,
+          "medianMeters": 8.908049274462497
         },
-        "timeConditioned": {
-          "deltaCount": 463
-        }
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 499,
+          "sortedClusterCount": 60,
+          "sequentialClusterCount": 480,
+          "sortedClusterCountOverTotalDeltasRatio": 0.12024048096192384,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.9619238476953907,
+          "sequentialOverSortedClusterCountRatio": 8,
+          "clusters": [
+            {
+              "centerMeters": 9.213905729820878,
+              "count": 32,
+              "clusterShareOfTotalDeltas": 0.06412825651302605,
+              "minMeters": 8.908049274462497,
+              "maxMeters": 9.37045713711359,
+              "spreadMeters": 0.46240786265109257,
+              "meanInsertionRelativeDeviation": 0.011549197809833696,
+              "maxInsertionRelativeDeviation": 0.018431304967434656,
+              "meanInsertionAbsoluteDeviationMeters": 0.10515648119086807,
+              "maxInsertionAbsoluteDeviationMeters": 0.16758684176444483,
+              "finalMeanAbsoluteDeviationMeters": 0.10045636585286954,
+              "finalMaxAbsoluteDeviationMeters": 0.3058564553583807,
+              "finalMeanRelativeDeviation": 0.01090269086732044,
+              "finalMaxRelativeDeviation": 0.03319509275729551,
+              "finalSpreadOverCenterRatio": 0.050185868643577054
+            },
+            {
+              "centerMeters": 10.531772130139299,
+              "count": 31,
+              "clusterShareOfTotalDeltas": 0.06212424849699399,
+              "minMeters": 10.385117954270608,
+              "maxMeters": 10.737552035343152,
+              "spreadMeters": 0.35243408107254304,
+              "meanInsertionRelativeDeviation": 0.009227037281199902,
+              "maxInsertionRelativeDeviation": 0.019556585213911865,
+              "meanInsertionAbsoluteDeviationMeters": 0.09678486109474681,
+              "maxInsertionAbsoluteDeviationMeters": 0.2059619391541112,
+              "finalMeanAbsoluteDeviationMeters": 0.09441947116138084,
+              "finalMaxAbsoluteDeviationMeters": 0.20577990520385292,
+              "finalMeanRelativeDeviation": 0.008965202626362941,
+              "finalMaxRelativeDeviation": 0.019538962926757813,
+              "finalSpreadOverCenterRatio": 0.03346389161459018
+            },
+            {
+              "centerMeters": 10.873552989558906,
+              "count": 28,
+              "clusterShareOfTotalDeltas": 0.056112224448897796,
+              "minMeters": 10.752735677494073,
+              "maxMeters": 11.064218527412246,
+              "spreadMeters": 0.311482849918173,
+              "meanInsertionRelativeDeviation": 0.009207366456912381,
+              "maxInsertionRelativeDeviation": 0.017750030427597614,
+              "meanInsertionAbsoluteDeviationMeters": 0.09974332488557984,
+              "maxInsertionAbsoluteDeviationMeters": 0.19296507948680208,
+              "finalMeanAbsoluteDeviationMeters": 0.09762693612787686,
+              "finalMaxAbsoluteDeviationMeters": 0.19066553785333973,
+              "finalMeanRelativeDeviation": 0.008978384178715182,
+              "finalMaxRelativeDeviation": 0.017534796403385552,
+              "finalSpreadOverCenterRatio": 0.028645912722112785
+            },
+            {
+              "centerMeters": 9.518249796248188,
+              "count": 22,
+              "clusterShareOfTotalDeltas": 0.04408817635270541,
+              "minMeters": 9.411214912580633,
+              "maxMeters": 9.695591442204279,
+              "spreadMeters": 0.28437652962364623,
+              "meanInsertionRelativeDeviation": 0.008501770340106128,
+              "maxInsertionRelativeDeviation": 0.01877723657890504,
+              "meanInsertionAbsoluteDeviationMeters": 0.0805692964251334,
+              "maxInsertionAbsoluteDeviationMeters": 0.1786792125177623,
+              "finalMeanAbsoluteDeviationMeters": 0.07815809350535935,
+              "finalMaxAbsoluteDeviationMeters": 0.1773416459560906,
+              "finalMeanRelativeDeviation": 0.008211393394630907,
+              "finalMaxRelativeDeviation": 0.01863174950777121,
+              "finalSpreadOverCenterRatio": 0.029876976934954894
+            },
+            {
+              "centerMeters": 11.655214134511866,
+              "count": 21,
+              "clusterShareOfTotalDeltas": 0.04208416833667335,
+              "minMeters": 11.47789015597186,
+              "maxMeters": 11.854806576664956,
+              "spreadMeters": 0.37691642069309594,
+              "meanInsertionRelativeDeviation": 0.008925381804835122,
+              "maxInsertionRelativeDeviation": 0.018975562894751923,
+              "meanInsertionAbsoluteDeviationMeters": 0.10331259964362531,
+              "maxInsertionAbsoluteDeviationMeters": 0.22076253444348737,
+              "finalMeanAbsoluteDeviationMeters": 0.09909060015457746,
+              "finalMaxAbsoluteDeviationMeters": 0.19959244215309013,
+              "finalMeanRelativeDeviation": 0.008501825793244211,
+              "finalMaxRelativeDeviation": 0.01712473403316406,
+              "finalSpreadOverCenterRatio": 0.032338867080701786
+            },
+            {
+              "centerMeters": 9.865098452148095,
+              "count": 20,
+              "clusterShareOfTotalDeltas": 0.04008016032064128,
+              "minMeters": 9.713395220041786,
+              "maxMeters": 10.04575563317994,
+              "spreadMeters": 0.33236041313815434,
+              "meanInsertionRelativeDeviation": 0.009258564529229322,
+              "maxInsertionRelativeDeviation": 0.018948989046138627,
+              "meanInsertionAbsoluteDeviationMeters": 0.09092966265307449,
+              "maxInsertionAbsoluteDeviationMeters": 0.18677688309151463,
+              "finalMeanAbsoluteDeviationMeters": 0.08716226183604547,
+              "finalMaxAbsoluteDeviationMeters": 0.18065718103184558,
+              "finalMeanRelativeDeviation": 0.008835417330991375,
+              "finalMaxRelativeDeviation": 0.018312760071087588,
+              "finalSpreadOverCenterRatio": 0.03369053180262827
+            },
+            {
+              "centerMeters": 12.08601933139113,
+              "count": 19,
+              "clusterShareOfTotalDeltas": 0.03807615230460922,
+              "minMeters": 11.911935390102009,
+              "maxMeters": 12.270017923547446,
+              "spreadMeters": 0.3580825334454367,
+              "meanInsertionRelativeDeviation": 0.008348036203559844,
+              "maxInsertionRelativeDeviation": 0.0172285770856224,
+              "meanInsertionAbsoluteDeviationMeters": 0.10019045574081793,
+              "maxInsertionAbsoluteDeviationMeters": 0.2078145997858769,
+              "finalMeanAbsoluteDeviationMeters": 0.09560929939110399,
+              "finalMaxAbsoluteDeviationMeters": 0.18399859215631587,
+              "finalMeanRelativeDeviation": 0.00791073526936839,
+              "finalMaxRelativeDeviation": 0.015224085541416818,
+              "finalSpreadOverCenterRatio": 0.029627830605515056
+            },
+            {
+              "centerMeters": 8.726039915465888,
+              "count": 18,
+              "clusterShareOfTotalDeltas": 0.036072144288577156,
+              "minMeters": 8.510871866827287,
+              "maxMeters": 8.87224973621597,
+              "spreadMeters": 0.3613778693886829,
+              "meanInsertionRelativeDeviation": 0.009821060295845063,
+              "maxInsertionRelativeDeviation": 0.017573902899655987,
+              "meanInsertionAbsoluteDeviationMeters": 0.08487094332922486,
+              "maxInsertionAbsoluteDeviationMeters": 0.15322725447405006,
+              "finalMeanAbsoluteDeviationMeters": 0.07908898180381839,
+              "finalMaxAbsoluteDeviationMeters": 0.21516804863860095,
+              "finalMeanRelativeDeviation": 0.009063559480588946,
+              "finalMaxRelativeDeviation": 0.02465815544313987,
+              "finalSpreadOverCenterRatio": 0.041413730958092775
+            },
+            {
+              "centerMeters": 10.173351477637716,
+              "count": 18,
+              "clusterShareOfTotalDeltas": 0.036072144288577156,
+              "minMeters": 10.065823201083154,
+              "maxMeters": 10.359493852021123,
+              "spreadMeters": 0.29367065093796896,
+              "meanInsertionRelativeDeviation": 0.006020529745717486,
+              "maxInsertionRelativeDeviation": 0.019763457166180963,
+              "meanInsertionAbsoluteDeviationMeters": 0.06103467691516901,
+              "maxInsertionAbsoluteDeviationMeters": 0.20077147456988165,
+              "finalMeanAbsoluteDeviationMeters": 0.058454144238277744,
+              "finalMaxAbsoluteDeviationMeters": 0.1861423743834063,
+              "finalMeanRelativeDeviation": 0.005745809959163132,
+              "finalMaxRelativeDeviation": 0.018297055281395736,
+              "finalSpreadOverCenterRatio": 0.028866657323645344
+            },
+            {
+              "centerMeters": 11.2506273545259,
+              "count": 18,
+              "clusterShareOfTotalDeltas": 0.036072144288577156,
+              "minMeters": 11.092421820251161,
+              "maxMeters": 11.409839706515672,
+              "spreadMeters": 0.3174178862645114,
+              "meanInsertionRelativeDeviation": 0.007345973002063563,
+              "maxInsertionRelativeDeviation": 0.015309033056322955,
+              "meanInsertionAbsoluteDeviationMeters": 0.08222327929611002,
+              "maxInsertionAbsoluteDeviationMeters": 0.17203984949152407,
+              "finalMeanAbsoluteDeviationMeters": 0.07818500049686043,
+              "finalMaxAbsoluteDeviationMeters": 0.15921235198977257,
+              "finalMeanRelativeDeviation": 0.00694939029025863,
+              "finalMaxRelativeDeviation": 0.01415141991399481,
+              "finalSpreadOverCenterRatio": 0.02821334991037816
+            },
+            {
+              "centerMeters": 5.76218637114871,
+              "count": 17,
+              "clusterShareOfTotalDeltas": 0.03406813627254509,
+              "minMeters": 5.589944868064412,
+              "maxMeters": 5.868178267659169,
+              "spreadMeters": 0.27823339959475657,
+              "meanInsertionRelativeDeviation": 0.011987458335730825,
+              "maxInsertionRelativeDeviation": 0.018499507283706654,
+              "meanInsertionAbsoluteDeviationMeters": 0.0683049601939041,
+              "maxInsertionAbsoluteDeviationMeters": 0.10658660689406751,
+              "finalMeanAbsoluteDeviationMeters": 0.06323903363260129,
+              "finalMaxAbsoluteDeviationMeters": 0.17224150308429742,
+              "finalMeanRelativeDeviation": 0.010974833085795242,
+              "finalMaxRelativeDeviation": 0.029891692491362535,
+              "finalSpreadOverCenterRatio": 0.0482860813020336
+            },
+            {
+              "centerMeters": 7.506328589634219,
+              "count": 17,
+              "clusterShareOfTotalDeltas": 0.03406813627254509,
+              "minMeters": 7.324615129899917,
+              "maxMeters": 7.622173892816869,
+              "spreadMeters": 0.29755876291695227,
+              "meanInsertionRelativeDeviation": 0.011255350945627301,
+              "maxInsertionRelativeDeviation": 0.01713464936360277,
+              "meanInsertionAbsoluteDeviationMeters": 0.08364280174444376,
+              "maxInsertionAbsoluteDeviationMeters": 0.12814553135186468,
+              "finalMeanAbsoluteDeviationMeters": 0.07829828822284668,
+              "finalMaxAbsoluteDeviationMeters": 0.18171345973430153,
+              "finalMeanRelativeDeviation": 0.010430969985909202,
+              "finalMaxRelativeDeviation": 0.024208034269274693,
+              "finalSpreadOverCenterRatio": 0.03964105212871479
+            },
+            {
+              "centerMeters": 7.801835765984422,
+              "count": 16,
+              "clusterShareOfTotalDeltas": 0.03206412825651302,
+              "minMeters": 7.695452708049471,
+              "maxMeters": 7.94394199340704,
+              "spreadMeters": 0.24848928535756887,
+              "meanInsertionRelativeDeviation": 0.008913806400413731,
+              "maxInsertionRelativeDeviation": 0.01846619030044353,
+              "meanInsertionAbsoluteDeviationMeters": 0.06918925454380842,
+              "maxInsertionAbsoluteDeviationMeters": 0.14403457471932857,
+              "finalMeanAbsoluteDeviationMeters": 0.06592504483636341,
+              "finalMaxAbsoluteDeviationMeters": 0.1421062274226177,
+              "finalMeanRelativeDeviation": 0.008449940092791111,
+              "finalMaxRelativeDeviation": 0.018214460248214027,
+              "finalSpreadOverCenterRatio": 0.03185010461780913
+            },
+            {
+              "centerMeters": 8.33751072944817,
+              "count": 16,
+              "clusterShareOfTotalDeltas": 0.03206412825651302,
+              "minMeters": 8.19003511089344,
+              "maxMeters": 8.463955959065986,
+              "spreadMeters": 0.2739208481725459,
+              "meanInsertionRelativeDeviation": 0.007841331344317177,
+              "maxInsertionRelativeDeviation": 0.01589641537311783,
+              "meanInsertionAbsoluteDeviationMeters": 0.06498455436380202,
+              "maxInsertionAbsoluteDeviationMeters": 0.1324412189954156,
+              "finalMeanAbsoluteDeviationMeters": 0.06056331595201658,
+              "finalMaxAbsoluteDeviationMeters": 0.14747561855472924,
+              "finalMeanRelativeDeviation": 0.007263956583360829,
+              "finalMaxRelativeDeviation": 0.01768820734872867,
+              "finalSpreadOverCenterRatio": 0.03285403246379699
+            },
+            {
+              "centerMeters": 6.084740787238539,
+              "count": 13,
+              "clusterShareOfTotalDeltas": 0.026052104208416832,
+              "minMeters": 5.904623712612382,
+              "maxMeters": 6.177356705059433,
+              "spreadMeters": 0.2727329924470503,
+              "meanInsertionRelativeDeviation": 0.011879099210954706,
+              "maxInsertionRelativeDeviation": 0.017953484448603146,
+              "meanInsertionAbsoluteDeviationMeters": 0.0715256288076431,
+              "maxInsertionAbsoluteDeviationMeters": 0.10880232661103939,
+              "finalMeanAbsoluteDeviationMeters": 0.06459804901432936,
+              "finalMaxAbsoluteDeviationMeters": 0.1801170746261569,
+              "finalMeanRelativeDeviation": 0.010616401137384546,
+              "finalMaxRelativeDeviation": 0.029601437583654258,
+              "finalSpreadOverCenterRatio": 0.04482245045163637
+            },
+            {
+              "centerMeters": 7.1684908500203415,
+              "count": 13,
+              "clusterShareOfTotalDeltas": 0.026052104208416832,
+              "minMeters": 7.071154666312305,
+              "maxMeters": 7.3055576593978,
+              "spreadMeters": 0.23440299308549495,
+              "meanInsertionRelativeDeviation": 0.00840700953305659,
+              "maxInsertionRelativeDeviation": 0.019642559030131818,
+              "meanInsertionAbsoluteDeviationMeters": 0.06004252937771426,
+              "maxInsertionAbsoluteDeviationMeters": 0.14073544331971366,
+              "finalMeanAbsoluteDeviationMeters": 0.05629883000432813,
+              "finalMaxAbsoluteDeviationMeters": 0.1370668093774583,
+              "finalMeanRelativeDeviation": 0.007853651651681802,
+              "finalMaxRelativeDeviation": 0.019120734370061915,
+              "finalSpreadOverCenterRatio": 0.03269907125358607
+            },
+            {
+              "centerMeters": 8.01355668611253,
+              "count": 13,
+              "clusterShareOfTotalDeltas": 0.026052104208416832,
+              "minMeters": 7.964950537543355,
+              "maxMeters": 8.140508071650133,
+              "spreadMeters": 0.17555753410677877,
+              "meanInsertionRelativeDeviation": 0.0050787231978144266,
+              "maxInsertionRelativeDeviation": 0.016788002355394054,
+              "meanInsertionAbsoluteDeviationMeters": 0.0406068443026223,
+              "maxInsertionAbsoluteDeviationMeters": 0.13440645283420594,
+              "finalMeanAbsoluteDeviationMeters": 0.038737377049961684,
+              "finalMaxAbsoluteDeviationMeters": 0.12695138553760366,
+              "finalMeanRelativeDeviation": 0.00483398053664404,
+              "finalMaxRelativeDeviation": 0.015842077433308736,
+              "finalSpreadOverCenterRatio": 0.02190756751131735
+            },
+            {
+              "centerMeters": 13.038083486914958,
+              "count": 13,
+              "clusterShareOfTotalDeltas": 0.026052104208416832,
+              "minMeters": 12.822948881396508,
+              "maxMeters": 13.270347151542767,
+              "spreadMeters": 0.4473982701462589,
+              "meanInsertionRelativeDeviation": 0.009849322275553803,
+              "maxInsertionRelativeDeviation": 0.018153433030179734,
+              "meanInsertionAbsoluteDeviationMeters": 0.12770236870705312,
+              "maxInsertionAbsoluteDeviationMeters": 0.23660712667422423,
+              "finalMeanAbsoluteDeviationMeters": 0.11942796080249721,
+              "finalMaxAbsoluteDeviationMeters": 0.23226366462780845,
+              "finalMeanRelativeDeviation": 0.009159932203406681,
+              "finalMaxRelativeDeviation": 0.017814248916331044,
+              "finalSpreadOverCenterRatio": 0.03431472659269812
+            },
+            {
+              "centerMeters": 6.6934976135037,
+              "count": 12,
+              "clusterShareOfTotalDeltas": 0.02404809619238477,
+              "minMeters": 6.596614333097979,
+              "maxMeters": 6.785714443582378,
+              "spreadMeters": 0.18910011048439923,
+              "meanInsertionRelativeDeviation": 0.010339285904036053,
+              "maxInsertionRelativeDeviation": 0.018577757601543256,
+              "meanInsertionAbsoluteDeviationMeters": 0.06869611122580725,
+              "maxInsertionAbsoluteDeviationMeters": 0.12313431255482765,
+              "finalMeanAbsoluteDeviationMeters": 0.06484720592795028,
+              "finalMaxAbsoluteDeviationMeters": 0.09688328040572092,
+              "finalMeanRelativeDeviation": 0.009688089795852799,
+              "finalMaxRelativeDeviation": 0.014474238432574494,
+              "finalSpreadOverCenterRatio": 0.02825131514246034
+            },
+            {
+              "centerMeters": 12.524415404126575,
+              "count": 12,
+              "clusterShareOfTotalDeltas": 0.02404809619238477,
+              "minMeters": 12.339215852784111,
+              "maxMeters": 12.730041981113944,
+              "spreadMeters": 0.39082612832983266,
+              "meanInsertionRelativeDeviation": 0.009324784090041243,
+              "maxInsertionRelativeDeviation": 0.01930963207035156,
+              "meanInsertionAbsoluteDeviationMeters": 0.11592239174253087,
+              "maxInsertionAbsoluteDeviationMeters": 0.24000183092137917,
+              "finalMeanAbsoluteDeviationMeters": 0.10852481902605267,
+              "finalMaxAbsoluteDeviationMeters": 0.20562657698736864,
+              "finalMeanRelativeDeviation": 0.008665060645488942,
+              "finalMaxRelativeDeviation": 0.01641805787754519,
+              "finalSpreadOverCenterRatio": 0.031205139379284905
+            },
+            {
+              "centerMeters": 5.342692135866536,
+              "count": 11,
+              "clusterShareOfTotalDeltas": 0.022044088176352707,
+              "minMeters": 5.249584335459649,
+              "maxMeters": 5.416987181551112,
+              "spreadMeters": 0.16740284609146272,
+              "meanInsertionRelativeDeviation": 0.008087353679919434,
+              "maxInsertionRelativeDeviation": 0.014481648013089944,
+              "meanInsertionAbsoluteDeviationMeters": 0.042917740789093675,
+              "maxInsertionAbsoluteDeviationMeters": 0.07732707812732276,
+              "finalMeanAbsoluteDeviationMeters": 0.038685568043326075,
+              "finalMaxAbsoluteDeviationMeters": 0.09310780040688726,
+              "finalMeanRelativeDeviation": 0.00724083796324746,
+              "finalMaxRelativeDeviation": 0.017427131872682015,
+              "finalSpreadOverCenterRatio": 0.031333051172395786
+            },
+            {
+              "centerMeters": 6.454664856156588,
+              "count": 11,
+              "clusterShareOfTotalDeltas": 0.022044088176352707,
+              "minMeters": 6.332976279717341,
+              "maxMeters": 6.502366870876996,
+              "spreadMeters": 0.1693905911596545,
+              "meanInsertionRelativeDeviation": 0.007075313995409781,
+              "maxInsertionRelativeDeviation": 0.013057697001309968,
+              "meanInsertionAbsoluteDeviationMeters": 0.04521673108701962,
+              "maxInsertionAbsoluteDeviationMeters": 0.08284623102620348,
+              "finalMeanAbsoluteDeviationMeters": 0.03968543215796308,
+              "finalMaxAbsoluteDeviationMeters": 0.12168857643924635,
+              "finalMeanRelativeDeviation": 0.006148333498695959,
+              "finalMaxRelativeDeviation": 0.018852810974868413,
+              "finalSpreadOverCenterRatio": 0.026243127247433516
+            },
+            {
+              "centerMeters": 4.665489778091644,
+              "count": 6,
+              "clusterShareOfTotalDeltas": 0.012024048096192385,
+              "minMeters": 4.6371071214527495,
+              "maxMeters": 4.683061595322556,
+              "spreadMeters": 0.045954473869806556,
+              "meanInsertionRelativeDeviation": 0.003897485317248713,
+              "maxInsertionRelativeDeviation": 0.006592307598944193,
+              "meanInsertionAbsoluteDeviationMeters": 0.01811141719187755,
+              "maxInsertionAbsoluteDeviationMeters": 0.030592746086903766,
+              "finalMeanAbsoluteDeviationMeters": 0.01622755434229865,
+              "finalMaxAbsoluteDeviationMeters": 0.028382656638894055,
+              "finalMeanRelativeDeviation": 0.0034782102446136564,
+              "finalMaxRelativeDeviation": 0.006083532059629461,
+              "finalSpreadOverCenterRatio": 0.009849871300887004
+            },
+            {
+              "centerMeters": 4.8002518062056385,
+              "count": 6,
+              "clusterShareOfTotalDeltas": 0.012024048096192385,
+              "minMeters": 4.768992935511021,
+              "maxMeters": 4.847172078558856,
+              "spreadMeters": 0.07817914304783447,
+              "meanInsertionRelativeDeviation": 0.004559294463872814,
+              "maxInsertionRelativeDeviation": 0.0098245162054958,
+              "meanInsertionAbsoluteDeviationMeters": 0.021827035168753284,
+              "maxInsertionAbsoluteDeviationMeters": 0.04715781789054674,
+              "finalMeanAbsoluteDeviationMeters": 0.019241924738979233,
+              "finalMaxAbsoluteDeviationMeters": 0.046920272353217385,
+              "finalMeanRelativeDeviation": 0.004008524034948288,
+              "finalMaxRelativeDeviation": 0.009774543971330858,
+              "finalSpreadOverCenterRatio": 0.01628646708632379
+            },
+            {
+              "centerMeters": 4.940584729474018,
+              "count": 6,
+              "clusterShareOfTotalDeltas": 0.012024048096192385,
+              "minMeters": 4.906794852581639,
+              "maxMeters": 4.987464849185939,
+              "spreadMeters": 0.08066999660429985,
+              "meanInsertionRelativeDeviation": 0.006332104844323107,
+              "maxInsertionRelativeDeviation": 0.013201062359827025,
+              "meanInsertionAbsoluteDeviationMeters": 0.031152724515959296,
+              "maxInsertionAbsoluteDeviationMeters": 0.06498200301744905,
+              "finalMeanAbsoluteDeviationMeters": 0.029845391717054987,
+              "finalMaxAbsoluteDeviationMeters": 0.04688011971192019,
+              "finalMeanRelativeDeviation": 0.006040862236205868,
+              "finalMaxRelativeDeviation": 0.009488779624048895,
+              "finalSpreadOverCenterRatio": 0.016328026138899575
+            },
+            {
+              "centerMeters": 3.702265005899968,
+              "count": 5,
+              "clusterShareOfTotalDeltas": 0.01002004008016032,
+              "minMeters": 3.664580750325233,
+              "maxMeters": 3.726582857121864,
+              "spreadMeters": 0.06200210679663121,
+              "meanInsertionRelativeDeviation": 0.005112042926559596,
+              "maxInsertionRelativeDeviation": 0.008312417256801458,
+              "meanInsertionAbsoluteDeviationMeters": 0.018820456571701706,
+              "maxInsertionAbsoluteDeviationMeters": 0.03072154137971994,
+              "finalMeanAbsoluteDeviationMeters": 0.015052031014228095,
+              "finalMaxAbsoluteDeviationMeters": 0.037684255574735204,
+              "finalMeanRelativeDeviation": 0.0040656276604297695,
+              "finalMaxRelativeDeviation": 0.010178702906107796,
+              "finalSpreadOverCenterRatio": 0.016747074209389118
+            },
+            {
+              "centerMeters": 4.314797864381585,
+              "count": 5,
+              "clusterShareOfTotalDeltas": 0.01002004008016032,
+              "minMeters": 4.282972926623397,
+              "maxMeters": 4.360162737451104,
+              "spreadMeters": 0.07718981082770693,
+              "meanInsertionRelativeDeviation": 0.005977694556045779,
+              "maxInsertionRelativeDeviation": 0.01420499499463262,
+              "meanInsertionAbsoluteDeviationMeters": 0.02564909742744348,
+              "maxInsertionAbsoluteDeviationMeters": 0.06106861055402746,
+              "finalMeanAbsoluteDeviationMeters": 0.022466603651624516,
+              "finalMaxAbsoluteDeviationMeters": 0.0453648730695182,
+              "finalMeanRelativeDeviation": 0.005206872803262714,
+              "finalMaxRelativeDeviation": 0.010513788709316532,
+              "finalSpreadOverCenterRatio": 0.017889554332290857
+            },
+            {
+              "centerMeters": 5.071057365984926,
+              "count": 5,
+              "clusterShareOfTotalDeltas": 0.01002004008016032,
+              "minMeters": 5.05658832684739,
+              "maxMeters": 5.162864597892817,
+              "spreadMeters": 0.10627627104542725,
+              "meanInsertionRelativeDeviation": 0.005390384270926752,
+              "maxInsertionRelativeDeviation": 0.019121399751402802,
+              "meanInsertionAbsoluteDeviationMeters": 0.027297933010591535,
+              "maxInsertionAbsoluteDeviationMeters": 0.09686892833646255,
+              "finalMeanAbsoluteDeviationMeters": 0.02585102909683794,
+              "finalMaxAbsoluteDeviationMeters": 0.0918072319078913,
+              "finalMeanRelativeDeviation": 0.005097759151816857,
+              "finalMaxRelativeDeviation": 0.018104159602631523,
+              "finalSpreadOverCenterRatio": 0.020957418418946588
+            },
+            {
+              "centerMeters": 6.915341243498188,
+              "count": 5,
+              "clusterShareOfTotalDeltas": 0.01002004008016032,
+              "minMeters": 6.87125450888063,
+              "maxMeters": 6.946446891171051,
+              "spreadMeters": 0.07519238229042102,
+              "meanInsertionRelativeDeviation": 0.0047109617353924115,
+              "maxInsertionRelativeDeviation": 0.009428457711039513,
+              "meanInsertionAbsoluteDeviationMeters": 0.03240422925419591,
+              "maxInsertionAbsoluteDeviationMeters": 0.06478539667177952,
+              "finalMeanAbsoluteDeviationMeters": 0.02799555579244011,
+              "finalMaxAbsoluteDeviationMeters": 0.044086734617557966,
+              "finalMeanRelativeDeviation": 0.00404832600542476,
+              "finalMaxRelativeDeviation": 0.006375207392550349,
+              "finalSpreadOverCenterRatio": 0.010873271418256763
+            },
+            {
+              "centerMeters": 13.372480195906027,
+              "count": 5,
+              "clusterShareOfTotalDeltas": 0.01002004008016032,
+              "minMeters": 13.299840242144722,
+              "maxMeters": 13.593797256466804,
+              "spreadMeters": 0.293957014322082,
+              "meanInsertionRelativeDeviation": 0.005855286887715268,
+              "maxInsertionRelativeDeviation": 0.017191167705880174,
+              "meanInsertionAbsoluteDeviationMeters": 0.07816447027340026,
+              "maxInsertionAbsoluteDeviationMeters": 0.22974368615755303,
+              "finalMeanAbsoluteDeviationMeters": 0.07090047489726956,
+              "finalMaxAbsoluteDeviationMeters": 0.22131706056077682,
+              "finalMeanRelativeDeviation": 0.005301968958531394,
+              "finalMaxRelativeDeviation": 0.016550187947074534,
+              "finalSpreadOverCenterRatio": 0.02198223590655058
+            },
+            {
+              "centerMeters": 13.819692277375998,
+              "count": 5,
+              "clusterShareOfTotalDeltas": 0.01002004008016032,
+              "minMeters": 13.67339323508159,
+              "maxMeters": 14.046305436914208,
+              "spreadMeters": 0.37291220183261764,
+              "meanInsertionRelativeDeviation": 0.007581530234096401,
+              "maxInsertionRelativeDeviation": 0.01645635275315806,
+              "meanInsertionAbsoluteDeviationMeters": 0.10438083104996174,
+              "maxInsertionAbsoluteDeviationMeters": 0.22740864034384778,
+              "finalMeanAbsoluteDeviationMeters": 0.08975092682052122,
+              "finalMaxAbsoluteDeviationMeters": 0.2266131595382106,
+              "finalMeanRelativeDeviation": 0.006494422959580008,
+              "finalMaxRelativeDeviation": 0.016397844104618413,
+              "finalSpreadOverCenterRatio": 0.026984117616215404
+            },
+            {
+              "centerMeters": 3.188569777381164,
+              "count": 4,
+              "clusterShareOfTotalDeltas": 0.008016032064128256,
+              "minMeters": 3.1823891050983684,
+              "maxMeters": 3.196428596185554,
+              "spreadMeters": 0.014039491087185496,
+              "meanInsertionRelativeDeviation": 0.00172741467413742,
+              "maxInsertionRelativeDeviation": 0.0034871449834638422,
+              "meanInsertionAbsoluteDeviationMeters": 0.005500778206002477,
+              "maxInsertionAbsoluteDeviationMeters": 0.01110767586800776,
+              "finalMeanAbsoluteDeviationMeters": 0.00513430130360526,
+              "finalMaxAbsoluteDeviationMeters": 0.007858818804389767,
+              "finalMeanRelativeDeviation": 0.0016102207767340014,
+              "finalMaxRelativeDeviation": 0.0024646845931169713,
+              "finalSpreadOverCenterRatio": 0.004403068481291449
+            },
+            {
+              "centerMeters": 3.337898043882016,
+              "count": 4,
+              "clusterShareOfTotalDeltas": 0.008016032064128256,
+              "minMeters": 3.3348008931362405,
+              "maxMeters": 3.3607580526539906,
+              "spreadMeters": 0.025957159517750128,
+              "meanInsertionRelativeDeviation": 0.0024096607918680396,
+              "maxInsertionRelativeDeviation": 0.0077820173081101715,
+              "meanInsertionAbsoluteDeviationMeters": 0.0080357512355419,
+              "maxInsertionAbsoluteDeviationMeters": 0.025951522139661343,
+              "finalMeanAbsoluteDeviationMeters": 0.008035046563280801,
+              "finalMaxAbsoluteDeviationMeters": 0.022860008771974805,
+              "finalMeanRelativeDeviation": 0.002407217493658358,
+              "finalMaxRelativeDeviation": 0.006848624035678555,
+              "finalSpreadOverCenterRatio": 0.007776498615746105
+            },
+            {
+              "centerMeters": 4.044399043626081,
+              "count": 4,
+              "clusterShareOfTotalDeltas": 0.008016032064128256,
+              "minMeters": 4.039852395360307,
+              "maxMeters": 4.11520512689609,
+              "spreadMeters": 0.0753527315357827,
+              "meanInsertionRelativeDeviation": 0.004825228100583318,
+              "maxInsertionRelativeDeviation": 0.01757817482818269,
+              "meanInsertionAbsoluteDeviationMeters": 0.019512305614879377,
+              "maxInsertionAbsoluteDeviationMeters": 0.0710881944639068,
+              "finalMeanAbsoluteDeviationMeters": 0.01897923848089489,
+              "finalMaxAbsoluteDeviationMeters": 0.07080608327000881,
+              "finalMeanRelativeDeviation": 0.004692721533204275,
+              "finalMaxRelativeDeviation": 0.017507195137334,
+              "finalSpreadOverCenterRatio": 0.018631379031339056
+            },
+            {
+              "centerMeters": 4.164638711121736,
+              "count": 4,
+              "clusterShareOfTotalDeltas": 0.008016032064128256,
+              "minMeters": 4.1640118242673045,
+              "maxMeters": 4.227380355825389,
+              "spreadMeters": 0.0633685315580843,
+              "meanInsertionRelativeDeviation": 0.0038796738955067557,
+              "maxInsertionRelativeDeviation": 0.015217778237731022,
+              "meanInsertionAbsoluteDeviationMeters": 0.01615501373900896,
+              "maxInsertionAbsoluteDeviationMeters": 0.06336703135081123,
+              "finalMeanAbsoluteDeviationMeters": 0.016154826213099938,
+              "finalMaxAbsoluteDeviationMeters": 0.06274164470365307,
+              "finalMeanRelativeDeviation": 0.003879046259152855,
+              "finalMaxRelativeDeviation": 0.015065327164178846,
+              "finalSpreadOverCenterRatio": 0.015215853271703403
+            },
+            {
+              "centerMeters": 2.6304297013384907,
+              "count": 3,
+              "clusterShareOfTotalDeltas": 0.006012024048096192,
+              "minMeters": 2.610065124870597,
+              "maxMeters": 2.6496329051382395,
+              "spreadMeters": 0.039567780267642405,
+              "meanInsertionRelativeDeviation": 0.006339034216741586,
+              "maxInsertionRelativeDeviation": 0.011214777614789739,
+              "meanInsertionAbsoluteDeviationMeters": 0.016583356167196417,
+              "maxInsertionAbsoluteDeviationMeters": 0.02938549203369556,
+              "finalMeanAbsoluteDeviationMeters": 0.013189260089214136,
+              "finalMaxAbsoluteDeviationMeters": 0.02036457646789369,
+              "finalMeanRelativeDeviation": 0.00501410856275794,
+              "finalMaxRelativeDeviation": 0.007741920058738389,
+              "finalSpreadOverCenterRatio": 0.015042325688273817
+            },
+            {
+              "centerMeters": 2.8878718513037174,
+              "count": 3,
+              "clusterShareOfTotalDeltas": 0.006012024048096192,
+              "minMeters": 2.87535618868207,
+              "maxMeters": 2.92774546512212,
+              "spreadMeters": 0.0523892764400502,
+              "meanInsertionRelativeDeviation": 0.006787208606380776,
+              "maxInsertionRelativeDeviation": 0.01600889113155429,
+              "meanInsertionAbsoluteDeviationMeters": 0.01954903591695804,
+              "maxInsertionAbsoluteDeviationMeters": 0.046131445129226734,
+              "finalMeanAbsoluteDeviationMeters": 0.0174630921466834,
+              "finalMaxAbsoluteDeviationMeters": 0.03987361381840282,
+              "finalMeanRelativeDeviation": 0.006047045383540742,
+              "finalMaxRelativeDeviation": 0.013807265651487287,
+              "finalSpreadOverCenterRatio": 0.018141136150622225
+            },
+            {
+              "centerMeters": 3.1172905155926407,
+              "count": 3,
+              "clusterShareOfTotalDeltas": 0.006012024048096192,
+              "minMeters": 3.1153429419746614,
+              "maxMeters": 3.1249035310785582,
+              "spreadMeters": 0.009560589103896788,
+              "meanInsertionRelativeDeviation": 0.0011268628531573037,
+              "maxInsertionRelativeDeviation": 0.0027554331097335944,
+              "meanInsertionAbsoluteDeviationMeters": 0.003511458637628806,
+              "maxInsertionAbsoluteDeviationMeters": 0.008586802294907159,
+              "finalMeanAbsoluteDeviationMeters": 0.0031868630346322626,
+              "finalMaxAbsoluteDeviationMeters": 0.007613015485917529,
+              "finalMeanRelativeDeviation": 0.001022318266036361,
+              "finalMaxRelativeDeviation": 0.002442189923536911,
+              "finalSpreadOverCenterRatio": 0.0030669547981090834
+            },
+            {
+              "centerMeters": 3.2677799737523685,
+              "count": 3,
+              "clusterShareOfTotalDeltas": 0.006012024048096192,
+              "minMeters": 3.2632671778627476,
+              "maxMeters": 3.281002512557263,
+              "spreadMeters": 0.01773533469451527,
+              "meanInsertionRelativeDeviation": 0.0020410053257174693,
+              "maxInsertionRelativeDeviation": 0.004740108711625787,
+              "meanInsertionAbsoluteDeviationMeters": 0.006663910879775248,
+              "maxInsertionAbsoluteDeviationMeters": 0.015478936749704797,
+              "finalMeanAbsoluteDeviationMeters": 0.00591177823150509,
+              "finalMaxAbsoluteDeviationMeters": 0.013222538804894324,
+              "finalMeanRelativeDeviation": 0.0018091114698633266,
+              "finalMaxRelativeDeviation": 0.004046336935503946,
+              "finalSpreadOverCenterRatio": 0.00542733440958998
+            },
+            {
+              "centerMeters": 3.9118824249408126,
+              "count": 3,
+              "clusterShareOfTotalDeltas": 0.006012024048096192,
+              "minMeters": 3.902431778066907,
+              "maxMeters": 3.918336286522531,
+              "spreadMeters": 0.01590450845562419,
+              "meanInsertionRelativeDeviation": 0.0017609798997838266,
+              "maxInsertionRelativeDeviation": 0.0028612069410693694,
+              "meanInsertionAbsoluteDeviationMeters": 0.006876610630859019,
+              "maxInsertionAbsoluteDeviationMeters": 0.011179185018671323,
+              "finalMeanAbsoluteDeviationMeters": 0.005301502818541397,
+              "finalMaxAbsoluteDeviationMeters": 0.009450646873905733,
+              "finalMeanRelativeDeviation": 0.0013552306134613976,
+              "finalMaxRelativeDeviation": 0.0024158821373698935,
+              "finalSpreadOverCenterRatio": 0.0040656918403841925
+            },
+            {
+              "centerMeters": 14.303505093855287,
+              "count": 3,
+              "clusterShareOfTotalDeltas": 0.006012024048096192,
+              "minMeters": 14.146752366739065,
+              "maxMeters": 14.493184447214125,
+              "spreadMeters": 0.3464320804750596,
+              "meanInsertionRelativeDeviation": 0.009974763659249273,
+              "maxInsertionRelativeDeviation": 0.01884381660083222,
+              "meanInsertionAbsoluteDeviationMeters": 0.14160281467772387,
+              "maxInsertionAbsoluteDeviationMeters": 0.2680557169169493,
+              "finalMeanAbsoluteDeviationMeters": 0.11547736015835319,
+              "finalMaxAbsoluteDeviationMeters": 0.18967935335883723,
+              "finalMeanRelativeDeviation": 0.008073360997925024,
+              "finalMaxRelativeDeviation": 0.01326104001181658,
+              "finalSpreadOverCenterRatio": 0.024220082993775073
+            },
+            {
+              "centerMeters": 1.4265785362477148,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 1.4130205827641753,
+              "maxMeters": 1.4401364897312543,
+              "spreadMeters": 0.027115906967078995,
+              "meanInsertionRelativeDeviation": 0.009595014856059063,
+              "maxInsertionRelativeDeviation": 0.019190029712118126,
+              "meanInsertionAbsoluteDeviationMeters": 0.013557953483539498,
+              "maxInsertionAbsoluteDeviationMeters": 0.027115906967078995,
+              "finalMeanAbsoluteDeviationMeters": 0.013557953483539498,
+              "finalMaxAbsoluteDeviationMeters": 0.013557953483539498,
+              "finalMeanRelativeDeviation": 0.009503825509109762,
+              "finalMaxRelativeDeviation": 0.009503825509109762,
+              "finalSpreadOverCenterRatio": 0.019007651018219524
+            },
+            {
+              "centerMeters": 1.8798794602731324,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 1.8655712852050728,
+              "maxMeters": 1.8941876353411917,
+              "spreadMeters": 0.028616350136118962,
+              "meanInsertionRelativeDeviation": 0.0076695943926295244,
+              "maxInsertionRelativeDeviation": 0.015339188785259049,
+              "meanInsertionAbsoluteDeviationMeters": 0.014308175068059481,
+              "maxInsertionAbsoluteDeviationMeters": 0.028616350136118962,
+              "finalMeanAbsoluteDeviationMeters": 0.014308175068059481,
+              "finalMaxAbsoluteDeviationMeters": 0.014308175068059592,
+              "finalMeanRelativeDeviation": 0.007611219426792722,
+              "finalMaxRelativeDeviation": 0.007611219426792781,
+              "finalSpreadOverCenterRatio": 0.015222438853585443
+            },
+            {
+              "centerMeters": 2.815815725530658,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 2.7946698308331306,
+              "maxMeters": 2.8369616202281853,
+              "spreadMeters": 0.042291789395054735,
+              "meanInsertionRelativeDeviation": 0.0075665090967914,
+              "maxInsertionRelativeDeviation": 0.0151330181935828,
+              "meanInsertionAbsoluteDeviationMeters": 0.021145894697527368,
+              "maxInsertionAbsoluteDeviationMeters": 0.042291789395054735,
+              "finalMeanAbsoluteDeviationMeters": 0.021145894697527368,
+              "finalMaxAbsoluteDeviationMeters": 0.021145894697527368,
+              "finalMeanRelativeDeviation": 0.0075096869819285825,
+              "finalMaxRelativeDeviation": 0.0075096869819285825,
+              "finalSpreadOverCenterRatio": 0.015019373963857165
+            },
+            {
+              "centerMeters": 2.9960042660473354,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 2.9897455127657397,
+              "maxMeters": 3.0022630193289315,
+              "spreadMeters": 0.012517506563191727,
+              "meanInsertionRelativeDeviation": 0.0020934066979520424,
+              "maxInsertionRelativeDeviation": 0.004186813395904085,
+              "meanInsertionAbsoluteDeviationMeters": 0.0062587532815958635,
+              "maxInsertionAbsoluteDeviationMeters": 0.012517506563191727,
+              "finalMeanAbsoluteDeviationMeters": 0.0062587532815958635,
+              "finalMaxAbsoluteDeviationMeters": 0.006258753281596086,
+              "finalMeanRelativeDeviation": 0.002089033501228325,
+              "finalMaxRelativeDeviation": 0.002089033501228399,
+              "finalSpreadOverCenterRatio": 0.00417806700245665
+            },
+            {
+              "centerMeters": 3.500951801600678,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 3.4950821166510244,
+              "maxMeters": 3.506821486550331,
+              "spreadMeters": 0.011739369899306684,
+              "meanInsertionRelativeDeviation": 0.001679412601406245,
+              "maxInsertionRelativeDeviation": 0.00335882520281249,
+              "meanInsertionAbsoluteDeviationMeters": 0.005869684949653342,
+              "maxInsertionAbsoluteDeviationMeters": 0.011739369899306684,
+              "finalMeanAbsoluteDeviationMeters": 0.005869684949653342,
+              "finalMaxAbsoluteDeviationMeters": 0.005869684949653564,
+              "finalMeanRelativeDeviation": 0.0016765969034391306,
+              "finalMaxRelativeDeviation": 0.001676596903439194,
+              "finalSpreadOverCenterRatio": 0.0033531938068782612
+            },
+            {
+              "centerMeters": 4.49453470035991,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 4.461836280382558,
+              "maxMeters": 4.5272331203372635,
+              "spreadMeters": 0.06539683995470558,
+              "meanInsertionRelativeDeviation": 0.0073284670083298585,
+              "maxInsertionRelativeDeviation": 0.014656934016659717,
+              "meanInsertionAbsoluteDeviationMeters": 0.03269841997735279,
+              "maxInsertionAbsoluteDeviationMeters": 0.06539683995470558,
+              "finalMeanAbsoluteDeviationMeters": 0.03269841997735279,
+              "finalMaxAbsoluteDeviationMeters": 0.03269841997735323,
+              "finalMeanRelativeDeviation": 0.007275151302032308,
+              "finalMaxRelativeDeviation": 0.0072751513020324066,
+              "finalSpreadOverCenterRatio": 0.014550302604064615
+            },
+            {
+              "centerMeters": 14.754765013030617,
+              "count": 2,
+              "clusterShareOfTotalDeltas": 0.004008016032064128,
+              "minMeters": 14.687176119458236,
+              "maxMeters": 14.822353906602999,
+              "spreadMeters": 0.13517778714476236,
+              "meanInsertionRelativeDeviation": 0.0046018984876770395,
+              "maxInsertionRelativeDeviation": 0.009203796975354079,
+              "meanInsertionAbsoluteDeviationMeters": 0.06758889357238118,
+              "maxInsertionAbsoluteDeviationMeters": 0.13517778714476236,
+              "finalMeanAbsoluteDeviationMeters": 0.06758889357238118,
+              "finalMaxAbsoluteDeviationMeters": 0.06758889357238118,
+              "finalMeanRelativeDeviation": 0.004580818028121105,
+              "finalMaxRelativeDeviation": 0.004580818028121105,
+              "finalSpreadOverCenterRatio": 0.00916163605624221
+            },
+            {
+              "centerMeters": 1.0239503036286597,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 1.0239503036286597,
+              "maxMeters": 1.0239503036286597,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 1.106155912201099,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 1.106155912201099,
+              "maxMeters": 1.106155912201099,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 1.2557185576114165,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 1.2557185576114165,
+              "maxMeters": 1.2557185576114165,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 1.5643265739146355,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 1.5643265739146355,
+              "maxMeters": 1.5643265739146355,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 1.7901544949350414,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 1.7901544949350414,
+              "maxMeters": 1.7901544949350414,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 2.061376901314371,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 2.061376901314371,
+              "maxMeters": 2.061376901314371,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 2.1148763534404353,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 2.1148763534404353,
+              "maxMeters": 2.1148763534404353,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 2.234432759347266,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 2.234432759347266,
+              "maxMeters": 2.234432759347266,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 2.448687017386712,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 2.448687017386712,
+              "maxMeters": 2.448687017386712,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 2.731892001170082,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 2.731892001170082,
+              "maxMeters": 2.731892001170082,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 3.8169862722569383,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 3.8169862722569383,
+              "maxMeters": 3.8169862722569383,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerMeters": 15.071394031238428,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.002004008016032064,
+              "minMeters": 15.071394031238428,
+              "maxMeters": 15.071394031238428,
+              "spreadMeters": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationMeters": 0,
+              "maxInsertionAbsoluteDeviationMeters": 0,
+              "finalMeanAbsoluteDeviationMeters": 0,
+              "finalMaxAbsoluteDeviationMeters": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            }
+          ]
+        },
+        "normalization": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 499,
+          "sortedClusterCount": 60,
+          "sequentialClusterCount": 480,
+          "meanFinalAbsoluteDeviationMeters": 0.06767215201228631,
+          "maxFinalAbsoluteDeviationMeters": 0.3058564553583807,
+          "meanFinalRelativeDeviation": 0.007603178069967646,
+          "maxFinalRelativeDeviation": 0.03319509275729551,
+          "sortedClusterCountOverTotalDeltasRatio": 0.12024048096192384,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.9619238476953907,
+          "sequentialOverSortedClusterCountRatio": 8,
+          "nonZeroFinalDeviationCount": 464,
+          "zeroFinalDeviationCount": 35
+        },
+        "timeConditionedDeltaCount": 463
       }
     },
     "motion": {
@@ -688,6 +1778,68 @@
         "meanSpeedMps": 3.9773202278187925,
         "medianSpeedMps": 4.01415972376696,
         "maxSpeedMps": 14.822353906602999
+      }
+    },
+    "elevation": {
+      "totalPointsEvaluated": 500,
+      "validElevationPointCount": 500,
+      "parameters": {
+        "validFloorM": -500,
+        "validCeilingM": 9500
+      },
+      "channelStatistics": {
+        "minEle": 100,
+        "maxEle": 100,
+        "elevationSpanM": 0,
+        "firstValidEle": 100,
+        "firstValidEleIndex": 0,
+        "lastValidEle": 100,
+        "lastValidEleIndex": 499
+      },
+      "missing": {
+        "pointCount": 0,
+        "pointCountOverTotalPointsRatio": 0,
+        "maxBlockLength": 0,
+        "blocks": [],
+        "isolatedPointCount": 0,
+        "isolatedPointEvents": []
+      },
+      "outOfBounds": {
+        "pointCount": 0,
+        "pointCountOverTotalPointsRatio": 0,
+        "maxBlockLength": 0,
+        "blocks": [],
+        "isolatedPointCount": 0,
+        "isolatedPointEvents": []
+      },
+      "adjacentDuplicate": {
+        "pointCount": 499,
+        "pointCountOverTotalPointsRatio": 0.998,
+        "maxBlockLength": 499,
+        "blocks": [
+          {
+            "startIndex": 1,
+            "endIndex": 499,
+            "length": 499,
+            "value": 100
+          }
+        ],
+        "isolatedPointCount": 0,
+        "isolatedPointEvents": []
+      },
+      "consecutiveDeltas": {
+        "pairCount": 499,
+        "skippedPairsDueToMissingOrOob": 0,
+        "zeroDeltaCount": 499,
+        "maxPositiveDeltaM": null,
+        "maxNegativeDeltaM": null,
+        "maxAbsoluteDeltaM": null
+      },
+      "coPresenceWithTime": {
+        "pointsWithBothValidEleAndParseableTime": 475,
+        "pointsWithValidEleButNoTime": 25,
+        "pointsWithParseableTimeButNoEle": 0,
+        "consecutivePairsWithBothValidEleAndPositiveDt": 438
       }
     }
   }

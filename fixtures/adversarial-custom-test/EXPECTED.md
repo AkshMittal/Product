@@ -29,7 +29,7 @@ These are assertion targets for each adversarial GPX case.
 ## adv-05-alternating-backtracking
 - Title: Alternating forward/backtracking
 - Why: Backtracking points should be detected repeatedly without forced block inflation.
-- expect: Temporal backtracking count equals 3 [backtracking eq 3]
+- expect: belowAnchor tag count equals 3 (each point is behind the monotonic high-water mark) [backtracking eq 3]
 - expect: Motion backward pair count equals 3 [motionBackward eq 3]
 
 ## adv-06-large-forward-jump
@@ -115,16 +115,12 @@ These are assertion targets for each adversarial GPX case.
 ## adv-18-duplicate-singletons
 - Title: Duplicate singletons vs duplicate blocks
 - Why: Isolated duplicate events should appear in singleton fields.
-- expect: Duplicate count is 2 [duplicateTs eq 2]
-- expect: Duplicate singleton count is 2 [duplicateSingles eq 2]
-- expect: No duplicate block of length >1 [duplicateBlocks eq 0]
+- expect: adjacentDuplicate tag count is 2 (two isolated adjacent-duplicate events) [duplicateTs eq 2]
 
 ## adv-19-missing-singletons-and-block
 - Title: Missing singleton and block split
 - Why: Ensures single-point missing anomalies are not hidden by block summaries.
-- expect: Three missing timestamps total [missingTs eq 3]
-- expect: One missing block exists [missingBlocks eq 1]
-- expect: One missing singleton remains visible [missingSingles eq 1]
+- expect: Three missing timestamp tags total (block-level grouping is downstream concern) [missingTs eq 3]
 
 ## adv-20-seeded-random-walk
 - Title: Seeded random-walk fuzz
@@ -132,3 +128,42 @@ These are assertion targets for each adversarial GPX case.
 - expect: Some positive deltas collected [positiveDeltas atLeast 50]
 - expect: At least one temporal anomaly detected [missingTs atLeast 1]
 - expect: No invalid-distance rejection explosion [motionInvalidDistance eq 0]
+
+## adv-21-nonadjacent-repeat-streamwide
+- Title: Non-adjacent repeat detected stream-wide
+- Why: A timestamp value that reappears after intervening valid points should be tagged nonAdjacentRepeat, not adjacentDuplicate. Must also receive belowAnchor and belowPrevValid since the repeat is behind the current high-water mark.
+- expect: Exactly one nonAdjacentRepeat tag (T+10 reappears after T+20, T+30) [nonAdjacentRepeatCount eq 1]
+- expect: Exactly one belowAnchor tag (T+10 < anchor=T+30) [backtracking eq 1]
+- expect: Exactly one belowPrevValid tag (T+10 < prevValid=T+30) [belowPrevValidCount eq 1]
+- expect: No adjacentDuplicate tags [duplicateTs eq 0]
+
+## adv-22-locally-recovering-backtrack
+- Title: Locally recovering backtrack: belowAnchor without belowPrevValid
+- Why: After a drop below the anchor, a sequence progressing forward locally is still belowAnchor but is NOT belowPrevValid. Only the initial drop point is belowPrevValid. Tests the tag distinction between 'still in the hole' vs 'actively digging'.
+- expect: Four points tagged belowAnchor (T+60,70,80,90 all < anchor=T+100) [backtracking eq 4]
+- expect: Only one point tagged belowPrevValid (T+60 is the only drop below its predecessor) [belowPrevValidCount eq 1]
+- expect: Four annotation entries total [annotationCount eq 4]
+
+## adv-23-adjacent-dup-below-anchor
+- Title: Adjacent duplicate that is also below anchor gets both tags
+- Why: Tags are non-exclusive. An adjacent duplicate occurring during a backtracking block should simultaneously carry adjacentDuplicate and belowAnchor, but NOT belowPrevValid (equal, not strictly less) and NOT nonAdjacentRepeat (is adjacent).
+- expect: One adjacentDuplicate tag (T+50 pos3) [duplicateTs eq 1]
+- expect: Two belowAnchor tags (both T+50 occurrences < anchor=T+100) [backtracking eq 2]
+- expect: One belowPrevValid tag (T+50 pos2 only; pos3 equals prevValid, not strictly less) [belowPrevValidCount eq 1]
+- expect: No nonAdjacentRepeat tags (adjacent duplicate excluded from that check) [nonAdjacentRepeatCount eq 0]
+
+## adv-24-anchor-no-advance-on-dup
+- Title: Anchor does not advance during adjacent duplicate run
+- Why: The monotonic anchor only advances on genuine forward progress. A run of adjacent duplicates must not move the anchor. A belowAnchor point after the dup-run must still be detected correctly.
+- expect: Two adjacentDuplicate tags (T+50 pos2 and pos3) [duplicateTs eq 2]
+- expect: One belowAnchor tag (T+30 < anchor=T+50, anchor held steady through dup run) [backtracking eq 1]
+- expect: One belowPrevValid tag (T+30 < prevValid=T+50) [belowPrevValidCount eq 1]
+
+## adv-25-multi-tag-convergence
+- Title: Single point receives nonAdjacentRepeat + belowAnchor + belowPrevValid simultaneously
+- Why: A non-adjacent repeat that falls below the anchor and below its predecessor should carry all three tags in a single annotation object.
+- expect: One nonAdjacentRepeat tag [nonAdjacentRepeatCount eq 1]
+- expect: One belowAnchor tag [backtracking eq 1]
+- expect: One belowPrevValid tag [belowPrevValidCount eq 1]
+- expect: No adjacentDuplicate tags (the non-adjacent repeat is not the immediately preceding point) [duplicateTs eq 0]
+- expect: Exactly one annotation entry [annotationCount eq 1]

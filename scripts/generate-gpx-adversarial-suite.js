@@ -119,18 +119,14 @@ function metric(payload) {
     totalPoints: ingestion.counts ? ingestion.counts.totalPointCount : null,
     hasMultiplePointTypes: ingestion.context ? ingestion.context.hasMultiplePointTypes : null,
     rejectedCoords: ingestion.counts ? ingestion.counts.rejectedPointCount : null,
-    missingTs: temporal.temporalOrder && temporal.temporalOrder.missing ? temporal.temporalOrder.missing.pointCount : null,
-    missingBlocks: temporal.temporalOrder && temporal.temporalOrder.missing ? temporal.temporalOrder.missing.blocks.length : null,
-    missingSingles: temporal.temporalOrder && temporal.temporalOrder.missing ? temporal.temporalOrder.missing.isolatedPointCount : null,
-    unparsableTs: temporal.temporalOrder && temporal.temporalOrder.unparsable ? temporal.temporalOrder.unparsable.pointCount : null,
-    unparsableBlocks: temporal.temporalOrder && temporal.temporalOrder.unparsable ? temporal.temporalOrder.unparsable.blocks.length : null,
-    unparsableSingles: temporal.temporalOrder && temporal.temporalOrder.unparsable ? temporal.temporalOrder.unparsable.isolatedPointCount : null,
-    duplicateTs: temporal.temporalOrder && temporal.temporalOrder.duplicate ? temporal.temporalOrder.duplicate.pointCount : null,
-    duplicateBlocks: temporal.temporalOrder && temporal.temporalOrder.duplicate ? temporal.temporalOrder.duplicate.blocks.length : null,
-    duplicateSingles: temporal.temporalOrder && temporal.temporalOrder.duplicate ? temporal.temporalOrder.duplicate.isolatedPointCount : null,
-    backtracking: temporal.temporalOrder && temporal.temporalOrder.backtracking ? temporal.temporalOrder.backtracking.pointCount : null,
-    backtrackingBlocks: temporal.temporalOrder && temporal.temporalOrder.backtracking ? temporal.temporalOrder.backtracking.blocks.length : null,
-    backtrackingSingles: temporal.temporalOrder && temporal.temporalOrder.backtracking ? temporal.temporalOrder.backtracking.isolatedPointCount : null,
+    // Temporal: reads from tag-based schema (tagCounts)
+    missingTs: temporal.tagCounts ? temporal.tagCounts.missing : null,
+    unparsableTs: temporal.tagCounts ? temporal.tagCounts.unparsable : null,
+    duplicateTs: temporal.tagCounts ? temporal.tagCounts.adjacentDuplicate : null,
+    backtracking: temporal.tagCounts ? temporal.tagCounts.belowAnchor : null,
+    belowPrevValidCount: temporal.tagCounts ? temporal.tagCounts.belowPrevValid : null,
+    nonAdjacentRepeatCount: temporal.tagCounts ? temporal.tagCounts.nonAdjacentRepeat : null,
+    annotationCount: temporal.pointAnnotations ? temporal.pointAnnotations.length : null,
     positiveDeltas: sampling.time && sampling.time.deltaStatistics ? sampling.time.deltaStatistics.positiveDeltaCount : null,
     clusterCountSorted: sampling.time && sampling.time.clustering ? sampling.time.clustering.sortedClusterCount : null,
     maxDeltaMs: sampling.time && sampling.time.deltaStatistics ? sampling.time.deltaStatistics.maxMs : null,
@@ -366,7 +362,7 @@ function buildCases() {
         return pts;
       },
       expectedChecks: [
-        { description: "Temporal backtracking count equals 3", key: "backtracking", kind: "eq", value: 3 },
+        { description: "belowAnchor tag count equals 3 (each point is behind the monotonic high-water mark)", key: "backtracking", kind: "eq", value: 3 },
         { description: "Motion backward pair count equals 3", key: "motionBackward", kind: "eq", value: 3 }
       ]
     },
@@ -674,9 +670,7 @@ function buildCases() {
         return pts;
       },
       expectedChecks: [
-        { description: "Duplicate count is 2", key: "duplicateTs", kind: "eq", value: 2 },
-        { description: "Duplicate singleton count is 2", key: "duplicateSingles", kind: "eq", value: 2 },
-        { description: "No duplicate block of length >1", key: "duplicateBlocks", kind: "eq", value: 0 }
+        { description: "adjacentDuplicate tag count is 2 (two isolated adjacent-duplicate events)", key: "duplicateTs", kind: "eq", value: 2 }
       ]
     },
     {
@@ -699,9 +693,7 @@ function buildCases() {
         return pts;
       },
       expectedChecks: [
-        { description: "Three missing timestamps total", key: "missingTs", kind: "eq", value: 3 },
-        { description: "One missing block exists", key: "missingBlocks", kind: "eq", value: 1 },
-        { description: "One missing singleton remains visible", key: "missingSingles", kind: "eq", value: 1 }
+        { description: "Three missing timestamp tags total (block-level grouping is downstream concern)", key: "missingTs", kind: "eq", value: 3 }
       ]
     },
     {
@@ -742,6 +734,153 @@ function buildCases() {
         { description: "Some positive deltas collected", key: "positiveDeltas", kind: "atLeast", value: 50 },
         { description: "At least one temporal anomaly detected", key: "missingTs", kind: "atLeast", value: 1 },
         { description: "No invalid-distance rejection explosion", key: "motionInvalidDistance", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-21-nonadjacent-repeat-streamwide",
+      title: "Non-adjacent repeat detected stream-wide",
+      rationale: "A timestamp value that reappears after intervening valid points should be tagged nonAdjacentRepeat, not adjacentDuplicate. Must also receive belowAnchor and belowPrevValid since the repeat is behind the current high-water mark.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 6,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.0001,
+          lonStep: 0.00005,
+          baseIso,
+          dtSec: 10
+        });
+        // Stream: T+0, T+10, T+20, T+30, T+10 (non-adjacent repeat), T+40
+        const absoluteSec = [0, 10, 20, 30, 10, 40];
+        for (let i = 0; i < pts.length; i++) {
+          pts[i].time = isoAt(baseIso, absoluteSec[i]);
+        }
+        return pts;
+      },
+      expectedChecks: [
+        { description: "Exactly one nonAdjacentRepeat tag (T+10 reappears after T+20, T+30)", key: "nonAdjacentRepeatCount", kind: "eq", value: 1 },
+        { description: "Exactly one belowAnchor tag (T+10 < anchor=T+30)", key: "backtracking", kind: "eq", value: 1 },
+        { description: "Exactly one belowPrevValid tag (T+10 < prevValid=T+30)", key: "belowPrevValidCount", kind: "eq", value: 1 },
+        { description: "No adjacentDuplicate tags", key: "duplicateTs", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-22-locally-recovering-backtrack",
+      title: "Locally recovering backtrack: belowAnchor without belowPrevValid",
+      rationale: "After a drop below the anchor, a sequence progressing forward locally is still belowAnchor but is NOT belowPrevValid. Only the initial drop point is belowPrevValid. Tests the tag distinction between 'still in the hole' vs 'actively digging'.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 7,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.0001,
+          lonStep: 0.00005,
+          baseIso,
+          dtSec: 10
+        });
+        // Stream: T+0, T+100, T+60, T+70, T+80, T+90, T+110
+        // T+60 drops below anchor=100 and below prevValid=100 → both tags
+        // T+70,80,90 are still belowAnchor=100 but each is above its prevValid → belowAnchor only
+        const absoluteSec = [0, 100, 60, 70, 80, 90, 110];
+        for (let i = 0; i < pts.length; i++) {
+          pts[i].time = isoAt(baseIso, absoluteSec[i]);
+        }
+        return pts;
+      },
+      expectedChecks: [
+        { description: "Four points tagged belowAnchor (T+60,70,80,90 all < anchor=T+100)", key: "backtracking", kind: "eq", value: 4 },
+        { description: "Only one point tagged belowPrevValid (T+60 is the only drop below its predecessor)", key: "belowPrevValidCount", kind: "eq", value: 1 },
+        { description: "Four annotation entries total", key: "annotationCount", kind: "eq", value: 4 }
+      ]
+    },
+    {
+      id: "adv-23-adjacent-dup-below-anchor",
+      title: "Adjacent duplicate that is also below anchor gets both tags",
+      rationale: "Tags are non-exclusive. An adjacent duplicate occurring during a backtracking block should simultaneously carry adjacentDuplicate and belowAnchor, but NOT belowPrevValid (equal, not strictly less) and NOT nonAdjacentRepeat (is adjacent).",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 5,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.0001,
+          lonStep: 0.00005,
+          baseIso,
+          dtSec: 10
+        });
+        // Stream: T+0, T+100, T+50, T+50, T+120
+        // T+50 (pos2): belowAnchor + belowPrevValid
+        // T+50 (pos3): adjacentDuplicate + belowAnchor (NOT belowPrevValid: equal, not strictly less)
+        const absoluteSec = [0, 100, 50, 50, 120];
+        for (let i = 0; i < pts.length; i++) {
+          pts[i].time = isoAt(baseIso, absoluteSec[i]);
+        }
+        return pts;
+      },
+      expectedChecks: [
+        { description: "One adjacentDuplicate tag (T+50 pos3)", key: "duplicateTs", kind: "eq", value: 1 },
+        { description: "Two belowAnchor tags (both T+50 occurrences < anchor=T+100)", key: "backtracking", kind: "eq", value: 2 },
+        { description: "One belowPrevValid tag (T+50 pos2 only; pos3 equals prevValid, not strictly less)", key: "belowPrevValidCount", kind: "eq", value: 1 },
+        { description: "No nonAdjacentRepeat tags (adjacent duplicate excluded from that check)", key: "nonAdjacentRepeatCount", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-24-anchor-no-advance-on-dup",
+      title: "Anchor does not advance during adjacent duplicate run",
+      rationale: "The monotonic anchor only advances on genuine forward progress. A run of adjacent duplicates must not move the anchor. A belowAnchor point after the dup-run must still be detected correctly.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 5,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.0001,
+          lonStep: 0.00005,
+          baseIso,
+          dtSec: 10
+        });
+        // Stream: T+0, T+50, T+50, T+50, T+30
+        // Three adjacent dups at T+50; anchor stays at T+50
+        // T+30 < anchor=T+50 → belowAnchor
+        const absoluteSec = [0, 50, 50, 50, 30];
+        for (let i = 0; i < pts.length; i++) {
+          pts[i].time = isoAt(baseIso, absoluteSec[i]);
+        }
+        return pts;
+      },
+      expectedChecks: [
+        { description: "Two adjacentDuplicate tags (T+50 pos2 and pos3)", key: "duplicateTs", kind: "eq", value: 2 },
+        { description: "One belowAnchor tag (T+30 < anchor=T+50, anchor held steady through dup run)", key: "backtracking", kind: "eq", value: 1 },
+        { description: "One belowPrevValid tag (T+30 < prevValid=T+50)", key: "belowPrevValidCount", kind: "eq", value: 1 }
+      ]
+    },
+    {
+      id: "adv-25-multi-tag-convergence",
+      title: "Single point receives nonAdjacentRepeat + belowAnchor + belowPrevValid simultaneously",
+      rationale: "A non-adjacent repeat that falls below the anchor and below its predecessor should carry all three tags in a single annotation object.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 5,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.0001,
+          lonStep: 0.00005,
+          baseIso,
+          dtSec: 10
+        });
+        // Stream: T+0, T+50, T+60, T+50, T+70
+        // T+50 pos3: not adjacent (prev=T+60), seen before at pos1 → nonAdjacentRepeat
+        //            T+50 < anchor=T+60 → belowAnchor; T+50 < prevValid=T+60 → belowPrevValid
+        const absoluteSec = [0, 50, 60, 50, 70];
+        for (let i = 0; i < pts.length; i++) {
+          pts[i].time = isoAt(baseIso, absoluteSec[i]);
+        }
+        return pts;
+      },
+      expectedChecks: [
+        { description: "One nonAdjacentRepeat tag", key: "nonAdjacentRepeatCount", kind: "eq", value: 1 },
+        { description: "One belowAnchor tag", key: "backtracking", kind: "eq", value: 1 },
+        { description: "One belowPrevValid tag", key: "belowPrevValidCount", kind: "eq", value: 1 },
+        { description: "No adjacentDuplicate tags (the non-adjacent repeat is not the immediately preceding point)", key: "duplicateTs", kind: "eq", value: 0 },
+        { description: "Exactly one annotation entry", key: "annotationCount", kind: "eq", value: 1 }
       ]
     }
   ];
@@ -788,10 +927,9 @@ function renderReport(results) {
     }
     lines.push("- Key metrics:");
     lines.push(`  - totalPoints=${r.metrics.totalPoints}, rejectedCoords=${r.metrics.rejectedCoords}, hasMultiplePointTypes=${String(r.metrics.hasMultiplePointTypes)}`);
-    lines.push(`  - missingTs=${r.metrics.missingTs}, missingBlocks=${r.metrics.missingBlocks}, missingSingles=${r.metrics.missingSingles}`);
-    lines.push(`  - unparsableTs=${r.metrics.unparsableTs}, unparsableBlocks=${r.metrics.unparsableBlocks}, unparsableSingles=${r.metrics.unparsableSingles}`);
-    lines.push(`  - duplicateTs=${r.metrics.duplicateTs}, duplicateBlocks=${r.metrics.duplicateBlocks}, duplicateSingles=${r.metrics.duplicateSingles}`);
-    lines.push(`  - backtracking=${r.metrics.backtracking}, backtrackingBlocks=${r.metrics.backtrackingBlocks}, backtrackingSingles=${r.metrics.backtrackingSingles}`);
+    lines.push(`  - missing=${r.metrics.missingTs}, unparsable=${r.metrics.unparsableTs}`);
+    lines.push(`  - adjacentDuplicate=${r.metrics.duplicateTs}, belowAnchor=${r.metrics.backtracking}, belowPrevValid=${r.metrics.belowPrevValidCount}, nonAdjacentRepeat=${r.metrics.nonAdjacentRepeatCount}`);
+    lines.push(`  - annotationCount=${r.metrics.annotationCount}`);
     lines.push(`  - positiveDeltas=${r.metrics.positiveDeltas}, clusterCountSorted=${r.metrics.clusterCountSorted}, maxDeltaMs=${r.metrics.maxDeltaMs}`);
     lines.push(`  - motionForwardValid=${r.metrics.motionForwardValid}, motionBackward=${r.metrics.motionBackward}, motionZeroDelta=${r.metrics.motionZeroDelta}, motionInvalidDistance=${r.metrics.motionInvalidDistance}, motionInvalidTimeRatio=${r.metrics.motionInvalidTimeRatio}, motionTotalValidDistanceMeters=${r.metrics.motionTotalValidDistanceMeters}`);
     lines.push("");

@@ -1,9 +1,9 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-02T10:43:31.609Z",
+    "generatedAtUtc": "2026-04-02T10:45:04.978Z",
     "source": {
-      "fileName": "adv-09-mixed-point-types.gpx"
+      "fileName": "adv-24-anchor-no-advance-on-dup.gpx"
     },
     "summary": {
       "totalPointCount": 5
@@ -16,13 +16,13 @@
         "validPointCount": 5,
         "rejectedPointCount": 0,
         "pointTypeCounts": {
-          "wpt": 1,
-          "rtept": 2,
-          "trkpt": 2
+          "wpt": 0,
+          "rtept": 0,
+          "trkpt": 5
         }
       },
       "context": {
-        "hasMultiplePointTypes": true,
+        "hasMultiplePointTypes": false,
         "hasAnyTimestampValues": true
       },
       "rejections": {
@@ -32,26 +32,54 @@
     "temporal": {
       "totalPointsEvaluated": 5,
       "session": {
-        "rawSessionDurationSec": 20,
+        "rawSessionDurationSec": 30,
         "parseableTimestampPointCount": 5
       },
       "tagCounts": {
         "missing": 0,
         "unparsable": 0,
-        "adjacentDuplicate": 0,
-        "belowAnchor": 0,
-        "belowPrevValid": 0,
+        "adjacentDuplicate": 2,
+        "belowAnchor": 1,
+        "belowPrevValid": 1,
         "nonAdjacentRepeat": 0
       },
       "tagIndex": {
         "missing": [],
         "unparsable": [],
-        "adjacentDuplicate": [],
-        "belowAnchor": [],
-        "belowPrevValid": [],
+        "adjacentDuplicate": [
+          2,
+          3
+        ],
+        "belowAnchor": [
+          4
+        ],
+        "belowPrevValid": [
+          4
+        ],
         "nonAdjacentRepeat": []
       },
-      "pointAnnotations": []
+      "pointAnnotations": [
+        {
+          "gpxIndex": 2,
+          "timestampMs": 1771027250000,
+          "anchorMs": 1771027250000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 3,
+          "timestampMs": 1771027250000,
+          "anchorMs": 1771027250000,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 4,
+          "timestampMs": 1771027230000,
+          "anchorMs": 1771027250000,
+          "belowAnchor": true,
+          "depthFromAnchorMs": 20000,
+          "belowPrevValid": true
+        }
+      ]
     },
     "sampling": {
       "time": {
@@ -60,34 +88,50 @@
           "hasAnyPositiveTimeDelta": true,
           "timestampedPointsCount": 5,
           "consecutiveTimestampPairsCount": 4,
-          "positiveTimeDeltaCount": 4,
+          "positiveTimeDeltaCount": 1,
           "rejections": {
             "nonPositiveTimeDeltaPairs": {
-              "nonPositivePairCount": 0,
-              "events": []
+              "nonPositivePairCount": 3,
+              "events": [
+                {
+                  "fromIndex": 1,
+                  "toIndex": 2,
+                  "delta": 0
+                },
+                {
+                  "fromIndex": 2,
+                  "toIndex": 3,
+                  "delta": 0
+                },
+                {
+                  "fromIndex": 3,
+                  "toIndex": 4,
+                  "delta": -20000
+                }
+              ]
             }
           }
         },
         "deltaStatistics": {
-          "positiveDeltaCount": 4,
-          "minMs": 5000,
-          "maxMs": 5000,
-          "medianMs": 5000
+          "positiveDeltaCount": 1,
+          "minMs": 50000,
+          "maxMs": 50000,
+          "medianMs": 50000
         },
         "clustering": {
           "insertionRelativeThreshold": 0.02,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
-          "sortedClusterCountOverTotalDeltasRatio": 0.25,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.25,
+          "sortedClusterCountOverTotalDeltasRatio": 1,
+          "sequentialClusterCountOverTotalDeltasRatio": 1,
           "sequentialOverSortedClusterCountRatio": 1,
           "clusters": [
             {
-              "centerSec": 5,
-              "count": 4,
+              "centerSec": 50,
+              "count": 1,
               "clusterShareOfTotalDeltas": 1,
-              "minSec": 5,
-              "maxSec": 5,
+              "minSec": 50,
+              "maxSec": 50,
               "spreadSec": 0,
               "meanInsertionRelativeDeviation": 0,
               "maxInsertionRelativeDeviation": 0,
@@ -103,18 +147,18 @@
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
-          "totalDeltaCount": 4,
+          "totalDeltaCount": 1,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
           "meanFinalAbsoluteDeviationSec": 0,
           "maxFinalAbsoluteDeviationSec": 0,
           "meanFinalRelativeDeviation": 0,
           "maxFinalRelativeDeviation": 0,
-          "sortedClusterCountOverTotalDeltasRatio": 0.25,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.25,
+          "sortedClusterCountOverTotalDeltasRatio": 1,
+          "sequentialClusterCountOverTotalDeltasRatio": 1,
           "sequentialOverSortedClusterCountRatio": 1,
           "nonZeroFinalDeviationCount": 0,
-          "zeroFinalDeviationCount": 4
+          "zeroFinalDeviationCount": 1
         }
       },
       "distance": {
@@ -128,9 +172,9 @@
         },
         "deltaStatistics": {
           "deltaCount": 4,
-          "minMeters": 15.525979292495805,
-          "maxMeters": 15.525988413523885,
-          "medianMeters": 15.525983852494914
+          "minMeters": 12.36916917515021,
+          "maxMeters": 12.36917203736586,
+          "medianMeters": 12.369170606264955
         },
         "clustering": {
           "insertionRelativeThreshold": 0.02,
@@ -142,21 +186,21 @@
           "sequentialOverSortedClusterCountRatio": 1,
           "clusters": [
             {
-              "centerMeters": 15.525983852494914,
+              "centerMeters": 12.369170606264955,
               "count": 4,
               "clusterShareOfTotalDeltas": 1,
-              "minMeters": 15.525979292495805,
-              "maxMeters": 15.525988413523885,
-              "spreadMeters": 0.000009121028080372184,
-              "meanInsertionRelativeDeviation": 2.203095979603441e-7,
-              "maxInsertionRelativeDeviation": 3.917135498394814e-7,
-              "meanInsertionAbsoluteDeviationMeters": 0.0000034205226651096154,
-              "maxInsertionAbsoluteDeviationMeters": 0.0000060817376539290535,
-              "finalMeanAbsoluteDeviationMeters": 0.000003040611361804224,
-              "finalMaxAbsoluteDeviationMeters": 0.000004561028971394876,
-              "finalMeanRelativeDeviation": 1.9584017287996985e-7,
-              "finalMaxRelativeDeviation": 2.9376746844045903e-7,
-              "finalSpreadOverCenterRatio": 5.874686053410071e-7
+              "minMeters": 12.36916917515021,
+              "maxMeters": 12.36917203736586,
+              "spreadMeters": 0.0000028622156502677853,
+              "meanInsertionRelativeDeviation": 8.677475972086859e-8,
+              "maxInsertionRelativeDeviation": 1.54265551252981e-7,
+              "meanInsertionAbsoluteDeviationMeters": 0.0000010733317337141557,
+              "maxInsertionAbsoluteDeviationMeters": 0.0000019081368485274197,
+              "finalMeanAbsoluteDeviationMeters": 9.540718837186546e-7,
+              "finalMaxAbsoluteDeviationMeters": 0.0000014311147449319606,
+              "finalMeanRelativeDeviation": 7.713305233541038e-8,
+              "finalMaxRelativeDeviation": 1.157001379063447e-7,
+              "finalSpreadOverCenterRatio": 2.3139915693442534e-7
             }
           ]
         },
@@ -165,50 +209,70 @@
           "totalDeltaCount": 4,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
-          "meanFinalAbsoluteDeviationMeters": 0.000003040611361804224,
-          "maxFinalAbsoluteDeviationMeters": 0.000004561028971394876,
-          "meanFinalRelativeDeviation": 1.9584017287996985e-7,
-          "maxFinalRelativeDeviation": 2.9376746844045903e-7,
+          "meanFinalAbsoluteDeviationMeters": 9.540718837186546e-7,
+          "maxFinalAbsoluteDeviationMeters": 0.0000014311147449319606,
+          "meanFinalRelativeDeviation": 7.713305233541038e-8,
+          "maxFinalRelativeDeviation": 1.157001379063447e-7,
           "sortedClusterCountOverTotalDeltasRatio": 0.25,
           "sequentialClusterCountOverTotalDeltasRatio": 0.25,
           "sequentialOverSortedClusterCountRatio": 1,
           "nonZeroFinalDeviationCount": 4,
           "zeroFinalDeviationCount": 0
         },
-        "timeConditionedDeltaCount": 4
+        "timeConditionedDeltaCount": 1
       }
     },
     "motion": {
       "evaluatedPairs": {
         "consecutivePairCount": 4,
-        "forwardValidPairCount": 4
+        "forwardValidPairCount": 1
       },
       "rejections": {
         "missingTimestampPairCount": 0,
         "unparsableTimestampPairCount": 0,
         "nonFiniteDistancePairCount": 0,
-        "backwardTimePairCount": 0,
-        "zeroTimeDeltaPairCount": 0,
+        "backwardTimePairCount": 1,
+        "zeroTimeDeltaPairCount": 2,
         "events": {
           "missingTimestamp": [],
           "unparsableTimestamp": [],
           "nonFiniteDistance": [],
-          "backward": [],
-          "zeroTimeDelta": []
+          "backward": [
+            {
+              "fromIndex": 3,
+              "toIndex": 4,
+              "dtSec": -20,
+              "ddMeters": 12.36916917515021
+            }
+          ],
+          "zeroTimeDelta": [
+            {
+              "fromIndex": 1,
+              "toIndex": 2,
+              "dtSec": 0,
+              "ddMeters": 12.369171083300897
+            },
+            {
+              "fromIndex": 2,
+              "toIndex": 3,
+              "dtSec": 0,
+              "ddMeters": 12.369170129229012
+            }
+          ]
         }
       },
       "time": {
-        "validMotionTimeSeconds": 20,
-        "invalidTimeSeconds": 0,
-        "invalidTimeShareOfEvaluatedTime": 0
+        "validMotionTimeSeconds": 50,
+        "invalidTimeSeconds": 20,
+        "invalidTimeShareOfEvaluatedTime": 0.2857142857142857
       },
       "distance": {
-        "totalForwardValidDistanceMeters": 62.103935411009516
+        "totalForwardValidDistanceMeters": 12.36917203736586
       },
       "speed": {
-        "meanSpeedMps": 3.1051967705504757,
-        "medianSpeedMps": 3.105196770498983,
-        "maxSpeedMps": 3.105197682704777
+        "meanSpeedMps": 0.24738344074731722,
+        "medianSpeedMps": 0.24738344074731722,
+        "maxSpeedMps": 0.24738344074731722
       }
     },
     "elevation": {
@@ -220,11 +284,11 @@
       },
       "channelStatistics": {
         "minEle": 100,
-        "maxEle": 104,
-        "elevationSpanM": 4,
+        "maxEle": 100,
+        "elevationSpanM": 0,
         "firstValidEle": 100,
         "firstValidEleIndex": 0,
-        "lastValidEle": 104,
+        "lastValidEle": 100,
         "lastValidEleIndex": 4
       },
       "missing": {
@@ -244,26 +308,33 @@
         "isolatedPointEvents": []
       },
       "adjacentDuplicate": {
-        "pointCount": 0,
-        "pointCountOverTotalPointsRatio": 0,
-        "maxBlockLength": 0,
-        "blocks": [],
+        "pointCount": 4,
+        "pointCountOverTotalPointsRatio": 0.8,
+        "maxBlockLength": 4,
+        "blocks": [
+          {
+            "startIndex": 1,
+            "endIndex": 4,
+            "length": 4,
+            "value": 100
+          }
+        ],
         "isolatedPointCount": 0,
         "isolatedPointEvents": []
       },
       "consecutiveDeltas": {
         "pairCount": 4,
         "skippedPairsDueToMissingOrOob": 0,
-        "zeroDeltaCount": 0,
-        "maxPositiveDeltaM": 1,
+        "zeroDeltaCount": 4,
+        "maxPositiveDeltaM": null,
         "maxNegativeDeltaM": null,
-        "maxAbsoluteDeltaM": 1
+        "maxAbsoluteDeltaM": null
       },
       "coPresenceWithTime": {
         "pointsWithBothValidEleAndParseableTime": 5,
         "pointsWithValidEleButNoTime": 0,
         "pointsWithParseableTimeButNoEle": 0,
-        "consecutivePairsWithBothValidEleAndPositiveDt": 4
+        "consecutivePairsWithBothValidEleAndPositiveDt": 1
       }
     }
   }

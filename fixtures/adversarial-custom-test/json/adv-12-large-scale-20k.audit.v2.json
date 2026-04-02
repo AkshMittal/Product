@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-03-21T11:29:10.514Z",
+    "generatedAtUtc": "2026-04-02T10:45:04.758Z",
     "source": {
       "fileName": "adv-12-large-scale-20k.gpx"
     },
@@ -35,41 +35,23 @@
         "rawSessionDurationSec": 19999,
         "parseableTimestampPointCount": 20000
       },
-      "temporalOrder": {
-        "monotonicForwardCount": 19999,
-        "missing": {
-          "pointCount": 0,
-          "pointCountOverTotalPointsRatio": 0,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 0,
-          "isolatedPointEvents": []
-        },
-        "unparsable": {
-          "pointCount": 0,
-          "pointCountOverTotalPointsRatio": 0,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 0,
-          "isolatedPointEvents": []
-        },
-        "duplicate": {
-          "pointCount": 0,
-          "pointCountOverTotalPointsRatio": 0,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 0,
-          "isolatedPointEvents": []
-        },
-        "backtracking": {
-          "pointCount": 0,
-          "maxDepthFromAnchorMs": null,
-          "maxBlockLength": 0,
-          "blocks": [],
-          "isolatedPointCount": 0,
-          "isolatedPointEvents": []
-        }
-      }
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "adjacentDuplicate": 0,
+        "belowAnchor": 0,
+        "belowPrevValid": 0,
+        "nonAdjacentRepeat": 0
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "adjacentDuplicate": [],
+        "belowAnchor": [],
+        "belowPrevValid": [],
+        "nonAdjacentRepeat": []
+      },
+      "pointAnnotations": []
     },
     "sampling": {
       "time": {
@@ -121,6 +103,7 @@
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 19999,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
           "meanFinalAbsoluteDeviationSec": 0,
@@ -143,12 +126,56 @@
             }
           }
         },
-        "geometryConditioned": {
-          "deltaCount": 19999
+        "deltaStatistics": {
+          "deltaCount": 19999,
+          "minMeters": 0.15525381460481782,
+          "maxMeters": 0.1552598993985143,
+          "medianMeters": 0.1552568581220012
         },
-        "timeConditioned": {
-          "deltaCount": 19999
-        }
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 19999,
+          "sortedClusterCount": 1,
+          "sequentialClusterCount": 1,
+          "sortedClusterCountOverTotalDeltasRatio": 0.00005000250012500625,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.00005000250012500625,
+          "sequentialOverSortedClusterCountRatio": 1,
+          "clusters": [
+            {
+              "centerMeters": 0.1552568581220012,
+              "count": 19999,
+              "clusterShareOfTotalDeltas": 1,
+              "minMeters": 0.15525381460481782,
+              "maxMeters": 0.1552598993985143,
+              "spreadMeters": 0.0000060847936964869564,
+              "meanInsertionRelativeDeviation": 0.000009798467535343158,
+              "maxInsertionRelativeDeviation": 0.000019590637152493218,
+              "meanInsertionAbsoluteDeviationMeters": 0.0000015212693418267016,
+              "maxInsertionAbsoluteDeviationMeters": 0.000003041580766943719,
+              "finalMeanAbsoluteDeviationMeters": 0.000001521193250092526,
+              "finalMaxAbsoluteDeviationMeters": 0.0000030435171833875785,
+              "finalMeanRelativeDeviation": 0.000009797913396503089,
+              "finalMaxRelativeDeviation": 0.00001960310945488782,
+              "finalSpreadOverCenterRatio": 0.00003919178688844464
+            }
+          ]
+        },
+        "normalization": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 19999,
+          "sortedClusterCount": 1,
+          "sequentialClusterCount": 1,
+          "meanFinalAbsoluteDeviationMeters": 0.000001521193250092526,
+          "maxFinalAbsoluteDeviationMeters": 0.0000030435171833875785,
+          "meanFinalRelativeDeviation": 0.000009797913396503089,
+          "maxFinalRelativeDeviation": 0.00001960310945488782,
+          "sortedClusterCountOverTotalDeltasRatio": 0.00005000250012500625,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.00005000250012500625,
+          "sequentialOverSortedClusterCountRatio": 1,
+          "nonZeroFinalDeviationCount": 19998,
+          "zeroFinalDeviationCount": 1
+        },
+        "timeConditionedDeltaCount": 19999
       }
     },
     "motion": {
@@ -182,6 +209,68 @@
         "meanSpeedMps": 0.15525685769485165,
         "medianSpeedMps": 0.1552568581220012,
         "maxSpeedMps": 0.1552598993985143
+      }
+    },
+    "elevation": {
+      "totalPointsEvaluated": 20000,
+      "validElevationPointCount": 20000,
+      "parameters": {
+        "validFloorM": -500,
+        "validCeilingM": 9500
+      },
+      "channelStatistics": {
+        "minEle": 100,
+        "maxEle": 100,
+        "elevationSpanM": 0,
+        "firstValidEle": 100,
+        "firstValidEleIndex": 0,
+        "lastValidEle": 100,
+        "lastValidEleIndex": 19999
+      },
+      "missing": {
+        "pointCount": 0,
+        "pointCountOverTotalPointsRatio": 0,
+        "maxBlockLength": 0,
+        "blocks": [],
+        "isolatedPointCount": 0,
+        "isolatedPointEvents": []
+      },
+      "outOfBounds": {
+        "pointCount": 0,
+        "pointCountOverTotalPointsRatio": 0,
+        "maxBlockLength": 0,
+        "blocks": [],
+        "isolatedPointCount": 0,
+        "isolatedPointEvents": []
+      },
+      "adjacentDuplicate": {
+        "pointCount": 19999,
+        "pointCountOverTotalPointsRatio": 0.99995,
+        "maxBlockLength": 19999,
+        "blocks": [
+          {
+            "startIndex": 1,
+            "endIndex": 19999,
+            "length": 19999,
+            "value": 100
+          }
+        ],
+        "isolatedPointCount": 0,
+        "isolatedPointEvents": []
+      },
+      "consecutiveDeltas": {
+        "pairCount": 19999,
+        "skippedPairsDueToMissingOrOob": 0,
+        "zeroDeltaCount": 19999,
+        "maxPositiveDeltaM": null,
+        "maxNegativeDeltaM": null,
+        "maxAbsoluteDeltaM": null
+      },
+      "coPresenceWithTime": {
+        "pointsWithBothValidEleAndParseableTime": 20000,
+        "pointsWithValidEleButNoTime": 0,
+        "pointsWithParseableTimeButNoEle": 0,
+        "consecutivePairsWithBothValidEleAndPositiveDt": 19999
       }
     }
   }
