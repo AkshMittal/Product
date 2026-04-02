@@ -74,7 +74,7 @@ Path: `audit.sampling.time`
 ### Clustering
 
 - `clustering.insertionRelativeThreshold`
-- `clustering.totalPositiveTimeDeltaCount`
+- `clustering.totalDeltaCount`
 - `clustering.sortedClusterCount`
 - `clustering.sequentialClusterCount`
 - `clustering.sortedClusterCountOverTotalDeltasRatio`
@@ -101,16 +101,86 @@ Per cluster:
 
 ### Normalization
 
+- `normalization.insertionRelativeThreshold`
+- `normalization.totalDeltaCount`
+- `normalization.sortedClusterCount`
+- `normalization.sequentialClusterCount`
 - `normalization.meanFinalAbsoluteDeviationSec`
 - `normalization.maxFinalAbsoluteDeviationSec`
 - `normalization.meanFinalRelativeDeviation`
 - `normalization.maxFinalRelativeDeviation`
-- `normalization.globalFinalMeanAbsoluteDeviationSec`
-- `normalization.globalFinalMaxAbsoluteDeviationSec`
-- `normalization.globalFinalMeanRelativeDeviation`
-- `normalization.globalFinalMaxRelativeDeviation`
+- `normalization.sortedClusterCountOverTotalDeltasRatio`
+- `normalization.sequentialClusterCountOverTotalDeltasRatio`
+- `normalization.sequentialOverSortedClusterCountRatio`
 - `normalization.nonZeroFinalDeviationCount`
 - `normalization.zeroFinalDeviationCount`
+
+## Sampling (distance)
+
+Path: `audit.sampling.distance`
+
+### Pair inspection
+
+- `pairInspection.consecutivePairCount`
+- `pairInspection.rejections.invalidDistance.count`
+
+### Delta statistics
+
+- `deltaStatistics.deltaCount`
+- `deltaStatistics.minMeters`
+- `deltaStatistics.maxMeters`
+- `deltaStatistics.medianMeters`
+
+### Clustering
+
+Operates on all distance deltas (complete population of consecutive spatial steps). `null` if
+no valid distance deltas exist.
+
+- `clustering.insertionRelativeThreshold`
+- `clustering.totalDeltaCount`
+- `clustering.sortedClusterCount`
+- `clustering.sequentialClusterCount`
+- `clustering.sortedClusterCountOverTotalDeltasRatio`
+- `clustering.sequentialClusterCountOverTotalDeltasRatio`
+- `clustering.sequentialOverSortedClusterCountRatio`
+
+Per cluster:
+
+- `centerMeters`
+- `count`
+- `clusterShareOfTotalDeltas`
+- `minMeters`
+- `maxMeters`
+- `spreadMeters`
+- `meanInsertionRelativeDeviation`
+- `maxInsertionRelativeDeviation`
+- `meanInsertionAbsoluteDeviationMeters`
+- `maxInsertionAbsoluteDeviationMeters`
+- `finalMeanAbsoluteDeviationMeters`
+- `finalMaxAbsoluteDeviationMeters`
+- `finalMeanRelativeDeviation`
+- `finalMaxRelativeDeviation`
+- `finalSpreadOverCenterRatio`
+
+### Normalization
+
+- `normalization.insertionRelativeThreshold`
+- `normalization.totalDeltaCount`
+- `normalization.sortedClusterCount`
+- `normalization.sequentialClusterCount`
+- `normalization.meanFinalAbsoluteDeviationMeters`
+- `normalization.maxFinalAbsoluteDeviationMeters`
+- `normalization.meanFinalRelativeDeviation`
+- `normalization.maxFinalRelativeDeviation`
+- `normalization.sortedClusterCountOverTotalDeltasRatio`
+- `normalization.sequentialClusterCountOverTotalDeltasRatio`
+- `normalization.sequentialOverSortedClusterCountRatio`
+- `normalization.nonZeroFinalDeviationCount`
+- `normalization.zeroFinalDeviationCount`
+
+### Supplementary
+
+- `timeConditionedDeltaCount`: geometry-conditioned deltas that also had a positive time delta pair.
 
 ## Motion
 
