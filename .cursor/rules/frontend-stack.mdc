@@ -1,0 +1,21 @@
+---
+description: Frontend stack and UI constraints for the logbook web app
+globs: apps/**,**/*.tsx,**/*.css
+alwaysApply: false
+---
+
+# Frontend Stack
+
+- Use `Next.js` with App Router and `TypeScript` for frontend work unless the user explicitly chooses otherwise.
+- Use `Tailwind CSS` for styling.
+- Use `Mapbox GL JS` for map rendering. Prefer styles suitable for mountain/topographic contexts over default street styles.
+- Use `Recharts` for charts by default. Upgrade a specific chart only when custom rendering needs justify it.
+- Use unstyled/primitives-first UI building blocks such as `Radix UI`; avoid adopting pre-styled component defaults that force a generic look.
+
+# Design Constraints
+
+- Follow the project skills `design-system` and `logbook-design-brief` whenever designing or implementing the logbook surface.
+- Do not use generic SaaS defaults: no shadcn-style defaults, no centered gradient hero layouts, no donut/progress rings for key metrics.
+- Do not use `Inter`, `Roboto`, `Arial`, or system fonts as the primary display face.
+- Do not use Tailwind default blue as the product accent by default.
+- Data quality, coverage, and exclusion context must remain visible in the UI rather than hidden in settings or secondary screens.
