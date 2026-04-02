@@ -1,0 +1,47 @@
+---
+description: General coding style — immutability, file organization, error handling, input validation
+alwaysApply: true
+---
+
+# Coding Style
+
+## Immutability (Critical)
+
+Always create new objects, never mutate existing ones.
+
+Rationale: Immutable data prevents hidden side effects, makes debugging easier, and is essential for React state correctness.
+
+## File Organization
+
+Many small files over few large files:
+- 200–400 lines typical, 800 max
+- High cohesion, low coupling
+- Extract utilities when a file grows
+- Organize by feature/domain, not by type
+
+## Error Handling
+
+Handle errors explicitly at every level:
+- Never silently swallow errors
+- Provide user-facing messages in UI code
+- Log detailed context on the server side
+- Fail fast with clear messages
+
+## Input Validation
+
+Always validate at system boundaries:
+- All user input before processing
+- All external data (API responses, file uploads, GPX content)
+- Use schema-based validation where available
+- Never trust external data
+
+## Code Quality Checklist
+
+Before marking any task complete:
+- [ ] Functions are small (under 50 lines)
+- [ ] Files are focused (under 800 lines)
+- [ ] No deep nesting (over 4 levels)
+- [ ] Errors are handled explicitly
+- [ ] No hardcoded magic values
+- [ ] No mutation of existing objects
+- [ ] No `console.log` left in production code
