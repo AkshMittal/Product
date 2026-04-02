@@ -7,6 +7,7 @@ This repository’s written material is organized as **stable reference** vs **t
 | Path | What it is |
 |------|------------|
 | **[`project/`](project/README.md)** | Long-lived docs: GPX audit **pipeline** specs, workbench support modules, and product roadmap. |
+| **[`adr/`](adr/README.md)** | ADR hub; topic folders (e.g. [`adr/audit/`](adr/audit/README.md) for the GPX audit pipeline). |
 | **[`reports/`](reports/)** | Dated notes: adversarial harness snapshots and run metadata. |
 
 ## Where to start

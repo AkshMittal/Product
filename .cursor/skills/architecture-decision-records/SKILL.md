@@ -78,37 +78,44 @@ When a decision moment is detected:
 3. **Gather context** — what problem prompted this? What constraints exist?
 4. **Document alternatives** — what other options were considered? Why were they rejected?
 5. **State consequences** — what are the trade-offs? What becomes easier/harder?
-6. **Assign a number** — scan existing ADRs in `docs/adr/` and increment
-7. **Confirm and write** — present the draft ADR to the user for review. Only write to `docs/adr/NNNN-decision-title.md` after explicit approval.
-8. **Update the index** — append to `docs/adr/README.md`
+6. **Choose scope folder** — use `docs/adr/general/` for main/trunk or cross-cutting decisions; otherwise use or create a scope folder native to the current worktree or subsystem (e.g. `docs/adr/pipeline/`). Confirm with the user if the scope is ambiguous.
+7. **Assign a number** — scan existing ADRs **in that scope folder only** and pick the next `NNNN`.
+8. **Confirm and write** — present the draft ADR to the user for review. Only write to `docs/adr/<scope>/NNNN-decision-title.md` after explicit approval.
+9. **Update indexes** — append to `docs/adr/README.md` (master index) and to `docs/adr/<scope>/README.md` if that scope index exists.
 
 ### Reading Existing ADRs
 
 When a user asks "why did we choose X?":
 
 1. Check if `docs/adr/` exists — if not, respond: "No ADRs found in this project. Would you like to start recording architectural decisions?"
-2. If it exists, scan `docs/adr/README.md` index for relevant entries
+2. If it exists, scan `docs/adr/README.md` (and scope-specific `README.md` files under `docs/adr/*/`) for relevant entries
 3. Read matching ADR files and present the Context and Decision sections
 
 ### ADR Directory Structure
 
+Scope folders keep worktree- or area-specific ADRs separate; numbering restarts per folder.
+
 ```
 docs/
 └── adr/
-    ├── README.md              ← index of all ADRs
-    ├── 0001-use-nextjs.md
-    ├── 0002-mapbox-over-leaflet.md
-    └── template.md
+    ├── README.md                 ← master index (all scopes)
+    ├── template.md               ← shared template
+    ├── general/                  ← main branch / cross-cutting (default)
+    │   ├── README.md             ← optional scope index
+    │   ├── 0001-use-nextjs.md
+    │   └── 0002-mapbox-over-leaflet.md
+    └── <scope>/                  ← e.g. pipeline/, frontend/ — one folder per worktree or subsystem
+        └── 0001-first-local-decision.md
 ```
 
 ### ADR Index Format
 
-```markdown
-# Architecture Decision Records
+Master index at `docs/adr/README.md` should include a **Scope** column linking into each folder:
 
-| ADR | Title | Status | Date |
-|-----|-------|--------|------|
-| [0001](0001-use-nextjs.md) | Use Next.js as frontend framework | accepted | 2026-03-31 |
+```markdown
+| Scope | ADR | Title | Status | Date |
+|-------|-----|-------|--------|------|
+| general | [0001](general/0001-use-nextjs.md) | Use Next.js as frontend framework | accepted | 2026-03-31 |
 ```
 
 ## Decision Detection Signals

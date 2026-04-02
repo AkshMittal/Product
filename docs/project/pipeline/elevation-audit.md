@@ -12,7 +12,7 @@ This module covers the **recorded elevation channel only**. It does NOT compute:
 - Accumulated gain or loss — metric-layer concept, not a stream observable
 - Smoothed grade or gradient — requires processing
 - DEM comparison or residual analysis — external dependency; belongs in a post-audit quality gate layer
-- `std(Δele)` or any variance metric — requires a reference the stream cannot provide (see `design-decisions.md`)
+- `std(Δele)` or any variance metric — requires a reference the stream cannot provide (see [ADR-0004](../../adr/audit/0004-elevation-delta-std-not-audit-artifact.md))
 
 ## Function
 
