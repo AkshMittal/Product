@@ -124,7 +124,8 @@ function parseGPX(gpxString) {
   let totalPointsFound = 0;
   let pointsDiscarded = 0;
   let firstRejectionLogged = false;
-  const rejectedCoordinates = [];
+  /** Built into audit.ingestion.rejections.events (coordinate rejects only). */
+  const rejectionEvents = [];
   const pointTypeCounts = { wpt: 0, rtept: 0, trkpt: 0 };
   let hasAnyTimestamps = false;
   
@@ -146,7 +147,7 @@ function parseGPX(gpxString) {
         firstRejectionLogged = true;
       }
       // Collect all rejected coordinates for flagged events
-      rejectedCoordinates.push({
+      rejectionEvents.push({
         gpxIndex: result.rawData.gpxIndex,
         pointType: result.rawData.pointType,
         rawLat: result.rawData.lat,
@@ -203,7 +204,7 @@ function parseGPX(gpxString) {
           hasAnyTimestampValues: hasAnyTimestamps
         },
         rejections: {
-          events: rejectedCoordinates
+          events: rejectionEvents
         }
       }
     }

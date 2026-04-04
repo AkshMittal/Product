@@ -34,8 +34,8 @@ Raw observations are the original GPX-derived points in original order, plus the
   - elevation channel fields from ingestion (`ele`, `eleAbsent`, etc.)
   - parsed extensions (optional)
 - raw audit output:
-  - observational diagnostics such as missing/unparsable/duplicate/backtracking timestamps, sampling diagnostics, motion pair classes, and later elevation observables
-  - event and block structures
+  - schema v2 **`audit.*`**: ingestion counts and `rejections.events`; temporal / motion / elevation **label-based** fields (`tagCounts`, `tagIndex`, sparse `pointAnnotations`); sampling time and distance diagnostics on **GPX-stream-adjacent** steps (ADR-0013)
+  - “blocks” or segment groupings, if needed, are **derived downstream** from tags and stream order—not primary buckets in the export
 
 Rules:
 
