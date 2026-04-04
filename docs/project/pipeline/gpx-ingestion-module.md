@@ -66,12 +66,15 @@ Each valid point object contains:
 
 ```javascript
 {
-  index: number,           // Sequential index across all point types
+  gpxIndex: number,        // Absolute index in GPX stream order
   pointType: string,       // 'wpt', 'rtept', or 'trkpt'
-  lat: number,            // Latitude (-90 to 90)
-  lon: number,            // Longitude (-180 to 180)
-  ele: number|null,       // Elevation in meters, or null if missing/invalid
-  timeRaw: string|null,   // Raw timestamp string, or null if missing/empty
+  lat: number,             // Latitude (-90 to 90)
+  lon: number,             // Longitude (-180 to 180)
+  ele: number|null,        // Finite elevation in meters, or null if not usable
+  eleAbsent: boolean,      // true = no <ele> child; false = <ele> present (value may still be null if unparsable)
+  timeRaw: string|null,    // Trimmed ISO/text from <time>, or null if absent/empty element
+  timeAbsent: boolean,     // true = no <time> child; false = <time> present
+  timeMs: number|null,     // Date.parse(timeRaw) when finite; null if absent, empty, or unparsable
   extensions: Element|null // Raw DOM node for extensions, or null
 }
 ```
@@ -90,18 +93,17 @@ Each valid point object contains:
 
 ### Elevation Handling
 
-- Elevation (`<ele>`) is optional
-- If present, must be parseable as a number
-- Invalid or missing elevation is stored as `null` (point is **not** discarded)
-- Points without elevation data are kept in the output
+- Elevation (`<ele>`) is optional.
+- **`eleAbsent`**: `true` if the `<ele>` element is **not present**; `false` if it is present (even when empty or non-numeric).
+- **`ele`**: finite number when parseable; otherwise `null`. Used with `eleAbsent` so elevation audit can tag **missing** vs **unparsable** distinctly.
+- Points with missing or invalid elevation are **not** discarded at ingestion.
 
 ### Timestamp Handling
 
-- Timestamp (`<time>`) is optional
-- If the `<time>` element is absent → `timeRaw = null`
-- If the `<time>` element exists but is empty or whitespace-only → `timeRaw = null`
-- Only non-empty timestamp strings are preserved
-- Empty timestamps are treated as missing (not unparsable)
+- Timestamp (`<time>`) is optional.
+- **`timeAbsent`**: `true` if there is **no** `<time>` element; `false` if the element exists.
+- **`timeRaw`**: trimmed non-empty text inside `<time>`, or `null` if the element is absent or empty after trim.
+- **`timeMs`**: `Date.parse(timeRaw)` when `timeRaw` is non-null and parse yields a finite instant; otherwise `null`. **Only ingestion** runs `Date.parse` on GPX time text. Downstream audits (temporal, sampling, motion) use **finite `timeMs` only** for instant math; they do **not** parse `timeRaw`. **`timeAbsent` together with `timeMs`** distinguishes **missing** (`timeAbsent === true`) from **unparsable** (`timeAbsent === false` and `timeMs === null`). **`timeRaw`** may be forwarded in sparse audit annotations for humans/tools; it is not input to audit logic after ingestion.
 
 ### Extensions Handling
 

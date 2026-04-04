@@ -36,6 +36,6 @@ Standard deviation of consecutive elevation deltas (`std(Δele)`) is **not** emi
 ### Risks
 - **Risk**: Feature requests to “just add std.” **Mitigation**: Point to this ADR; emit min/max/max-abs/zero-run stats instead.
 
-**What audit emits instead**: min `Δele`, max `Δele`, max absolute `Δele`, zero-delta count and run statistics, raw elevation range.
+**What audit emits instead (2026-04-04):** Per-point elevation **labels** only (`missing`, `unparsable`, `outOfBounds`, `adjacentDuplicate`) under `audit.elevation` — no consecutive `Δele` aggregates in the audit payload. Any min/max/absolute Δele or spread metrics are **downstream** if still needed for analytics.
 
 **Cross-references**: [`../../project/pipeline/sampling-audit.md`](../../project/pipeline/sampling-audit.md), elevation audit module

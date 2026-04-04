@@ -11,6 +11,10 @@ The sampling module performs an observational audit of time-delta sampling behav
 - Distance deltas are always computed from consecutive coordinate pairs — no timestamp dependency.
 - Clustering uses insertion-time threshold checks and final-center spread summaries.
 
+## Input points (time channel)
+
+Sampling uses **finite ingestion `timeMs` only** for timestamped points. It does not call `Date.parse` on `timeRaw`. Missing vs unparsable is defined at ingestion (`timeAbsent`, `timeMs`); see temporal audit for per-point labels.
+
 ## Time context fields
 
 `audit.sampling.time.timestampContext`
@@ -169,5 +173,5 @@ Each cluster object includes:
 
 - Time delta collection uses only positive deltas.
 - Distance clustering uses all consecutive distance deltas regardless of timestamp availability.
-- Distance deltas are always strictly adjacent (no gap-bridging), matching elevation delta convention.
+- Distance deltas are always strictly adjacent (no gap-bridging), matching the **physically adjacent** side of ADR-0003 (elevation audit no longer emits Δele aggregates; stepping model for downstream ele deltas stays adjacent-only).
 - Module output is observational and deterministic for same input order.

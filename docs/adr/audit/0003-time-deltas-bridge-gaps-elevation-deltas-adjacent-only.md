@@ -11,7 +11,7 @@ Sampling audit time deltas and elevation audit elevation deltas answer different
 ## Decision
 
 1. **Sampling audit** computes `Δt` between the **last and next parseable** timestamp, skipping points with missing or unparsable time — bridging across gaps in parseable time is intentional.
-2. **Elevation audit** computes `Δele` only between **immediately adjacent** valid-elevation points; skipped pairs are counted separately (`skippedPairsDueToMissingOrOob`).
+2. **Elevation audit** (amended 2026-04-04) no longer emits consecutive `Δele` statistics or skipped-pair counters. **Point-level** elevation labels (`missing`, `unparsable`, `outOfBounds`, `adjacentDuplicate`) describe the channel; any `Δele` series or gap analysis is **downstream**, using physically adjacent points and those labels as needed. (Philosophy: **adjacent-only** steps for elevation *structure* remain the honest model; audit just does not aggregate Δele in-pipeline anymore.)
 3. **Time-conditioned distance deltas** in sampling use the physically **adjacent** previous point as the spatial anchor, not the last-timestamped point; they pair with time only when that adjacent pair has positive `Δt`.
 
 ## Alternatives Considered
@@ -24,7 +24,7 @@ Sampling audit time deltas and elevation audit elevation deltas answer different
 ### Alternative 2: Bridge gaps in `Δele` like `Δt`
 - **Pros**: Fewer “gaps” in delta series.
 - **Cons**: Merges two physical steps into one delta; misrepresents local elevation channel structure.
-- **Why not**: Gap is itself an observable; bridging would be processing, not audit.
+- **Why not**: Gap is itself an observable; bridging would be processing, not audit. (Elevation audit no longer emits Δele aggregates; downstream may still choose adjacent-only stepping.)
 
 ## Consequences
 

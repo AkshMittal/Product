@@ -14,7 +14,8 @@
 
 /**
  * Audits timestamps in an array of points using per-point labeling.
- * @param {Array} points - Array of point objects with gpxIndex, timeRaw properties
+ * Expects ingestion-shaped points: `timeAbsent`, `timeMs`, optional `timeRaw` (forwarded in unparsable annotations only; never parsed here).
+ * @param {Array} points - Array of point objects with gpxIndex, timeAbsent, timeMs, optional timeRaw
  * @returns {Object} Audit payload with session, tagCounts, tagIndex, pointAnnotations
  */
 function auditTimestamps(points) {
@@ -46,22 +47,38 @@ function auditTimestamps(points) {
   for (let i = 0; i < points.length; i++) {
     const point = points[i];
     const gpxIndex = point.gpxIndex;
-    const timeRaw = point.timeRaw;
+    const timeAbsent = point.timeAbsent;
     totalPointsEvaluated++;
 
-    // --- MISSING ---
-    if (timeRaw === null) {
+    let timestampMs = null;
+
+    // --- MISSING --- (no <time> element)
+    if (timeAbsent === true) {
       tagIndex.missing.push(gpxIndex);
       pointAnnotations.push({ gpxIndex, missing: true });
       continue;
     }
 
-    // --- UNPARSABLE ---
-    const timestampMs = Date.parse(timeRaw);
-    if (isNaN(timestampMs)) {
-      tagIndex.unparsable.push(gpxIndex);
-      pointAnnotations.push({ gpxIndex, unparsable: true });
-      continue;
+    // --- <time> present: valid only if ingestion produced finite timeMs; else unparsable (timeRaw forwarded, not read)
+    if (timeAbsent === false) {
+      if (typeof point.timeMs === 'number' && isFinite(point.timeMs)) {
+        timestampMs = point.timeMs;
+      } else {
+        tagIndex.unparsable.push(gpxIndex);
+        const ann = { gpxIndex, unparsable: true };
+        if (point.timeRaw != null) ann.timeRaw = point.timeRaw;
+        pointAnnotations.push(ann);
+        continue;
+      }
+    } else {
+      // Malformed point (no timeAbsent): treat like missing unless finite timeMs is present
+      if (typeof point.timeMs === 'number' && isFinite(point.timeMs)) {
+        timestampMs = point.timeMs;
+      } else {
+        tagIndex.missing.push(gpxIndex);
+        pointAnnotations.push({ gpxIndex, missing: true });
+        continue;
+      }
     }
 
     // Valid parsed timestamp from here
@@ -134,7 +151,7 @@ function auditTimestamps(points) {
     if (timestampMs > anchorTimestampMs) {
       anchorTimestampMs = timestampMs;
     }
-
+    
     // prevValidTimestampMs always tracks the most recent valid parsed timestamp
     prevValidTimestampMs = timestampMs;
   }

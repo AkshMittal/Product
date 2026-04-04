@@ -24,7 +24,7 @@ Path: `audit.ingestion`
 - `counts.totalPointCount`: total GPX points encountered in stream.
 - `counts.validPointCount`: points accepted after coordinate validation.
 - `counts.rejectedPointCount`: points rejected at ingestion.
-- `context.hasAnyTimestampValues`: any non-empty timestamp value exists.
+- `context.hasAnyTimestampValues`: any point has a `<time>` element (`timeAbsent === false`), or non-ingestion point with non-null `timeRaw` (ingestion always sets `timeAbsent`).
 - `rejections.rejectedPointCount`: rejected point count mirror.
 - `rejections.events`: rejected point events.
 
@@ -32,23 +32,12 @@ Path: `audit.ingestion`
 
 Path: `audit.temporal`
 
+Label-based per-point tags (`tagCounts`, `tagIndex`, `pointAnnotations`). Full field list and anchor semantics: [`pipeline/json-schema-v2-glossary.md`](pipeline/json-schema-v2-glossary.md#temporal).
+
 - `totalPointsEvaluated`: points seen by temporal audit.
-- `session.rawSessionDurationSec`: last valid timestamp minus first valid timestamp.
-- `session.parseableTimestampPointCount`: points with parseable timestamps.
-- `temporalOrder.monotonicForwardCount`: forward/non-backtracking progression count.
-
-Per anomaly group (`missing`, `unparsable`, `duplicate`, `backtracking`):
-
-- `pointCount`
-- `pointCountOverTotalPointsRatio`
-- `maxBlockLength`
-- `blocks`
-- `isolatedPointCount`
-- `isolatedPointEvents`
-
-Backtracking-only:
-
-- `maxDepthFromAnchorMs`: max depth below monotonic anchor.
+- `session.rawSessionDurationSec`: (lastValidMs − firstValidMs) / 1000; null if fewer than two valid timestamps.
+- `session.parseableTimestampPointCount`: points with finite ingestion `timeMs` (temporal audit does not parse `timeRaw`).
+- `tagCounts.missing` / `tagCounts.unparsable` / comparative tags — see pipeline glossary; `unparsable` annotations may forward `timeRaw` for debugging only.
 
 ## Sampling
 
@@ -116,30 +105,20 @@ Per cluster:
 
 Path: `audit.motion`
 
-- `evaluatedPairs.consecutivePairCount`
-- `evaluatedPairs.forwardValidPairCount`
+Label-based adjacent-pair output. Tags are **non-exclusive**. See [`pipeline/json-schema-v2-glossary.md`](pipeline/json-schema-v2-glossary.md#motion) for full field list.
 
-Rejections:
+- `summary.consecutivePairCount`, `summary.parameters.validFloorM`, `summary.parameters.validCeilingM`
+- `tagCounts.backwardTime`, `tagCounts.zeroTimeDelta`, `tagCounts.timeUnresolvable`, `tagCounts.nonFiniteDistance`, `tagCounts.eleUnresolvable`
+- `tagIndex.*` — per-tag arrays of `{ fromGpxIndex, toGpxIndex }`
+- `pairAnnotations` — sparse; one object per tagged pair
 
-- `rejections.missingTimestampPairCount`
-- `rejections.unparsableTimestampPairCount`
-- `rejections.nonFiniteDistancePairCount`
-- `rejections.backwardTimePairCount`
-- `rejections.zeroTimeDeltaPairCount`
-- `rejections.events.*`
+**Not emitted:** forward-valid pair count, time/distance/speed aggregates. Derive clean pair count as `consecutivePairCount - pairAnnotations.length`.
 
-Time and distance:
+## Elevation
 
-- `time.validMotionTimeSeconds`
-- `time.invalidTimeSeconds`
-- `time.invalidTimeShareOfEvaluatedTime`
-- `distance.totalForwardValidDistanceMeters`
+Path: `audit.elevation`
 
-Speed:
-
-- `speed.meanSpeedMps`
-- `speed.medianSpeedMps`
-- `speed.maxSpeedMps`
+Label-based **per-point** elevation channel tags (`tagCounts`, `tagIndex`, `pointAnnotations`). See [`pipeline/json-schema-v2-glossary.md`](pipeline/json-schema-v2-glossary.md#elevation).
 
 ## Export metadata
 

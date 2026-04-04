@@ -15,7 +15,7 @@ This repository’s written material is organized as **stable reference** vs **t
 | If you want to… | Read |
 |-----------------|------|
 | Look up v2 JSON paths | [`project/pipeline/json-schema-v2-glossary.md`](project/pipeline/json-schema-v2-glossary.md) |
-| Understand motion metrics and anomaly primitives | [`project/pipeline/motion-audit.md`](project/pipeline/motion-audit.md) |
+| Understand motion pair flags and eligibility | [`project/pipeline/motion-audit.md`](project/pipeline/motion-audit.md) |
 
 ## Repository root
 

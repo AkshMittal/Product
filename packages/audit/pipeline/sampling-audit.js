@@ -29,7 +29,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
  * Audits time and distance sampling behavior.
  * Time deltas: positive-only, between consecutive valid timestamps.
  * Distance deltas: every consecutive coordinate pair, no timestamp dependency.
- * @param {Array} points - Array of point objects with gpxIndex, timeRaw, lat, lon properties
+ * @param {Array} points - Array of point objects with gpxIndex, timeMs, lat, lon (finite timeMs from ingestion only)
  * @param {string} [gpxFilename] - Optional GPX filename (without extension)
  * @returns {Object} Sampling audit payload
  */
@@ -56,14 +56,13 @@ function auditSampling(points, gpxFilename) {
 
   for (let i = 0; i < points.length; i++) {
     const point = points[i];
-    const timeRaw = point.timeRaw;
 
     let currentTimestampMs = null;
     let hasValidTimestamp = false;
 
-    if (timeRaw !== null) {
-      currentTimestampMs = Date.parse(timeRaw);
-      hasValidTimestamp = !isNaN(currentTimestampMs);
+    if (typeof point.timeMs === 'number' && isFinite(point.timeMs)) {
+      currentTimestampMs = point.timeMs;
+      hasValidTimestamp = true;
     }
 
     // Distance delta: computed for every consecutive coordinate pair

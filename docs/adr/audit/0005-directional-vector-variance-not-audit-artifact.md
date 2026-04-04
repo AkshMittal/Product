@@ -10,7 +10,9 @@ Bearing changes, directional deviation, and variance in 3D speed sound like comp
 
 ## Decision
 
-Variance or clustering over bearing changes, directional deviation, or 3D speed variance is **not** part of the audit layer. The motion audit emits raw per-pair geometric observables (bearing, inclination, 3D displacement, 3D speed) without normative clustering.
+Variance or clustering over bearing changes, directional deviation, or 3D speed variance is **not** part of the audit layer.
+
+**Amendment (2026-04-03):** The motion audit does **not** emit computed per-pair kinematic scalars (bearing, inclination, 3D displacement, 3D speed, horizontal speed). It emits **label-based pair flags** only (`backwardTime`, `zeroTimeDelta`, `timeUnresolvable`, `nonFiniteDistance`, `eleUnresolvable`) for downstream exclusion. Distributional or variance summaries over those quantities remain out of audit; downstream computes kinematics on eligible pairs.
 
 ## Alternatives Considered
 
@@ -27,12 +29,12 @@ Variance or clustering over bearing changes, directional deviation, or 3D speed 
 ## Consequences
 
 ### Positive
-- Clean separation: audit = observables, later layer = plausibility vs reference motion.
+- Clean separation: audit = mechanical pair flags, later layer = computed kinematics and plausibility vs reference motion.
 
 ### Negative
 - Rich motion “quality” summaries require an additional pipeline stage.
 
 ### Risks
-- **Risk**: Pressure to move thresholds into audit for convenience. **Mitigation**: This ADR; keep motion outputs scalar per pair without distributional verdicts.
+- **Risk**: Pressure to move thresholds into audit for convenience. **Mitigation**: This ADR; motion audit stays flag-only; no distributional clustering in audit.
 
 **Cross-references**: motion audit module, [`../../project/objective-participation-and-quality.md`](../../project/objective-participation-and-quality.md)

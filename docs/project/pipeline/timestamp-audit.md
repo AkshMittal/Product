@@ -20,7 +20,7 @@ No point is presumed correct or incorrect. The audit records what is observable 
 ### `auditTimestamps(points)`
 
 **Parameters:**
-- `points` (Array): Array of point objects with `gpxIndex` and `timeRaw` properties
+- `points` (Array): Ingestion-shaped point objects (`gpxIndex`, `timeAbsent`, `timeMs`, optional `timeRaw` for forwarding in unparsable annotations only)
 
 **Returns:**
 ```javascript
@@ -30,11 +30,11 @@ No point is presumed correct or incorrect. The audit records what is observable 
       totalPointsEvaluated,     // total points seen
       session: {
         rawSessionDurationSec,          // (lastValidMs - firstValidMs) / 1000, or null
-        parseableTimestampPointCount    // points where Date.parse() succeeded
+        parseableTimestampPointCount    // points with finite ingestion timeMs
       },
       tagCounts: {
-        missing,             // timeRaw === null
-        unparsable,          // Date.parse(timeRaw) is NaN
+        missing,             // timeAbsent === true, or malformed point without finite timeMs
+        unparsable,          // timeAbsent === false and no finite timeMs
         adjacentDuplicate,   // timestampMs === prevValidTimestampMs
         belowAnchor,         // timestampMs < anchorTimestampMs (monotonic high-water mark)
         belowPrevValid,      // timestampMs < prevValidTimestampMs (strictly less than predecessor)
@@ -52,7 +52,7 @@ No point is presumed correct or incorrect. The audit records what is observable 
         // missing point example:
         { gpxIndex, missing: true },
         // unparsable point example:
-        { gpxIndex, unparsable: true },
+        { gpxIndex, unparsable: true, timeRaw?: string|null },
         // valid-but-anomalous point example (all applicable tags flat on object):
         {
           gpxIndex,
@@ -77,8 +77,8 @@ Tags are non-exclusive. A point receives every tag that applies. Missing and unp
 
 | Tag | Condition | Metadata |
 |---|---|---|
-| `missing` | `timeRaw === null` | — |
-| `unparsable` | `Date.parse(timeRaw)` is `NaN` | — |
+| `missing` | `timeAbsent === true`, or `timeAbsent` not `false` and no finite `timeMs` | — |
+| `unparsable` | `timeAbsent === false` and `timeMs` not finite | optional forwarded `timeRaw` on annotation (not parsed here) |
 | `adjacentDuplicate` | `timestampMs === prevValidTimestampMs` | — |
 | `belowAnchor` | `timestampMs < anchorTimestampMs` | `depthFromAnchorMs` |
 | `belowPrevValid` | `timestampMs < prevValidTimestampMs` | — |
@@ -148,5 +148,5 @@ Both are complementary and are emitted together without duplication concerns —
 
 ## Dependencies
 
-- Browser `Date.parse()` API (native, no external dependencies)
+- Ingestion supplies `timeAbsent` and `timeMs` (`Date.parse` runs only in ingestion for GPX `<time>` text). This module does not parse `timeRaw`.
 - `Map` (ES6, available in all target environments)
