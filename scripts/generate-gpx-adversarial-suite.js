@@ -1,3 +1,4 @@
+/** Regenerates adversarial GPX + audit JSON + EXPECTED.md; writes REPORT.md unless ADVERSARIAL_SKIP_REPORT=1. */
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -129,6 +130,18 @@ function metric(payload) {
     motionConsecutive !== null && motionTaggedPairCount !== null
       ? motionConsecutive - motionTaggedPairCount
       : null;
+  const samplingDistancePairs =
+    sampling.distance &&
+    sampling.distance.pairInspection &&
+    typeof sampling.distance.pairInspection.consecutivePairCount === "number"
+      ? sampling.distance.pairInspection.consecutivePairCount
+      : null;
+  const samplingTimestampPairs =
+    sampling.time &&
+    sampling.time.timestampContext &&
+    typeof sampling.time.timestampContext.consecutiveTimestampPairsCount === "number"
+      ? sampling.time.timestampContext.consecutiveTimestampPairsCount
+      : null;
   return {
     totalPoints: ingestion.counts ? ingestion.counts.totalPointCount : null,
     hasMultiplePointTypes: ingestion.context ? ingestion.context.hasMultiplePointTypes : null,
@@ -153,6 +166,8 @@ function metric(payload) {
     motionEleUnresolvable: motion.tagCounts ? motion.tagCounts.eleUnresolvable : null,
     motionConsecutivePairs: motionConsecutive,
     motionTaggedPairCount: motionTaggedPairCount,
+    samplingDistancePairs: samplingDistancePairs,
+    samplingTimestampPairs: samplingTimestampPairs,
     eleMissing: elevation.tagCounts ? elevation.tagCounts.missing : null,
     eleUnparsable: elevation.tagCounts ? elevation.tagCounts.unparsable : null,
     eleOutOfBounds: elevation.tagCounts ? elevation.tagCounts.outOfBounds : null,
@@ -1199,7 +1214,34 @@ function buildCases() {
           value: 1
         },
         { description: "No adjacentDuplicate when stream predecessor is missing", key: "duplicateTs", kind: "eq", value: 0 },
-        { description: "No stream-adjacent pairs to evaluate for motion", key: "motionConsecutivePairs", kind: "eq", value: 0 }
+        { description: "No stream-adjacent pairs to evaluate for motion", key: "motionConsecutivePairs", kind: "eq", value: 0 },
+        { description: "No sampling distance steps without stream-adjacent edges", key: "samplingDistancePairs", kind: "eq", value: 0 },
+        { description: "No sampling timestamp pair evaluations without stream-adjacent edges", key: "samplingTimestampPairs", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-37-reject-mid-track-sampling-motion-pair-counts",
+      title: "Mid-track coord reject: motion and sampling share stream-adjacent pair count",
+      rationale:
+        "Five GPX rows with one invalid coordinate in the middle yields two stream edges among four accepted points (0-1 and 3-4). Sampling distance pairInspection.consecutivePairCount must match motion.summary.consecutivePairCount (ADR-0013).",
+      pointsBuilder: () =>
+        buildLinearTrack({
+          count: 5,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00004,
+          lonStep: 0.00004,
+          baseIso,
+          dtSec: 5,
+          mutator: (pts) => {
+            pts[2] = { rawLat: "x", rawLon: "y", time: pts[2].time };
+          }
+        }),
+      expectedChecks: [
+        { description: "Exactly one coordinate rejection", key: "rejectedCoords", kind: "eq", value: 1 },
+        { description: "Two GPX-stream-adjacent edges among accepted points", key: "motionConsecutivePairs", kind: "eq", value: 2 },
+        { description: "Sampling distance pair count matches motion", key: "samplingDistancePairs", kind: "eq", value: 2 },
+        { description: "Sampling timestamp pair count matches motion (all times valid and adjacent)", key: "samplingTimestampPairs", kind: "eq", value: 2 }
       ]
     }
   ];
@@ -1228,6 +1270,10 @@ function renderReport(results) {
   const lines = [];
   lines.push("# Adversarial Suite Report");
   lines.push("");
+  lines.push(
+    "Motion and sampling **pair counts** and **pair annotations** use **GPX stream adjacency** (`toGpxIndex === fromGpxIndex + 1` among accepted points), not raw array `(i-1, i)` when coordinate rejects create `gpxIndex` gaps. See `docs/adr/audit/0013-gpx-stream-adjacency-via-gpxindex.md`. Temporal `adjacentDuplicate` / `belowPrevValid` use the accepted predecessor at `gpxIndex - 1` with finite `timeMs`."
+  );
+  lines.push("");
   const strictPass = results.filter((r) => r.status === "PASS").length;
   const expectedVariance = results.filter((r) => r.status === "EXPECTED_VARIANCE").length;
   const failed = results.filter((r) => r.status === "FAIL").length;
@@ -1250,6 +1296,7 @@ function renderReport(results) {
     lines.push(`  - adjacentDuplicate=${r.metrics.duplicateTs}, belowAnchor=${r.metrics.backtracking}, belowPrevValid=${r.metrics.belowPrevValidCount}, nonAdjacentRepeat=${r.metrics.nonAdjacentRepeatCount}`);
     lines.push(`  - annotationCount=${r.metrics.annotationCount}`);
     lines.push(`  - positiveDeltas=${r.metrics.positiveDeltas}, clusterCountSorted=${r.metrics.clusterCountSorted}, maxDeltaMs=${r.metrics.maxDeltaMs}`);
+    lines.push(`  - samplingDistancePairs=${r.metrics.samplingDistancePairs}, samplingTimestampPairs=${r.metrics.samplingTimestampPairs}`);
     lines.push(`  - motionConsecutivePairs=${r.metrics.motionConsecutivePairs}, motionTaggedPairCount=${r.metrics.motionTaggedPairCount}, motionCleanAdjacent=${r.metrics.motionForwardValid}, motionBackward=${r.metrics.motionBackward}, motionZeroDelta=${r.metrics.motionZeroDelta}, motionTimeUnresolvable=${r.metrics.motionTimeUnresolvable}, motionInvalidDistance=${r.metrics.motionInvalidDistance}, motionEleUnresolvable=${r.metrics.motionEleUnresolvable}`);
     lines.push(`  - eleMissing=${r.metrics.eleMissing}, eleUnparsable=${r.metrics.eleUnparsable}, eleOutOfBounds=${r.metrics.eleOutOfBounds}, eleAdjacentDup=${r.metrics.eleAdjacentDuplicates}, eleValid=${r.metrics.eleValidCount}, eleAnnotationCount=${r.metrics.eleAnnotationCount}`);
     lines.push("");

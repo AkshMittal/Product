@@ -1,6 +1,8 @@
 # Adversarial Suite Report
 
-- Overall: strictPass=33, expectedVariance=2, failed=0, total=35
+Motion and sampling **pair counts** and **pair annotations** use **GPX stream adjacency** (`toGpxIndex === fromGpxIndex + 1` among accepted points), not raw array `(i-1, i)` when coordinate rejects create `gpxIndex` gaps. See `docs/adr/audit/0013-gpx-stream-adjacency-via-gpxindex.md`. Temporal `adjacentDuplicate` / `belowPrevValid` use the accepted predecessor at `gpxIndex - 1` with finite `timeMs`.
+
+- Overall: strictPass=35, expectedVariance=2, failed=0, total=37
 
 ## adv-01-exact-2pct-boundary - Exactly 2% clustering boundary
 - Intent: Values exactly 2% apart should not merge under strict '< 0.02' rule.
@@ -14,6 +16,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=7, clusterCountSorted=1, maxDeltaMs=10200
+  - samplingDistancePairs=7, samplingTimestampPairs=7
   - motionConsecutivePairs=7, motionTaggedPairCount=0, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
@@ -29,6 +32,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=7, clusterCountSorted=1, maxDeltaMs=10200
+  - samplingDistancePairs=7, samplingTimestampPairs=7
   - motionConsecutivePairs=7, motionTaggedPairCount=0, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
@@ -44,6 +48,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=6
   - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - samplingDistancePairs=6, samplingTimestampPairs=0
   - motionConsecutivePairs=6, motionTaggedPairCount=6, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=6, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
@@ -59,6 +64,7 @@
   - adjacentDuplicate=7, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=7
   - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - samplingDistancePairs=7, samplingTimestampPairs=7
   - motionConsecutivePairs=7, motionTaggedPairCount=7, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=7, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
@@ -74,6 +80,7 @@
   - adjacentDuplicate=0, belowAnchor=3, belowPrevValid=3, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=3, clusterCountSorted=2, maxDeltaMs=10000
+  - samplingDistancePairs=6, samplingTimestampPairs=6
   - motionConsecutivePairs=6, motionTaggedPairCount=3, motionCleanAdjacent=3, motionBackward=3, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
@@ -89,6 +96,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=9, clusterCountSorted=2, maxDeltaMs=300000
+  - samplingDistancePairs=9, samplingTimestampPairs=9
   - motionConsecutivePairs=9, motionTaggedPairCount=0, motionCleanAdjacent=9, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=9, eleValid=10, eleAnnotationCount=9
 
@@ -104,6 +112,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=5, clusterCountSorted=1, maxDeltaMs=5000
+  - samplingDistancePairs=5, samplingTimestampPairs=5
   - motionConsecutivePairs=5, motionTaggedPairCount=0, motionCleanAdjacent=5, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
@@ -119,6 +128,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=7, clusterCountSorted=1, maxDeltaMs=3000
+  - samplingDistancePairs=7, samplingTimestampPairs=7
   - motionConsecutivePairs=7, motionTaggedPairCount=0, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
@@ -134,6 +144,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=4, clusterCountSorted=1, maxDeltaMs=5000
+  - samplingDistancePairs=4, samplingTimestampPairs=4
   - motionConsecutivePairs=4, motionTaggedPairCount=0, motionCleanAdjacent=4, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=5, eleAnnotationCount=0
 
@@ -142,13 +153,14 @@
 - Status: PASS
 - Checks:
   - PASS | Unparsable timestamps counted | expected atLeast 2 | actual 2
-  - PASS | Still has some positive deltas | expected atLeast 1 | actual 5
+  - PASS | Still has some positive deltas | expected atLeast 1 | actual 4
 - Key metrics:
   - totalPoints=8, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=2
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=2
-  - positiveDeltas=5, clusterCountSorted=4, maxDeltaMs=15000
+  - positiveDeltas=4, clusterCountSorted=3, maxDeltaMs=5500
+  - samplingDistancePairs=7, samplingTimestampPairs=4
   - motionConsecutivePairs=7, motionTaggedPairCount=3, motionCleanAdjacent=4, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
@@ -162,9 +174,10 @@
 - Key metrics:
   - totalPoints=7, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=1, unparsable=1
-  - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
+  - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=3, clusterCountSorted=3, maxDeltaMs=16000
+  - samplingDistancePairs=6, samplingTimestampPairs=3
   - motionConsecutivePairs=6, motionTaggedPairCount=3, motionCleanAdjacent=3, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
@@ -181,6 +194,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=19999, clusterCountSorted=1, maxDeltaMs=1000
+  - samplingDistancePairs=19999, samplingTimestampPairs=19999
   - motionConsecutivePairs=19999, motionTaggedPairCount=0, motionCleanAdjacent=19999, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=19999, eleValid=20000, eleAnnotationCount=19999
 
@@ -198,8 +212,9 @@
   - missing=1, unparsable=1
   - adjacentDuplicate=1, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=1
   - annotationCount=4
-  - positiveDeltas=8, clusterCountSorted=4, maxDeltaMs=32000
-  - motionConsecutivePairs=12, motionTaggedPairCount=5, motionCleanAdjacent=7, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
+  - positiveDeltas=6, clusterCountSorted=3, maxDeltaMs=32000
+  - samplingDistancePairs=11, samplingTimestampPairs=8
+  - motionConsecutivePairs=11, motionTaggedPairCount=5, motionCleanAdjacent=6, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=12, eleValid=13, eleAnnotationCount=12
 
 ## adv-14-multi-trkseg-backtrack - Multiple track segments with cross-segment backtrack
@@ -214,6 +229,7 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=1
   - positiveDeltas=4, clusterCountSorted=2, maxDeltaMs=11000
+  - samplingDistancePairs=5, samplingTimestampPairs=5
   - motionConsecutivePairs=5, motionTaggedPairCount=1, motionCleanAdjacent=4, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
@@ -231,6 +247,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=119, clusterCountSorted=1, maxDeltaMs=1000
+  - samplingDistancePairs=119, samplingTimestampPairs=119
   - motionConsecutivePairs=119, motionTaggedPairCount=0, motionCleanAdjacent=119, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=119, eleValid=120, eleAnnotationCount=119
 
@@ -247,6 +264,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=3, clusterCountSorted=1, maxDeltaMs=5000
+  - samplingDistancePairs=3, samplingTimestampPairs=3
   - motionConsecutivePairs=3, motionTaggedPairCount=0, motionCleanAdjacent=3, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=3, eleValid=4, eleAnnotationCount=3
 
@@ -256,13 +274,14 @@
 - Checks:
   - PASS | Multiple unparsable timestamps detected | expected atLeast 4 | actual 5
   - PASS | At least one missing timestamp detected | expected atLeast 1 | actual 1
-  - PASS | Still yields some positive deltas | expected atLeast 1 | actual 5
+  - PASS | Still yields some positive deltas | expected atLeast 1 | actual 2
 - Key metrics:
   - totalPoints=12, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=1, unparsable=5
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=6
-  - positiveDeltas=5, clusterCountSorted=4, maxDeltaMs=25000
+  - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=5123
+  - samplingDistancePairs=11, samplingTimestampPairs=2
   - motionConsecutivePairs=11, motionTaggedPairCount=9, motionCleanAdjacent=2, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=9, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=11, eleValid=12, eleAnnotationCount=11
 
@@ -277,6 +296,7 @@
   - adjacentDuplicate=2, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=2
   - positiveDeltas=7, clusterCountSorted=2, maxDeltaMs=6000
+  - samplingDistancePairs=9, samplingTimestampPairs=9
   - motionConsecutivePairs=9, motionTaggedPairCount=2, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=2, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=9, eleValid=10, eleAnnotationCount=9
 
@@ -290,7 +310,8 @@
   - missing=3, unparsable=0
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=3
-  - positiveDeltas=7, clusterCountSorted=3, maxDeltaMs=6000
+  - positiveDeltas=5, clusterCountSorted=1, maxDeltaMs=2000
+  - samplingDistancePairs=10, samplingTimestampPairs=5
   - motionConsecutivePairs=10, motionTaggedPairCount=5, motionCleanAdjacent=5, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=5, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=10, eleValid=11, eleAnnotationCount=10
 
@@ -298,7 +319,7 @@
 - Intent: Deterministic pseudo-random walk with sporadic anomalies for robustness.
 - Status: PASS
 - Checks:
-  - PASS | Some positive deltas collected | expected atLeast 50 | actual 463
+  - PASS | Some positive deltas collected | expected atLeast 50 | actual 438
   - PASS | At least one temporal anomaly detected | expected atLeast 1 | actual 12
   - PASS | No nonFiniteDistance motion pair explosion | expected eq 0 | actual 0
 - Key metrics:
@@ -306,7 +327,8 @@
   - missing=12, unparsable=13
   - adjacentDuplicate=11, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=36
-  - positiveDeltas=463, clusterCountSorted=6, maxDeltaMs=6000
+  - positiveDeltas=438, clusterCountSorted=6, maxDeltaMs=6000
+  - samplingDistancePairs=499, samplingTimestampPairs=449
   - motionConsecutivePairs=499, motionTaggedPairCount=61, motionCleanAdjacent=438, motionBackward=0, motionZeroDelta=11, motionTimeUnresolvable=50, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=499, eleValid=500, eleAnnotationCount=499
 
@@ -324,6 +346,7 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=1
   - annotationCount=1
   - positiveDeltas=4, clusterCountSorted=2, maxDeltaMs=30000
+  - samplingDistancePairs=5, samplingTimestampPairs=5
   - motionConsecutivePairs=5, motionTaggedPairCount=1, motionCleanAdjacent=4, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
@@ -340,6 +363,7 @@
   - adjacentDuplicate=0, belowAnchor=4, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=4
   - positiveDeltas=5, clusterCountSorted=3, maxDeltaMs=100000
+  - samplingDistancePairs=6, samplingTimestampPairs=6
   - motionConsecutivePairs=6, motionTaggedPairCount=1, motionCleanAdjacent=5, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
@@ -357,6 +381,7 @@
   - adjacentDuplicate=1, belowAnchor=2, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=2
   - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=100000
+  - samplingDistancePairs=4, samplingTimestampPairs=4
   - motionConsecutivePairs=4, motionTaggedPairCount=2, motionCleanAdjacent=2, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=4, eleValid=5, eleAnnotationCount=4
 
@@ -373,6 +398,7 @@
   - adjacentDuplicate=2, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=50000
+  - samplingDistancePairs=4, samplingTimestampPairs=4
   - motionConsecutivePairs=4, motionTaggedPairCount=3, motionCleanAdjacent=1, motionBackward=1, motionZeroDelta=2, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=4, eleValid=5, eleAnnotationCount=4
 
@@ -391,6 +417,7 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=1
   - annotationCount=1
   - positiveDeltas=3, clusterCountSorted=3, maxDeltaMs=50000
+  - samplingDistancePairs=4, samplingTimestampPairs=4
   - motionConsecutivePairs=4, motionTaggedPairCount=1, motionCleanAdjacent=3, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=4, eleValid=5, eleAnnotationCount=4
 
@@ -406,6 +433,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=3, clusterCountSorted=1, maxDeltaMs=5000
+  - samplingDistancePairs=3, samplingTimestampPairs=3
   - motionConsecutivePairs=3, motionTaggedPairCount=0, motionCleanAdjacent=3, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=4, eleAnnotationCount=0
 
@@ -421,6 +449,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=2000
+  - samplingDistancePairs=2, samplingTimestampPairs=2
   - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=2
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=1, eleAdjacentDup=0, eleValid=2, eleAnnotationCount=1
 
@@ -438,6 +467,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=3000
+  - samplingDistancePairs=2, samplingTimestampPairs=2
   - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=2
   - eleMissing=1, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=2, eleAnnotationCount=1
 
@@ -454,6 +484,7 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=1
   - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=20000
+  - samplingDistancePairs=2, samplingTimestampPairs=2
   - motionConsecutivePairs=2, motionTaggedPairCount=1, motionCleanAdjacent=1, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=1
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=1, eleAdjacentDup=1, eleValid=2, eleAnnotationCount=2
 
@@ -471,6 +502,7 @@
   - adjacentDuplicate=1, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=10000
+  - samplingDistancePairs=5, samplingTimestampPairs=4
   - motionConsecutivePairs=5, motionTaggedPairCount=3, motionCleanAdjacent=2, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=1, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
@@ -486,6 +518,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - samplingDistancePairs=0, samplingTimestampPairs=0
   - motionConsecutivePairs=0, motionTaggedPairCount=0, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=1, eleAnnotationCount=0
 
@@ -502,16 +535,17 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=5000
+  - samplingDistancePairs=2, samplingTimestampPairs=2
   - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=2
   - eleMissing=0, eleUnparsable=1, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=2, eleAnnotationCount=1
 
 ## adv-33-empty-time-element-mid-track - Empty <time></time> is unparsable not missing
-- Intent: Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012).
+- Intent: Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012). Sampling time Δ uses adjacent pairs only — no bridge across the empty <time> point.
 - Status: PASS
 - Checks:
   - PASS | Exactly one unparsable timestamp (empty <time> body) | expected eq 1 | actual 1
   - PASS | No missing-time points (every trkpt has a <time> child) | expected eq 0 | actual 0
-  - PASS | Sampling bridges positive dt across invalid point (prev valid to next valid) | expected eq 2 | actual 2
+  - PASS | One adjacent-valid positive dt (0→1 only; 2 unparsable breaks 1→2 and 2→3) | expected eq 1 | actual 1
   - PASS | Two motion pairs touch the non-finite timeMs endpoint | expected eq 2 | actual 2
   - PASS | Only the last pair has both endpoints with finite timeMs and no motion tags | expected eq 1 | actual 1
 - Key metrics:
@@ -519,7 +553,8 @@
   - missing=0, unparsable=1
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=1
-  - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=20000
+  - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=10000
+  - samplingDistancePairs=3, samplingTimestampPairs=1
   - motionConsecutivePairs=3, motionTaggedPairCount=2, motionCleanAdjacent=1, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=2, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=3, eleValid=4, eleAnnotationCount=3
 
@@ -538,6 +573,7 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=2
   - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - samplingDistancePairs=2, samplingTimestampPairs=0
   - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=2, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=2, eleValid=3, eleAnnotationCount=2
 
@@ -547,13 +583,52 @@
 - Checks:
   - PASS | Whitespace-only body counts as unparsable | expected eq 1 | actual 1
   - PASS | No missing-time tags when <time> exists on every point | expected eq 0 | actual 0
-  - PASS | One positive delta (bridge from first valid to last; middle invalid does not add a second consecutive-valid pair) | expected eq 1 | actual 1
+  - PASS | No positive sampling dt (middle unparsable; adjacent-only pairs are invalid-valid or valid-invalid) | expected eq 0 | actual 0
   - PASS | Middle point breaks two motion pairs for time | expected eq 2 | actual 2
 - Key metrics:
   - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=1
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=1
-  - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=20000
+  - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - samplingDistancePairs=2, samplingTimestampPairs=0
   - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=2, motionInvalidDistance=0, motionEleUnresolvable=0
   - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=2, eleValid=3, eleAnnotationCount=2
+
+## adv-36-gpx-gap-same-time-non-adjacent-dup - Coordinate rejection between identical timestamps: not adjacentDuplicate
+- Intent: When a GPX row is rejected between two accepted points, stream adjacency fails; same timestamp as earlier valid point should be nonAdjacentRepeat, not adjacentDuplicate (ADR-0013).
+- Status: PASS
+- Checks:
+  - PASS | At least one coordinate rejection | expected atLeast 1 | actual 1
+  - PASS | Same timestamp across gpx gap is nonAdjacentRepeat, not stream-adjacent duplicate | expected atLeast 1 | actual 1
+  - PASS | No adjacentDuplicate when stream predecessor is missing | expected eq 0 | actual 0
+  - PASS | No stream-adjacent pairs to evaluate for motion | expected eq 0 | actual 0
+  - PASS | No sampling distance steps without stream-adjacent edges | expected eq 0 | actual 0
+  - PASS | No sampling timestamp pair evaluations without stream-adjacent edges | expected eq 0 | actual 0
+- Key metrics:
+  - totalPoints=3, rejectedCoords=1, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=1
+  - annotationCount=1
+  - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - samplingDistancePairs=0, samplingTimestampPairs=0
+  - motionConsecutivePairs=0, motionTaggedPairCount=0, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=1, eleValid=2, eleAnnotationCount=1
+
+## adv-37-reject-mid-track-sampling-motion-pair-counts - Mid-track coord reject: motion and sampling share stream-adjacent pair count
+- Intent: Five GPX rows with one invalid coordinate in the middle yields two stream edges among four accepted points (0-1 and 3-4). Sampling distance pairInspection.consecutivePairCount must match motion.summary.consecutivePairCount (ADR-0013).
+- Status: PASS
+- Checks:
+  - PASS | Exactly one coordinate rejection | expected eq 1 | actual 1
+  - PASS | Two GPX-stream-adjacent edges among accepted points | expected eq 2 | actual 2
+  - PASS | Sampling distance pair count matches motion | expected eq 2 | actual 2
+  - PASS | Sampling timestamp pair count matches motion (all times valid and adjacent) | expected eq 2 | actual 2
+- Key metrics:
+  - totalPoints=5, rejectedCoords=1, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=0
+  - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=5000
+  - samplingDistancePairs=2, samplingTimestampPairs=2
+  - motionConsecutivePairs=2, motionTaggedPairCount=0, motionCleanAdjacent=2, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=3, eleValid=4, eleAnnotationCount=3

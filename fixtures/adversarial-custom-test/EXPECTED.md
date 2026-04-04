@@ -250,3 +250,13 @@ These are assertion targets for each adversarial GPX case.
 - expect: Same timestamp across gpx gap is nonAdjacentRepeat, not stream-adjacent duplicate [nonAdjacentRepeatCount atLeast 1]
 - expect: No adjacentDuplicate when stream predecessor is missing [duplicateTs eq 0]
 - expect: No stream-adjacent pairs to evaluate for motion [motionConsecutivePairs eq 0]
+- expect: No sampling distance steps without stream-adjacent edges [samplingDistancePairs eq 0]
+- expect: No sampling timestamp pair evaluations without stream-adjacent edges [samplingTimestampPairs eq 0]
+
+## adv-37-reject-mid-track-sampling-motion-pair-counts
+- Title: Mid-track coord reject: motion and sampling share stream-adjacent pair count
+- Why: Five GPX rows with one invalid coordinate in the middle yields two stream edges among four accepted points (0-1 and 3-4). Sampling distance pairInspection.consecutivePairCount must match motion.summary.consecutivePairCount (ADR-0013).
+- expect: Exactly one coordinate rejection [rejectedCoords eq 1]
+- expect: Two GPX-stream-adjacent edges among accepted points [motionConsecutivePairs eq 2]
+- expect: Sampling distance pair count matches motion [samplingDistancePairs eq 2]
+- expect: Sampling timestamp pair count matches motion (all times valid and adjacent) [samplingTimestampPairs eq 2]

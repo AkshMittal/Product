@@ -9,7 +9,7 @@ Files live under **`fixtures/adversarial-custom-test/`** (tracked in git) — no
 
 ## Expected outcomes + run report (`EXPECTED.md`, `REPORT.md`)
 
-Assertion targets and the latest harness run output for the 20 adversarial cases live **here** (same folder as the `custom-test` cohort). They are produced by:
+Assertion targets and the latest harness run output for all adversarial cases in this cohort live **here** (same folder as the `custom-test` cohort). They are produced by:
 
 ```bash
 node scripts/generate-gpx-adversarial-suite.js

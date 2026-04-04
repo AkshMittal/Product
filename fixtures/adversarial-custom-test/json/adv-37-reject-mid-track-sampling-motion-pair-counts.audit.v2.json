@@ -1,24 +1,24 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T10:33:09.286Z",
+    "generatedAtUtc": "2026-04-04T10:34:29.217Z",
     "source": {
-      "fileName": "adv-08-polar-latitude.gpx"
+      "fileName": "adv-37-reject-mid-track-sampling-motion-pair-counts.gpx"
     },
     "summary": {
-      "totalPointCount": 8
+      "totalPointCount": 5
     }
   },
   "audit": {
     "ingestion": {
       "counts": {
-        "totalPointCount": 8,
-        "validPointCount": 8,
-        "rejectedPointCount": 0,
+        "totalPointCount": 5,
+        "validPointCount": 4,
+        "rejectedPointCount": 1,
         "pointTypeCounts": {
           "wpt": 0,
           "rtept": 0,
-          "trkpt": 8
+          "trkpt": 5
         }
       },
       "context": {
@@ -26,14 +26,24 @@
         "hasAnyTimestampValues": true
       },
       "rejections": {
-        "events": []
+        "events": [
+          {
+            "gpxIndex": 2,
+            "pointType": "trkpt",
+            "rawLat": "x",
+            "rawLon": "y",
+            "rawEle": "100",
+            "rawTime": "2026-02-14T00:00:10.000Z",
+            "reason": "Invalid coordinates: lat=\"x\", lon=\"y\" (not parseable as numbers)"
+          }
+        ]
       }
     },
     "temporal": {
-      "totalPointsEvaluated": 8,
+      "totalPointsEvaluated": 4,
       "session": {
-        "rawSessionDurationSec": 21,
-        "parseableTimestampPointCount": 8
+        "rawSessionDurationSec": 20,
+        "parseableTimestampPointCount": 4
       },
       "tagCounts": {
         "missing": 0,
@@ -58,9 +68,9 @@
         "timestampContext": {
           "hasAnyParseableTimestamp": true,
           "hasAnyPositiveTimeDelta": true,
-          "timestampedPointsCount": 8,
-          "consecutiveTimestampPairsCount": 7,
-          "positiveTimeDeltaCount": 7,
+          "timestampedPointsCount": 4,
+          "consecutiveTimestampPairsCount": 2,
+          "positiveTimeDeltaCount": 2,
           "rejections": {
             "nonPositiveTimeDeltaPairs": {
               "nonPositivePairCount": 0,
@@ -69,25 +79,25 @@
           }
         },
         "deltaStatistics": {
-          "positiveDeltaCount": 7,
-          "minMs": 3000,
-          "maxMs": 3000,
-          "medianMs": 3000
+          "positiveDeltaCount": 2,
+          "minMs": 5000,
+          "maxMs": 5000,
+          "medianMs": 5000
         },
         "clustering": {
           "insertionRelativeThreshold": 0.02,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
-          "sortedClusterCountOverTotalDeltasRatio": 0.14285714285714285,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.14285714285714285,
+          "sortedClusterCountOverTotalDeltasRatio": 0.5,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.5,
           "sequentialOverSortedClusterCountRatio": 1,
           "clusters": [
             {
-              "centerSec": 3,
-              "count": 7,
+              "centerSec": 5,
+              "count": 2,
               "clusterShareOfTotalDeltas": 1,
-              "minSec": 3,
-              "maxSec": 3,
+              "minSec": 5,
+              "maxSec": 5,
               "spreadSec": 0,
               "meanInsertionRelativeDeviation": 0,
               "maxInsertionRelativeDeviation": 0,
@@ -103,23 +113,23 @@
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
-          "totalDeltaCount": 7,
+          "totalDeltaCount": 2,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
           "meanFinalAbsoluteDeviationSec": 0,
           "maxFinalAbsoluteDeviationSec": 0,
           "meanFinalRelativeDeviation": 0,
           "maxFinalRelativeDeviation": 0,
-          "sortedClusterCountOverTotalDeltasRatio": 0.14285714285714285,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.14285714285714285,
+          "sortedClusterCountOverTotalDeltasRatio": 0.5,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.5,
           "sequentialOverSortedClusterCountRatio": 1,
           "nonZeroFinalDeviationCount": 0,
-          "zeroFinalDeviationCount": 7
+          "zeroFinalDeviationCount": 2
         }
       },
       "distance": {
         "pairInspection": {
-          "consecutivePairCount": 7,
+          "consecutivePairCount": 2,
           "rejections": {
             "invalidDistance": {
               "count": 0
@@ -127,60 +137,60 @@
           }
         },
         "deltaStatistics": {
-          "deltaCount": 7,
-          "minMeters": 40.39431271039743,
-          "maxMeters": 40.61825163347651,
-          "medianMeters": 40.506269560183384
+          "deltaCount": 2,
+          "minMeters": 6.210394270708401,
+          "maxMeters": 6.210395730059987,
+          "medianMeters": 6.210395000384194
         },
         "clustering": {
           "insertionRelativeThreshold": 0.02,
-          "totalDeltaCount": 7,
+          "totalDeltaCount": 2,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
-          "sortedClusterCountOverTotalDeltasRatio": 0.14285714285714285,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.14285714285714285,
+          "sortedClusterCountOverTotalDeltasRatio": 0.5,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.5,
           "sequentialOverSortedClusterCountRatio": 1,
           "clusters": [
             {
-              "centerMeters": 40.506269560183384,
-              "count": 7,
+              "centerMeters": 6.210395000384194,
+              "count": 2,
               "clusterShareOfTotalDeltas": 1,
-              "minMeters": 40.39431271039743,
-              "maxMeters": 40.61825163347651,
-              "spreadMeters": 0.22393892307908203,
-              "meanInsertionRelativeDeviation": 0.0017793343528030112,
-              "maxInsertionRelativeDeviation": 0.003226739223140451,
-              "meanInsertionAbsoluteDeviationMeters": 0.07197947405880509,
-              "maxInsertionAbsoluteDeviationMeters": 0.1306429549740855,
-              "finalMeanAbsoluteDeviationMeters": 0.06398255621695016,
-              "finalMaxAbsoluteDeviationMeters": 0.11198207329312737,
-              "finalMeanRelativeDeviation": 0.0015795716789443223,
-              "finalMaxRelativeDeviation": 0.002764561498973553,
-              "finalSpreadOverCenterRatio": 0.005528500291698256
+              "minMeters": 6.210394270708401,
+              "maxMeters": 6.210395730059987,
+              "spreadMeters": 0.0000014593515853533745,
+              "meanInsertionRelativeDeviation": 1.1749266807716787e-7,
+              "maxInsertionRelativeDeviation": 2.3498533615433574e-7,
+              "meanInsertionAbsoluteDeviationMeters": 7.296757926766873e-7,
+              "maxInsertionAbsoluteDeviationMeters": 0.0000014593515853533745,
+              "finalMeanAbsoluteDeviationMeters": 7.296757926766873e-7,
+              "finalMaxAbsoluteDeviationMeters": 7.296757926766873e-7,
+              "finalMeanRelativeDeviation": 1.1749265427264244e-7,
+              "finalMaxRelativeDeviation": 1.1749265427264244e-7,
+              "finalSpreadOverCenterRatio": 2.3498530854528489e-7
             }
           ]
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
-          "totalDeltaCount": 7,
+          "totalDeltaCount": 2,
           "sortedClusterCount": 1,
           "sequentialClusterCount": 1,
-          "meanFinalAbsoluteDeviationMeters": 0.06398255621695016,
-          "maxFinalAbsoluteDeviationMeters": 0.11198207329312737,
-          "meanFinalRelativeDeviation": 0.0015795716789443223,
-          "maxFinalRelativeDeviation": 0.002764561498973553,
-          "sortedClusterCountOverTotalDeltasRatio": 0.14285714285714285,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.14285714285714285,
+          "meanFinalAbsoluteDeviationMeters": 7.296757926766873e-7,
+          "maxFinalAbsoluteDeviationMeters": 7.296757926766873e-7,
+          "meanFinalRelativeDeviation": 1.1749265427264244e-7,
+          "maxFinalRelativeDeviation": 1.1749265427264244e-7,
+          "sortedClusterCountOverTotalDeltasRatio": 0.5,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.5,
           "sequentialOverSortedClusterCountRatio": 1,
-          "nonZeroFinalDeviationCount": 6,
-          "zeroFinalDeviationCount": 1
+          "nonZeroFinalDeviationCount": 2,
+          "zeroFinalDeviationCount": 0
         },
-        "timeConditionedDeltaCount": 7
+        "timeConditionedDeltaCount": 2
       }
     },
     "motion": {
       "summary": {
-        "consecutivePairCount": 7,
+        "consecutivePairCount": 2,
         "parameters": {
           "validFloorM": -500,
           "validCeilingM": 9500
@@ -203,8 +213,8 @@
       "pairAnnotations": []
     },
     "elevation": {
-      "totalPointsEvaluated": 8,
-      "validElevationPointCount": 8,
+      "totalPointsEvaluated": 4,
+      "validElevationPointCount": 4,
       "parameters": {
         "validFloorM": -500,
         "validCeilingM": 9500
@@ -213,7 +223,7 @@
         "missing": 0,
         "unparsable": 0,
         "outOfBounds": 0,
-        "adjacentDuplicate": 7
+        "adjacentDuplicate": 3
       },
       "tagIndex": {
         "missing": [],
@@ -221,22 +231,13 @@
         "outOfBounds": [],
         "adjacentDuplicate": [
           1,
-          2,
           3,
-          4,
-          5,
-          6,
-          7
+          4
         ]
       },
       "pointAnnotations": [
         {
           "gpxIndex": 1,
-          "ele": 100,
-          "adjacentDuplicate": true
-        },
-        {
-          "gpxIndex": 2,
           "ele": 100,
           "adjacentDuplicate": true
         },
@@ -247,21 +248,6 @@
         },
         {
           "gpxIndex": 4,
-          "ele": 100,
-          "adjacentDuplicate": true
-        },
-        {
-          "gpxIndex": 5,
-          "ele": 100,
-          "adjacentDuplicate": true
-        },
-        {
-          "gpxIndex": 6,
-          "ele": 100,
-          "adjacentDuplicate": true
-        },
-        {
-          "gpxIndex": 7,
           "ele": 100,
           "adjacentDuplicate": true
         }
