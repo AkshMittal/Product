@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T08:06:36.722Z",
+    "generatedAtUtc": "2026-04-04T09:18:23.417Z",
     "source": {
       "fileName": "adv-11-backtracking-after-invalid-gap.gpx"
     },
@@ -85,18 +85,12 @@
           "hasAnyParseableTimestamp": true,
           "hasAnyPositiveTimeDelta": true,
           "timestampedPointsCount": 5,
-          "consecutiveTimestampPairsCount": 4,
+          "consecutiveTimestampPairsCount": 3,
           "positiveTimeDeltaCount": 3,
           "rejections": {
             "nonPositiveTimeDeltaPairs": {
-              "nonPositivePairCount": 1,
-              "events": [
-                {
-                  "fromIndex": 1,
-                  "toIndex": 4,
-                  "delta": -6000
-                }
-              ]
+              "nonPositivePairCount": 0,
+              "events": []
             }
           }
         },

@@ -1075,7 +1075,7 @@ function buildCases() {
       id: "adv-33-empty-time-element-mid-track",
       title: "Empty <time></time> is unparsable not missing",
       rationale:
-        "Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012).",
+        "Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012). Sampling time Δ uses adjacent pairs only — no bridge across the empty <time> point.",
       pointsBuilder: () => {
         return buildLinearTrack({
           count: 4,
@@ -1097,10 +1097,10 @@ function buildCases() {
         { description: "Exactly one unparsable timestamp (empty <time> body)", key: "unparsableTs", kind: "eq", value: 1 },
         { description: "No missing-time points (every trkpt has a <time> child)", key: "missingTs", kind: "eq", value: 0 },
         {
-          description: "Sampling bridges positive dt across invalid point (prev valid to next valid)",
+          description: "One adjacent-valid positive dt (0→1 only; 2 unparsable breaks 1→2 and 2→3)",
           key: "positiveDeltas",
           kind: "eq",
-          value: 2
+          value: 1
         },
         { description: "Two motion pairs touch the non-finite timeMs endpoint", key: "motionTimeUnresolvable", kind: "eq", value: 2 },
         { description: "Only the last pair has both endpoints with finite timeMs and no motion tags", key: "motionForwardValid", kind: "eq", value: 1 }
@@ -1160,10 +1160,10 @@ function buildCases() {
         { description: "Whitespace-only body counts as unparsable", key: "unparsableTs", kind: "eq", value: 1 },
         { description: "No missing-time tags when <time> exists on every point", key: "missingTs", kind: "eq", value: 0 },
         {
-          description: "One positive delta (bridge from first valid to last; middle invalid does not add a second consecutive-valid pair)",
+          description: "No positive sampling dt (middle unparsable; adjacent-only pairs are invalid-valid or valid-invalid)",
           key: "positiveDeltas",
           kind: "eq",
-          value: 1
+          value: 0
         },
         { description: "Middle point breaks two motion pairs for time", key: "motionTimeUnresolvable", kind: "eq", value: 2 }
       ]
@@ -1234,13 +1234,17 @@ function main() {
   fs.writeFileSync(EXPECTED_PATH, renderExpected(cases), "utf8");
 
   const results = cases.map(runCase);
-  fs.writeFileSync(REPORT_PATH, renderReport(results), "utf8");
+  if (process.env.ADVERSARIAL_SKIP_REPORT === "1") {
+    console.log(`Report file skipped (set ADVERSARIAL_SKIP_REPORT=1 to skip ${path.basename(REPORT_PATH)})`);
+  } else {
+    fs.writeFileSync(REPORT_PATH, renderReport(results), "utf8");
+  }
 
   const failed = results.filter((r) => r.status === "FAIL");
   console.log(`Generated ${results.length} adversarial GPX files in: ${FIXTURE_GPX_DIR}`);
   console.log(`Generated ${results.length} adversarial JSON files in: ${FIXTURE_JSON_DIR}`);
   console.log(`Expected outcomes file: ${EXPECTED_PATH}`);
-  console.log(`Report file: ${REPORT_PATH}`);
+  console.log(process.env.ADVERSARIAL_SKIP_REPORT === "1" ? `Report file: (not written)` : `Report file: ${REPORT_PATH}`);
   console.log(`Result: ${results.length - failed.length}/${results.length} non-failing cases`);
 
   if (failed.length > 0) {

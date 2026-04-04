@@ -43,6 +43,8 @@ Label-based per-point tags (`tagCounts`, `tagIndex`, `pointAnnotations`). Full f
 
 Path: `audit.sampling.time`
 
+Time positive-`Δt` population is **adjacent pairs with finite `timeMs` on both ends** only (see pipeline glossary).
+
 ### Context
 
 - `timestampContext.hasAnyParseableTimestamp`

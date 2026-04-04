@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T08:06:36.710Z",
+    "generatedAtUtc": "2026-04-04T09:18:23.408Z",
     "source": {
       "fileName": "adv-10-timestamp-format-variants.gpx"
     },
@@ -73,8 +73,8 @@
           "hasAnyParseableTimestamp": true,
           "hasAnyPositiveTimeDelta": true,
           "timestampedPointsCount": 6,
-          "consecutiveTimestampPairsCount": 5,
-          "positiveTimeDeltaCount": 5,
+          "consecutiveTimestampPairsCount": 4,
+          "positiveTimeDeltaCount": 4,
           "rejections": {
             "nonPositiveTimeDeltaPairs": {
               "nonPositivePairCount": 0,
@@ -83,23 +83,23 @@
           }
         },
         "deltaStatistics": {
-          "positiveDeltaCount": 5,
+          "positiveDeltaCount": 4,
           "minMs": 4500,
-          "maxMs": 15000,
+          "maxMs": 5500,
           "medianMs": 5000
         },
         "clustering": {
           "insertionRelativeThreshold": 0.02,
-          "sortedClusterCount": 4,
-          "sequentialClusterCount": 5,
-          "sortedClusterCountOverTotalDeltasRatio": 0.8,
+          "sortedClusterCount": 3,
+          "sequentialClusterCount": 4,
+          "sortedClusterCountOverTotalDeltasRatio": 0.75,
           "sequentialClusterCountOverTotalDeltasRatio": 1,
-          "sequentialOverSortedClusterCountRatio": 1.25,
+          "sequentialOverSortedClusterCountRatio": 1.3333333333333333,
           "clusters": [
             {
               "centerSec": 5,
               "count": 2,
-              "clusterShareOfTotalDeltas": 0.4,
+              "clusterShareOfTotalDeltas": 0.5,
               "minSec": 5,
               "maxSec": 5,
               "spreadSec": 0,
@@ -116,7 +116,7 @@
             {
               "centerSec": 4.5,
               "count": 1,
-              "clusterShareOfTotalDeltas": 0.2,
+              "clusterShareOfTotalDeltas": 0.25,
               "minSec": 4.5,
               "maxSec": 4.5,
               "spreadSec": 0,
@@ -133,26 +133,9 @@
             {
               "centerSec": 5.5,
               "count": 1,
-              "clusterShareOfTotalDeltas": 0.2,
+              "clusterShareOfTotalDeltas": 0.25,
               "minSec": 5.5,
               "maxSec": 5.5,
-              "spreadSec": 0,
-              "meanInsertionRelativeDeviation": 0,
-              "maxInsertionRelativeDeviation": 0,
-              "meanInsertionAbsoluteDeviationSec": 0,
-              "maxInsertionAbsoluteDeviationSec": 0,
-              "finalMeanAbsoluteDeviationSec": 0,
-              "finalMaxAbsoluteDeviationSec": 0,
-              "finalMeanRelativeDeviation": 0,
-              "finalMaxRelativeDeviation": 0,
-              "finalSpreadOverCenterRatio": 0
-            },
-            {
-              "centerSec": 15,
-              "count": 1,
-              "clusterShareOfTotalDeltas": 0.2,
-              "minSec": 15,
-              "maxSec": 15,
               "spreadSec": 0,
               "meanInsertionRelativeDeviation": 0,
               "maxInsertionRelativeDeviation": 0,
@@ -168,18 +151,18 @@
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
-          "totalDeltaCount": 5,
-          "sortedClusterCount": 4,
-          "sequentialClusterCount": 5,
+          "totalDeltaCount": 4,
+          "sortedClusterCount": 3,
+          "sequentialClusterCount": 4,
           "meanFinalAbsoluteDeviationSec": 0,
           "maxFinalAbsoluteDeviationSec": 0,
           "meanFinalRelativeDeviation": 0,
           "maxFinalRelativeDeviation": 0,
-          "sortedClusterCountOverTotalDeltasRatio": 0.8,
+          "sortedClusterCountOverTotalDeltasRatio": 0.75,
           "sequentialClusterCountOverTotalDeltasRatio": 1,
-          "sequentialOverSortedClusterCountRatio": 1.25,
+          "sequentialOverSortedClusterCountRatio": 1.3333333333333333,
           "nonZeroFinalDeviationCount": 0,
-          "zeroFinalDeviationCount": 5
+          "zeroFinalDeviationCount": 4
         }
       },
       "distance": {
@@ -240,7 +223,7 @@
           "nonZeroFinalDeviationCount": 6,
           "zeroFinalDeviationCount": 1
         },
-        "timeConditionedDeltaCount": 5
+        "timeConditionedDeltaCount": 4
       }
     },
     "motion": {

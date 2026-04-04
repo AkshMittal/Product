@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T08:08:20.826Z",
+    "generatedAtUtc": "2026-04-04T09:19:57.066Z",
     "source": {
       "fileName": "adv-13-mixed-all-anomalies.gpx"
     },
@@ -107,8 +107,8 @@
           "hasAnyParseableTimestamp": true,
           "hasAnyPositiveTimeDelta": true,
           "timestampedPointsCount": 11,
-          "consecutiveTimestampPairsCount": 10,
-          "positiveTimeDeltaCount": 8,
+          "consecutiveTimestampPairsCount": 9,
+          "positiveTimeDeltaCount": 7,
           "rejections": {
             "nonPositiveTimeDeltaPairs": {
               "nonPositivePairCount": 2,
@@ -128,23 +128,23 @@
           }
         },
         "deltaStatistics": {
-          "positiveDeltaCount": 8,
+          "positiveDeltaCount": 7,
           "minMs": 4000,
           "maxMs": 32000,
-          "medianMs": 6000
+          "medianMs": 4000
         },
         "clustering": {
           "insertionRelativeThreshold": 0.02,
-          "sortedClusterCount": 4,
-          "sequentialClusterCount": 7,
-          "sortedClusterCountOverTotalDeltasRatio": 0.5,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.875,
-          "sequentialOverSortedClusterCountRatio": 1.75,
+          "sortedClusterCount": 3,
+          "sequentialClusterCount": 5,
+          "sortedClusterCountOverTotalDeltasRatio": 0.42857142857142855,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.7142857142857143,
+          "sequentialOverSortedClusterCountRatio": 1.6666666666666667,
           "clusters": [
             {
               "centerSec": 4,
               "count": 4,
-              "clusterShareOfTotalDeltas": 0.5,
+              "clusterShareOfTotalDeltas": 0.5714285714285714,
               "minSec": 4,
               "maxSec": 4,
               "spreadSec": 0,
@@ -161,7 +161,7 @@
             {
               "centerSec": 8,
               "count": 2,
-              "clusterShareOfTotalDeltas": 0.25,
+              "clusterShareOfTotalDeltas": 0.2857142857142857,
               "minSec": 8,
               "maxSec": 8,
               "spreadSec": 0,
@@ -176,26 +176,9 @@
               "finalSpreadOverCenterRatio": 0
             },
             {
-              "centerSec": 12,
-              "count": 1,
-              "clusterShareOfTotalDeltas": 0.125,
-              "minSec": 12,
-              "maxSec": 12,
-              "spreadSec": 0,
-              "meanInsertionRelativeDeviation": 0,
-              "maxInsertionRelativeDeviation": 0,
-              "meanInsertionAbsoluteDeviationSec": 0,
-              "maxInsertionAbsoluteDeviationSec": 0,
-              "finalMeanAbsoluteDeviationSec": 0,
-              "finalMaxAbsoluteDeviationSec": 0,
-              "finalMeanRelativeDeviation": 0,
-              "finalMaxRelativeDeviation": 0,
-              "finalSpreadOverCenterRatio": 0
-            },
-            {
               "centerSec": 32,
               "count": 1,
-              "clusterShareOfTotalDeltas": 0.125,
+              "clusterShareOfTotalDeltas": 0.14285714285714285,
               "minSec": 32,
               "maxSec": 32,
               "spreadSec": 0,
@@ -213,18 +196,18 @@
         },
         "normalization": {
           "insertionRelativeThreshold": 0.02,
-          "totalDeltaCount": 8,
-          "sortedClusterCount": 4,
-          "sequentialClusterCount": 7,
+          "totalDeltaCount": 7,
+          "sortedClusterCount": 3,
+          "sequentialClusterCount": 5,
           "meanFinalAbsoluteDeviationSec": 0,
           "maxFinalAbsoluteDeviationSec": 0,
           "meanFinalRelativeDeviation": 0,
           "maxFinalRelativeDeviation": 0,
-          "sortedClusterCountOverTotalDeltasRatio": 0.5,
-          "sequentialClusterCountOverTotalDeltasRatio": 0.875,
-          "sequentialOverSortedClusterCountRatio": 1.75,
+          "sortedClusterCountOverTotalDeltasRatio": 0.42857142857142855,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.7142857142857143,
+          "sequentialOverSortedClusterCountRatio": 1.6666666666666667,
           "nonZeroFinalDeviationCount": 0,
-          "zeroFinalDeviationCount": 8
+          "zeroFinalDeviationCount": 7
         }
       },
       "distance": {
@@ -302,7 +285,7 @@
           "nonZeroFinalDeviationCount": 10,
           "zeroFinalDeviationCount": 2
         },
-        "timeConditionedDeltaCount": 8
+        "timeConditionedDeltaCount": 7
       }
     },
     "motion": {

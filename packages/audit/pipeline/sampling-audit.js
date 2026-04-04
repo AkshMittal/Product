@@ -2,7 +2,8 @@
  * Sampling Audit Module
  * Observational audit pass for time and distance sampling behavior in GPX points.
  * Does NOT mutate, reorder, or normalize any data.
- * Collects positive time deltas between consecutive valid timestamps.
+ * Collects positive time deltas only for physically adjacent point pairs where both
+ * endpoints have finite ingestion timeMs (no bridging across missing/unparsable gaps).
  * Collects distance deltas between every consecutive coordinate pair.
  */
 
@@ -27,7 +28,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 
 /**
  * Audits time and distance sampling behavior.
- * Time deltas: positive-only, between consecutive valid timestamps.
+ * Time deltas: positive-only, physically adjacent pairs only (both endpoints finite timeMs).
  * Distance deltas: every consecutive coordinate pair, no timestamp dependency.
  * @param {Array} points - Array of point objects with gpxIndex, timeMs, lat, lon (finite timeMs from ingestion only)
  * @param {string} [gpxFilename] - Optional GPX filename (without extension)
@@ -37,8 +38,6 @@ function auditSampling(points, gpxFilename) {
   const timeDeltasMs = []; // Array<{ fromIndex, toIndex, dtSec }>
   const distanceDeltas = []; // Array<{ fromIndex, toIndex, ddMeters }> — every consecutive pair
   const timeConditionedDistanceDeltas = []; // Array<{ fromIndex, toIndex, ddMeters }> — subset with positive dt
-  let previousTimestampMs = null;
-  let previousTimestampGpxIndex = null;
   let previousPoint = null;
   let hasValidTimestamps = false;
   let hasTimeProgression = false;
@@ -57,13 +56,9 @@ function auditSampling(points, gpxFilename) {
   for (let i = 0; i < points.length; i++) {
     const point = points[i];
 
-    let currentTimestampMs = null;
-    let hasValidTimestamp = false;
-
-    if (typeof point.timeMs === 'number' && isFinite(point.timeMs)) {
-      currentTimestampMs = point.timeMs;
-      hasValidTimestamp = true;
-    }
+    const hasValidTimestamp =
+      typeof point.timeMs === 'number' && isFinite(point.timeMs);
+    const currentTimestampMs = hasValidTimestamp ? point.timeMs : null;
 
     // Distance delta: computed for every consecutive coordinate pair
     let distanceFromPrev = null;
@@ -88,26 +83,25 @@ function auditSampling(points, gpxFilename) {
       }
     }
 
-    // Time delta: only for valid timestamps with positive progression
-    if (hasValidTimestamp) {
-      hasValidTimestamps = true;
-      timestampedPointsCount++;
-
-      if (previousTimestampMs !== null) {
+    // Time delta: physically adjacent pair (i-1, i) only when both have finite timeMs — no gap bridging
+    if (i >= 1) {
+      const prev = points[i - 1];
+      const prevTimeOk =
+        typeof prev.timeMs === 'number' && isFinite(prev.timeMs);
+      if (prevTimeOk && hasValidTimestamp) {
         consecutiveTimestampPairsCount++;
-        const delta = currentTimestampMs - previousTimestampMs;
+        const delta = currentTimestampMs - prev.timeMs;
 
         if (delta > 0) {
           positiveTimeDeltasCollected++;
           timeDeltasMs.push({
-            fromIndex: previousTimestampGpxIndex,
+            fromIndex: prev.gpxIndex,
             toIndex: point.gpxIndex,
             dtSec: delta / 1000
           });
           hasTimeProgression = true;
 
-          // Time-conditioned distance: reuse already-computed haversine
-          if (previousPoint !== null && distanceFromPrevValid) {
+          if (distanceFromPrevValid) {
             timeConditionedDistanceDeltas.push({
               fromIndex: previousPoint.gpxIndex,
               toIndex: point.gpxIndex,
@@ -117,14 +111,17 @@ function auditSampling(points, gpxFilename) {
         } else {
           rejectedTimestampPairsDeltaLeqZero++;
           nonPositiveTimeDeltaEvents.push({
-            fromIndex: previousTimestampGpxIndex,
+            fromIndex: prev.gpxIndex,
             toIndex: point.gpxIndex,
             delta: delta
           });
         }
       }
-      previousTimestampMs = currentTimestampMs;
-      previousTimestampGpxIndex = point.gpxIndex;
+    }
+
+    if (hasValidTimestamp) {
+      hasValidTimestamps = true;
+      timestampedPointsCount++;
     }
 
     previousPoint = { lat: point.lat, lon: point.lon, gpxIndex: point.gpxIndex };

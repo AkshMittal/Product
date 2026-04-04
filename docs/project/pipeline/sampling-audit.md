@@ -7,7 +7,8 @@ The sampling module performs an observational audit of time-delta sampling behav
 ## Core principles
 
 - Time audit and distance audit are separated.
-- Time-conditioned metrics require positive time progression.
+- **Time deltas** use **physically adjacent** pairs only: both endpoints must have finite `timeMs`. There is **no bridging** across missing or unparsable timestamps (temporal audit owns gap labeling).
+- Time-conditioned distance uses the same adjacent segment as horizontal distance when that edge has positive `Δt`.
 - Distance deltas are always computed from consecutive coordinate pairs — no timestamp dependency.
 - Clustering uses insertion-time threshold checks and final-center spread summaries.
 
@@ -20,9 +21,9 @@ Sampling uses **finite ingestion `timeMs` only** for timestamped points. It does
 `audit.sampling.time.timestampContext`
 
 - `hasAnyParseableTimestamp`: at least one parseable timestamp exists.
-- `hasAnyPositiveTimeDelta`: at least one consecutive positive delta exists.
+- `hasAnyPositiveTimeDelta`: at least one adjacent-pair positive `Δt` exists (both endpoints finite `timeMs`).
 - `timestampedPointsCount`: points with parseable timestamp.
-- `consecutiveTimestampPairsCount`: consecutive parseable pairs encountered.
+- `consecutiveTimestampPairsCount`: physically adjacent pairs where **both** endpoints have finite `timeMs` (evaluated for sign; includes non-positive rejects).
 - `positiveTimeDeltaCount`: count of collected positive deltas.
 - `rejections.nonPositiveTimeDeltaPairs.nonPositivePairCount`: rejected parseable pairs where delta <= 0.
 - `rejections.nonPositiveTimeDeltaPairs.events`: event-level rejects.

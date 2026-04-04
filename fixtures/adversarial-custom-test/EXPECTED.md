@@ -219,10 +219,10 @@ These are assertion targets for each adversarial GPX case.
 
 ## adv-33-empty-time-element-mid-track
 - Title: Empty <time></time> is unparsable not missing
-- Why: Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012).
+- Why: Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012). Sampling time Δ uses adjacent pairs only — no bridge across the empty <time> point.
 - expect: Exactly one unparsable timestamp (empty <time> body) [unparsableTs eq 1]
 - expect: No missing-time points (every trkpt has a <time> child) [missingTs eq 0]
-- expect: Sampling bridges positive dt across invalid point (prev valid to next valid) [positiveDeltas eq 2]
+- expect: One adjacent-valid positive dt (0→1 only; 2 unparsable breaks 1→2 and 2→3) [positiveDeltas eq 1]
 - expect: Two motion pairs touch the non-finite timeMs endpoint [motionTimeUnresolvable eq 2]
 - expect: Only the last pair has both endpoints with finite timeMs and no motion tags [motionForwardValid eq 1]
 
@@ -240,5 +240,5 @@ These are assertion targets for each adversarial GPX case.
 - Why: Ingestion trims text; all-whitespace becomes empty string → timeRaw null, timeMs null, timeAbsent false → unparsable.
 - expect: Whitespace-only body counts as unparsable [unparsableTs eq 1]
 - expect: No missing-time tags when <time> exists on every point [missingTs eq 0]
-- expect: One positive delta (bridge from first valid to last; middle invalid does not add a second consecutive-valid pair) [positiveDeltas eq 1]
+- expect: No positive sampling dt (middle unparsable; adjacent-only pairs are invalid-valid or valid-invalid) [positiveDeltas eq 0]
 - expect: Middle point breaks two motion pairs for time [motionTimeUnresolvable eq 2]

@@ -91,6 +91,8 @@ Sparse array of per-point objects (only anomalous points). Fields present only w
 
 Path: `audit.sampling.time`
 
+**Time deltas:** Built only from **physically adjacent** pairs with **finite `timeMs` on both endpoints** — no gap bridging. Use `audit.temporal` for missing/unparsable/gap structure.
+
 ### Context
 
 - `timestampContext.hasAnyParseableTimestamp`
