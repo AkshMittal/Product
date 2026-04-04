@@ -5,6 +5,7 @@
  *
  * Each anomalous point receives only the tags that apply; nominal points produce no annotation.
  * Tags are non-exclusive: a point can carry multiple tags simultaneously (e.g. belowAnchor + adjacentDuplicate).
+ * adjacentDuplicate / belowPrevValid use the accepted GPX predecessor row (gpxIndex-1) when it has finite timeMs (ADR-0013).
  *
  * Output shape:
  *   audit.temporal.tagCounts     — count per tag (quick summary / quality metrics)
@@ -22,7 +23,15 @@ function auditTimestamps(points) {
   let firstValidTimestampMs = null;
   let lastValidTimestampMs = null;
   let anchorTimestampMs = null;     // monotonic high-water mark; only advances on genuine forward progress
-  let prevValidTimestampMs = null;  // previous valid parsed timestamp (adjacency + belowPrevValid checks)
+
+  const pointByGpxIndex = new Map();
+  for (let pi = 0; pi < points.length; pi++) {
+    const p = points[pi];
+    const gi = p.gpxIndex;
+    if (typeof gi === 'number' && isFinite(gi)) {
+      pointByGpxIndex.set(gi, p);
+    }
+  }
 
   // tagIndex: sparse arrays of gpxIndexes, one per tag
   const tagIndex = {
@@ -89,7 +98,6 @@ function auditTimestamps(points) {
     // First valid point: initialize anchor and state, no comparative tags possible yet
     if (anchorTimestampMs === null) {
       anchorTimestampMs = timestampMs;
-      prevValidTimestampMs = timestampMs;
       seenTimestamps.set(timestampMs, gpxIndex);
       continue;
     }
@@ -98,9 +106,16 @@ function auditTimestamps(points) {
     const annotation = { gpxIndex, timestampMs, anchorMs: anchorTimestampMs };
     let hasTag = false;
 
+    const predPoint = pointByGpxIndex.get(gpxIndex - 1);
+    const predTimeMs =
+      predPoint && typeof predPoint.timeMs === 'number' && isFinite(predPoint.timeMs)
+        ? predPoint.timeMs
+        : null;
+
     // adjacentDuplicate and nonAdjacentRepeat are mutually exclusive by definition:
-    // "adjacent" means immediately preceding valid point; "non-adjacent" means seen before but not immediately.
-    const isAdjacentDup = (timestampMs === prevValidTimestampMs);
+    // "adjacent" means same timestamp as the GPX stream predecessor row (gpxIndex-1) when that row exists
+    // in accepted points with a parseable time; "non-adjacent" means seen before but not that stream pair.
+    const isAdjacentDup = predTimeMs !== null && timestampMs === predTimeMs;
 
     // NON-ADJACENT REPEAT: value seen before in stream AND not the immediately preceding valid point
     if (!isAdjacentDup && seenTimestamps.has(timestampMs)) {
@@ -133,11 +148,11 @@ function auditTimestamps(points) {
       hasTag = true;
     }
 
-    // BELOW PREV VALID: strictly less than the immediately preceding valid timestamp.
+    // BELOW PREV VALID: strictly less than the GPX stream predecessor's valid timestamp (gpxIndex-1).
     // Distinguishes locally-recovering backtracks (belowAnchor only) from actively-retreating
     // backtracks (belowAnchor + belowPrevValid). Both tags together = "digging deeper";
     // belowAnchor alone = "still in the hole but moving forward locally".
-    if (timestampMs < prevValidTimestampMs) {
+    if (predTimeMs !== null && timestampMs < predTimeMs) {
       annotation.belowPrevValid = true;
       tagIndex.belowPrevValid.push(gpxIndex);
       hasTag = true;
@@ -151,9 +166,6 @@ function auditTimestamps(points) {
     if (timestampMs > anchorTimestampMs) {
       anchorTimestampMs = timestampMs;
     }
-    
-    // prevValidTimestampMs always tracks the most recent valid parsed timestamp
-    prevValidTimestampMs = timestampMs;
   }
 
   const rawSessionDurationSec = (firstValidTimestampMs !== null && lastValidTimestampMs !== null)

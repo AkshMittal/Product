@@ -53,6 +53,24 @@ function endpointEleValidMotion(ele, floorM, ceilingM) {
 }
 
 /**
+ * GPX stream adjacency: consecutive source rows share gpxIndex+1 (ingestion may drop rejects).
+ * @param {{gpxIndex?:number}} prev
+ * @param {{gpxIndex?:number}} curr
+ * @returns {boolean}
+ */
+function gpxStreamAdjacentPair(prev, curr) {
+  var a = prev.gpxIndex;
+  var b = curr.gpxIndex;
+  if (typeof a !== 'number' || !isFinite(a)) {
+    return false;
+  }
+  if (typeof b !== 'number' || !isFinite(b)) {
+    return false;
+  }
+  return b === a + 1;
+}
+
+/**
  * @param {Array<{lat:number, lon:number, timeMs:number|null, ele?:number|null, gpxIndex:number}>} points
  * @param {{validFloorM?:number, validCeilingM?:number}|undefined} params
  * @returns {Object}
@@ -86,7 +104,7 @@ function auditMotion(points, params) {
   var pairAnnotations = [];
 
   var n = points.length;
-  var consecutivePairCount = n > 1 ? n - 1 : 0;
+  var consecutivePairCount = 0;
 
   if (n <= 1) {
     return {
@@ -110,6 +128,10 @@ function auditMotion(points, params) {
   for (var i = 1; i < n; i++) {
     var prev = points[i - 1];
     var curr = points[i];
+    if (!gpxStreamAdjacentPair(prev, curr)) {
+      continue;
+    }
+    consecutivePairCount++;
     var pairRef = { fromGpxIndex: prev.gpxIndex, toGpxIndex: curr.gpxIndex };
 
     var prevTsMs = endpointTimeMsForMotion(prev);

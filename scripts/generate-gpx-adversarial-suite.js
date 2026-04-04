@@ -1167,6 +1167,40 @@ function buildCases() {
         },
         { description: "Middle point breaks two motion pairs for time", key: "motionTimeUnresolvable", kind: "eq", value: 2 }
       ]
+    },
+    {
+      id: "adv-36-gpx-gap-same-time-non-adjacent-dup",
+      title: "Coordinate rejection between identical timestamps: not adjacentDuplicate",
+      rationale:
+        "When a GPX row is rejected between two accepted points, stream adjacency fails; same timestamp as earlier valid point should be nonAdjacentRepeat, not adjacentDuplicate (ADR-0013).",
+      pointsBuilder: () => {
+        const t = isoAt(baseIso, 0);
+        return buildLinearTrack({
+          count: 3,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00004,
+          lonStep: 0.00004,
+          baseIso,
+          dtSec: 10,
+          mutator: (pts) => {
+            pts[0].time = t;
+            pts[1] = { rawLat: "bad", rawLon: "77.5946", time: isoAt(baseIso, 99) };
+            pts[2].time = t;
+          }
+        });
+      },
+      expectedChecks: [
+        { description: "At least one coordinate rejection", key: "rejectedCoords", kind: "atLeast", value: 1 },
+        {
+          description: "Same timestamp across gpx gap is nonAdjacentRepeat, not stream-adjacent duplicate",
+          key: "nonAdjacentRepeatCount",
+          kind: "atLeast",
+          value: 1
+        },
+        { description: "No adjacentDuplicate when stream predecessor is missing", key: "duplicateTs", kind: "eq", value: 0 },
+        { description: "No stream-adjacent pairs to evaluate for motion", key: "motionConsecutivePairs", kind: "eq", value: 0 }
+      ]
     }
   ];
 }

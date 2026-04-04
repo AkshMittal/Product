@@ -2,9 +2,9 @@
  * Sampling Audit Module
  * Observational audit pass for time and distance sampling behavior in GPX points.
  * Does NOT mutate, reorder, or normalize any data.
- * Collects positive time deltas only for physically adjacent point pairs where both
+ * Collects positive time deltas only for GPX-stream-adjacent pairs (gpxIndex+1) where both
  * endpoints have finite ingestion timeMs (no bridging across missing/unparsable gaps).
- * Collects distance deltas between every consecutive coordinate pair.
+ * Collects distance deltas only for the same stream-adjacent pairs.
  */
 
 /**
@@ -27,18 +27,30 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
+ * @param {{gpxIndex?: number}} prev
+ * @param {{gpxIndex?: number}} curr
+ * @returns {boolean}
+ */
+function gpxStreamAdjacentPair(prev, curr) {
+  const a = prev.gpxIndex;
+  const b = curr.gpxIndex;
+  if (typeof a !== 'number' || !isFinite(a)) return false;
+  if (typeof b !== 'number' || !isFinite(b)) return false;
+  return b === a + 1;
+}
+
+/**
  * Audits time and distance sampling behavior.
- * Time deltas: positive-only, physically adjacent pairs only (both endpoints finite timeMs).
- * Distance deltas: every consecutive coordinate pair, no timestamp dependency.
+ * Time deltas: positive-only, stream-adjacent pairs only (both endpoints finite timeMs).
+ * Distance deltas: same stream-adjacent pairs as time (no array-only adjacency).
  * @param {Array} points - Array of point objects with gpxIndex, timeMs, lat, lon (finite timeMs from ingestion only)
  * @param {string} [gpxFilename] - Optional GPX filename (without extension)
  * @returns {Object} Sampling audit payload
  */
 function auditSampling(points, gpxFilename) {
   const timeDeltasMs = []; // Array<{ fromIndex, toIndex, dtSec }>
-  const distanceDeltas = []; // Array<{ fromIndex, toIndex, ddMeters }> — every consecutive pair
+  const distanceDeltas = []; // Array<{ fromIndex, toIndex, ddMeters }> — stream-adjacent pairs
   const timeConditionedDistanceDeltas = []; // Array<{ fromIndex, toIndex, ddMeters }> — subset with positive dt
-  let previousPoint = null;
   let hasValidTimestamps = false;
   let hasTimeProgression = false;
 
@@ -60,61 +72,62 @@ function auditSampling(points, gpxFilename) {
       typeof point.timeMs === 'number' && isFinite(point.timeMs);
     const currentTimestampMs = hasValidTimestamp ? point.timeMs : null;
 
-    // Distance delta: computed for every consecutive coordinate pair
     let distanceFromPrev = null;
     let distanceFromPrevValid = false;
-    if (previousPoint !== null) {
-      consecutivePairCount++;
-      distanceFromPrev = haversineDistance(
-        previousPoint.lat,
-        previousPoint.lon,
-        point.lat,
-        point.lon
-      );
-      distanceFromPrevValid = isFinite(distanceFromPrev) && distanceFromPrev >= 0;
-      if (distanceFromPrevValid) {
-        distanceDeltas.push({
-          fromIndex: previousPoint.gpxIndex,
-          toIndex: point.gpxIndex,
-          ddMeters: distanceFromPrev
-        });
-      } else {
-        rejectedDistanceCount++;
-      }
-    }
 
-    // Time delta: physically adjacent pair (i-1, i) only when both have finite timeMs — no gap bridging
     if (i >= 1) {
       const prev = points[i - 1];
-      const prevTimeOk =
-        typeof prev.timeMs === 'number' && isFinite(prev.timeMs);
-      if (prevTimeOk && hasValidTimestamp) {
-        consecutiveTimestampPairsCount++;
-        const delta = currentTimestampMs - prev.timeMs;
+      const streamAdjacent = gpxStreamAdjacentPair(prev, point);
 
-        if (delta > 0) {
-          positiveTimeDeltasCollected++;
-          timeDeltasMs.push({
+      if (streamAdjacent) {
+        consecutivePairCount++;
+        distanceFromPrev = haversineDistance(
+          prev.lat,
+          prev.lon,
+          point.lat,
+          point.lon
+        );
+        distanceFromPrevValid = isFinite(distanceFromPrev) && distanceFromPrev >= 0;
+        if (distanceFromPrevValid) {
+          distanceDeltas.push({
             fromIndex: prev.gpxIndex,
             toIndex: point.gpxIndex,
-            dtSec: delta / 1000
+            ddMeters: distanceFromPrev
           });
-          hasTimeProgression = true;
+        } else {
+          rejectedDistanceCount++;
+        }
 
-          if (distanceFromPrevValid) {
-            timeConditionedDistanceDeltas.push({
-              fromIndex: previousPoint.gpxIndex,
+        const prevTimeOk =
+          typeof prev.timeMs === 'number' && isFinite(prev.timeMs);
+        if (prevTimeOk && hasValidTimestamp) {
+          consecutiveTimestampPairsCount++;
+          const delta = currentTimestampMs - prev.timeMs;
+
+          if (delta > 0) {
+            positiveTimeDeltasCollected++;
+            timeDeltasMs.push({
+              fromIndex: prev.gpxIndex,
               toIndex: point.gpxIndex,
-              ddMeters: distanceFromPrev
+              dtSec: delta / 1000
+            });
+            hasTimeProgression = true;
+
+            if (distanceFromPrevValid) {
+              timeConditionedDistanceDeltas.push({
+                fromIndex: prev.gpxIndex,
+                toIndex: point.gpxIndex,
+                ddMeters: distanceFromPrev
+              });
+            }
+          } else {
+            rejectedTimestampPairsDeltaLeqZero++;
+            nonPositiveTimeDeltaEvents.push({
+              fromIndex: prev.gpxIndex,
+              toIndex: point.gpxIndex,
+              delta: delta
             });
           }
-        } else {
-          rejectedTimestampPairsDeltaLeqZero++;
-          nonPositiveTimeDeltaEvents.push({
-            fromIndex: prev.gpxIndex,
-            toIndex: point.gpxIndex,
-            delta: delta
-          });
         }
       }
     }
@@ -123,8 +136,6 @@ function auditSampling(points, gpxFilename) {
       hasValidTimestamps = true;
       timestampedPointsCount++;
     }
-
-    previousPoint = { lat: point.lat, lon: point.lon, gpxIndex: point.gpxIndex };
   }
 
   // Time delta statistics
@@ -325,7 +336,7 @@ function auditSampling(points, gpxFilename) {
   }
 
   // ── Distance-delta sampling regime detection via 2% relative clustering ──
-  // Operates on the complete population of consecutive spatial steps.
+  // Operates on stream-adjacent spatial steps (same pairs as distanceDeltas).
   var DISTANCE_CLUSTER_ALPHA = 0.02;
 
   var distanceSamplingClusters = null;

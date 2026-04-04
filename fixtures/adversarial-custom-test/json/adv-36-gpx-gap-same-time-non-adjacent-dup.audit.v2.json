@@ -1,24 +1,24 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T10:07:32.721Z",
+    "generatedAtUtc": "2026-04-04T10:07:32.747Z",
     "source": {
-      "fileName": "adv-31-single-trackpoint.gpx"
+      "fileName": "adv-36-gpx-gap-same-time-non-adjacent-dup.gpx"
     },
     "summary": {
-      "totalPointCount": 1
+      "totalPointCount": 3
     }
   },
   "audit": {
     "ingestion": {
       "counts": {
-        "totalPointCount": 1,
-        "validPointCount": 1,
-        "rejectedPointCount": 0,
+        "totalPointCount": 3,
+        "validPointCount": 2,
+        "rejectedPointCount": 1,
         "pointTypeCounts": {
           "wpt": 0,
           "rtept": 0,
-          "trkpt": 1
+          "trkpt": 3
         }
       },
       "context": {
@@ -26,14 +26,24 @@
         "hasAnyTimestampValues": true
       },
       "rejections": {
-        "events": []
+        "events": [
+          {
+            "gpxIndex": 1,
+            "pointType": "trkpt",
+            "rawLat": "bad",
+            "rawLon": "77.5946",
+            "rawEle": "100",
+            "rawTime": "2026-02-14T00:01:39.000Z",
+            "reason": "Invalid coordinates: lat=\"bad\", lon=\"77.5946\" (not parseable as numbers)"
+          }
+        ]
       }
     },
     "temporal": {
-      "totalPointsEvaluated": 1,
+      "totalPointsEvaluated": 2,
       "session": {
         "rawSessionDurationSec": 0,
-        "parseableTimestampPointCount": 1
+        "parseableTimestampPointCount": 2
       },
       "tagCounts": {
         "missing": 0,
@@ -41,7 +51,7 @@
         "adjacentDuplicate": 0,
         "belowAnchor": 0,
         "belowPrevValid": 0,
-        "nonAdjacentRepeat": 0
+        "nonAdjacentRepeat": 1
       },
       "tagIndex": {
         "missing": [],
@@ -49,16 +59,26 @@
         "adjacentDuplicate": [],
         "belowAnchor": [],
         "belowPrevValid": [],
-        "nonAdjacentRepeat": []
+        "nonAdjacentRepeat": [
+          2
+        ]
       },
-      "pointAnnotations": []
+      "pointAnnotations": [
+        {
+          "gpxIndex": 2,
+          "timestampMs": 1771027200000,
+          "anchorMs": 1771027200000,
+          "nonAdjacentRepeat": true,
+          "firstOccurrenceGpxIndex": 0
+        }
+      ]
     },
     "sampling": {
       "time": {
         "timestampContext": {
           "hasAnyParseableTimestamp": true,
           "hasAnyPositiveTimeDelta": false,
-          "timestampedPointsCount": 1,
+          "timestampedPointsCount": 2,
           "consecutiveTimestampPairsCount": 0,
           "positiveTimeDeltaCount": 0,
           "rejections": {
@@ -125,8 +145,8 @@
       "pairAnnotations": []
     },
     "elevation": {
-      "totalPointsEvaluated": 1,
-      "validElevationPointCount": 1,
+      "totalPointsEvaluated": 2,
+      "validElevationPointCount": 2,
       "parameters": {
         "validFloorM": -500,
         "validCeilingM": 9500
@@ -135,15 +155,23 @@
         "missing": 0,
         "unparsable": 0,
         "outOfBounds": 0,
-        "adjacentDuplicate": 0
+        "adjacentDuplicate": 1
       },
       "tagIndex": {
         "missing": [],
         "unparsable": [],
         "outOfBounds": [],
-        "adjacentDuplicate": []
+        "adjacentDuplicate": [
+          2
+        ]
       },
-      "pointAnnotations": []
+      "pointAnnotations": [
+        {
+          "gpxIndex": 2,
+          "ele": 100,
+          "adjacentDuplicate": true
+        }
+      ]
     }
   }
 }

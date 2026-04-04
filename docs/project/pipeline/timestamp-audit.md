@@ -10,8 +10,8 @@ No point is presumed correct or incorrect. The audit records what is observable 
 
 - Identify points with missing or unparsable timestamps (ingestion-time issues)
 - Label points that are behind the monotonic high-water mark (`belowAnchor`)
-- Label points that are actively retreating from their immediate predecessor (`belowPrevValid`)
-- Label points that are adjacent to an equal-valued predecessor (`adjacentDuplicate`)
+- Label points that are actively retreating from their **GPX stream predecessor’s** valid timestamp (`belowPrevValid`)
+- Label points whose timestamp equals the **stream predecessor**’s valid time (`adjacentDuplicate`)
 - Detect stream-wide timestamp value recurrence via a hash map (`nonAdjacentRepeat`)
 - Provide tag-indexed output (fast set-level queries) and point-annotated output (sequential correction workflow) simultaneously
 
@@ -35,10 +35,10 @@ No point is presumed correct or incorrect. The audit records what is observable 
       tagCounts: {
         missing,             // timeAbsent === true, or malformed point without finite timeMs
         unparsable,          // timeAbsent === false and no finite timeMs
-        adjacentDuplicate,   // timestampMs === prevValidTimestampMs
+        adjacentDuplicate,   // same as accepted point at gpxIndex-1 with finite timeMs
         belowAnchor,         // timestampMs < anchorTimestampMs (monotonic high-water mark)
-        belowPrevValid,      // timestampMs < prevValidTimestampMs (strictly less than predecessor)
-        nonAdjacentRepeat    // value seen earlier in stream, but NOT the immediately preceding valid point
+        belowPrevValid,      // timestampMs < predecessor’s timeMs (predecessor = accepted gpxIndex-1 with finite time)
+        nonAdjacentRepeat    // value seen earlier in stream, but NOT stream-adjacent duplicate
       },
       tagIndex: {
         missing:            [...gpxIndexes],
@@ -79,19 +79,18 @@ Tags are non-exclusive. A point receives every tag that applies. Missing and unp
 |---|---|---|
 | `missing` | `timeAbsent === true`, or `timeAbsent` not `false` and no finite `timeMs` | — |
 | `unparsable` | `timeAbsent === false` and `timeMs` not finite | optional forwarded `timeRaw` on annotation (not parsed here) |
-| `adjacentDuplicate` | `timestampMs === prevValidTimestampMs` | — |
+| `adjacentDuplicate` | Accepted point at `gpxIndex - 1` exists with finite `timeMs`, and `timestampMs ===` that `timeMs` | — |
 | `belowAnchor` | `timestampMs < anchorTimestampMs` | `depthFromAnchorMs` |
-| `belowPrevValid` | `timestampMs < prevValidTimestampMs` | — |
-| `nonAdjacentRepeat` | `seenTimestamps.has(timestampMs)` AND `timestampMs !== prevValidTimestampMs` | `firstOccurrenceGpxIndex` |
+| `belowPrevValid` | Predecessor as above exists and `timestampMs <` its `timeMs` | — |
+| `nonAdjacentRepeat` | `seenTimestamps.has(timestampMs)` AND not `adjacentDuplicate` (stream-adjacent equal-time case) | `firstOccurrenceGpxIndex` |
 
 Note: `adjacentDuplicate` and `nonAdjacentRepeat` are mutually exclusive by definition (a point cannot be simultaneously adjacent and non-adjacent to the same value).
 
 ## Anchor and State Semantics
 
-Two state variables track comparative context:
-
 - **`anchorTimestampMs`**: monotonic high-water mark. Initialized to the first valid timestamp. Advances only when `timestampMs > anchorTimestampMs`. Adjacent duplicates and below-anchor points do not move the anchor.
-- **`prevValidTimestampMs`**: most recent valid parsed timestamp. Updates on every valid point, including duplicates and below-anchor points.
+
+**Stream predecessor for comparative tags:** `adjacentDuplicate` and `belowPrevValid` use the **accepted** point at **`gpxIndex - 1`** (if present) with **finite `timeMs`**. If that GPX row was rejected or has no parseable time, those two tags are not applied via a “previous valid in array order” fallback. See **ADR-0013**.
 
 The `seenTimestamps` Map stores the first gpxIndex of every timestamp value encountered. It is populated once per value (not updated on re-occurrence). This gives O(1) lookup per point, avoiding O(N²) behavior in tracks with no repeats.
 
@@ -124,7 +123,7 @@ Concretely: `T=0, T=50, T=50, T=50, T=30` → anchor stays at T=50 through all t
 
 ### Decision 3: Adjacent duplicate excludes nonAdjacentRepeat
 
-The `nonAdjacentRepeat` check is gated on `!isAdjacentDup`. A point that equals its immediate predecessor is tagged `adjacentDuplicate`, not `nonAdjacentRepeat`, even if the value appeared earlier in the stream. These two tags are structurally mutually exclusive.
+The `nonAdjacentRepeat` check is gated on `!isAdjacentDup`. A point that equals its **stream predecessor’s** valid time is tagged `adjacentDuplicate`, not `nonAdjacentRepeat`, even if the value appeared earlier in the stream. These two tags are structurally mutually exclusive.
 
 ### Decision 4: No "large forward jump" tag
 

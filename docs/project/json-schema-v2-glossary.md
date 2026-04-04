@@ -43,7 +43,7 @@ Label-based per-point tags (`tagCounts`, `tagIndex`, `pointAnnotations`). Full f
 
 Path: `audit.sampling.time`
 
-Time positive-`Δt` population is **adjacent pairs with finite `timeMs` on both ends** only (see pipeline glossary).
+Time positive-`Δt` population is **GPX-stream-adjacent pairs** (`toGpxIndex === fromGpxIndex + 1`) with finite `timeMs` on both ends only (see pipeline glossary, ADR-0013).
 
 ### Context
 
@@ -107,7 +107,7 @@ Per cluster:
 
 Path: `audit.motion`
 
-Label-based adjacent-pair output. Tags are **non-exclusive**. See [`pipeline/json-schema-v2-glossary.md`](pipeline/json-schema-v2-glossary.md#motion) for full field list.
+Label-based **stream-adjacent** pair output (`toGpxIndex === fromGpxIndex + 1`). Tags are **non-exclusive**. See [`pipeline/json-schema-v2-glossary.md`](pipeline/json-schema-v2-glossary.md#motion) for full field list.
 
 - `summary.consecutivePairCount`, `summary.parameters.validFloorM`, `summary.parameters.validCeilingM`
 - `tagCounts.backwardTime`, `tagCounts.zeroTimeDelta`, `tagCounts.timeUnresolvable`, `tagCounts.nonFiniteDistance`, `tagCounts.eleUnresolvable`

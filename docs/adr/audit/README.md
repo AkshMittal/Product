@@ -8,7 +8,7 @@ For narrative module specs, see [`../../project/pipeline/`](../../project/pipeli
 |-----|-------|--------|------|
 | [0001](0001-sampling-rate-clustering-audit-artifact.md) | Sampling rate clustering is an audit artifact | accepted | 2026-04-02 |
 | [0002](0002-timestamp-audit-label-based-architecture.md) | Timestamp audit uses per-point label-based architecture | accepted | 2026-04-02 |
-| [0003](0003-time-deltas-bridge-gaps-elevation-deltas-adjacent-only.md) | Time Δ bridges gaps; elevation Δ and conditioned distance stay adjacent | accepted | 2026-04-02 |
+| [0003](0003-time-deltas-bridge-gaps-elevation-deltas-adjacent-only.md) | Time Δ adjacent-only (no gap bridging); elevation stepping model | accepted | 2026-04-02 |
 | [0004](0004-elevation-delta-std-not-audit-artifact.md) | std(Δele) is not an audit artifact | accepted | 2026-04-02 |
 | [0005](0005-directional-vector-variance-not-audit-artifact.md) | Directional and vector variance are not audit artifacts | accepted | 2026-04-02 |
 | [0006](0006-elevation-audit-module-scope.md) | Elevation audit: per-point labels (amended) | accepted (amended 2026-04-04) | 2026-04-04 |
@@ -18,6 +18,7 @@ For narrative module specs, see [`../../project/pipeline/`](../../project/pipeli
 | [0010](0010-dem-residual-post-audit-quality-gate.md) | DEM residual analysis as post-audit quality gate | accepted (impl. deferred) | 2026-04-02 |
 | [0011](0011-dem-full-substitution-declared-channel.md) | Full DEM substitution only as declared attached channel | accepted (impl. deferred) | 2026-04-02 |
 | [0012](0012-ingestion-only-time-parse.md) | GPX time parsing only at ingestion; audits consume `timeMs` | accepted | 2026-04-04 |
+| [0013](0013-gpx-stream-adjacency-via-gpxindex.md) | GPX stream adjacency via `gpxIndex` for motion, sampling, temporal | accepted | 2026-04-04 |
 
 **Template:** [`template.md`](template.md)
 

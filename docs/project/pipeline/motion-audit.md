@@ -24,7 +24,7 @@ Elevation bounds apply only to the **`eleUnresolvable`** predicate; they mirror 
 
 ## Core behavior
 
-- Evaluates **every physically adjacent pair** `(points[i - 1], points[i])` for `i = 1 … n - 1`.
+- Evaluates **GPX-stream-adjacent** pairs only: for neighbors in the `points` array, include the pair only when **`curr.gpxIndex === prev.gpxIndex + 1`**. Rejected GPX rows are absent from `points`, so array neighbors are not always stream-adjacent. See **ADR-0013**.
 - **No anchored timestamp chaining** — no `prevTimestampMs` that skips points; pairs do not bridge across timestamp gaps.
 - Computes haversine horizontal distance between the two endpoints.
 - Applies **five independent, non-exclusive** boolean predicates per pair. A pair receives every tag whose condition holds (e.g. backward time and bad elevation on the same pair both appear on one `pairAnnotations` entry).
@@ -37,7 +37,7 @@ Returned as `audit.motion`:
 
 | Area | Role |
 |------|------|
-| `summary.consecutivePairCount` | Always `max(0, points.length - 1)`. |
+| `summary.consecutivePairCount` | Count of **stream-adjacent** pairs evaluated (see Core behavior), not `points.length - 1`. |
 | `summary.parameters` | `validFloorM`, `validCeilingM` actually used. |
 | `tagCounts` | Per-tag counts of **pairs** carrying that tag (non-exclusive; sums can exceed `consecutivePairCount`). |
 | `tagIndex` | Per tag, an array of pair identities `{ fromGpxIndex, toGpxIndex }`. |

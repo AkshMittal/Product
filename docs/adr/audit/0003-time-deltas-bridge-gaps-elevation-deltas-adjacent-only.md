@@ -13,9 +13,9 @@ Sampling audit time deltas and elevation audit elevation deltas answer different
 
 ## Decision
 
-1. **Sampling audit** computes `Δt` only for **physically adjacent** point pairs `(points[i-1], points[i])` where **both** endpoints have a **finite** ingestion `timeMs`. It does **not** carry the “last valid timestamp” across invalid points. Gap structure remains observable via **`audit.temporal`**.
+1. **Sampling audit** computes `Δt` only for **GPX-stream-adjacent** pairs: `curr.gpxIndex === prev.gpxIndex + 1`, with **both** endpoints having **finite** ingestion `timeMs`. It does **not** carry the “last valid timestamp” across invalid points. Gap structure remains observable via **`audit.temporal`**. (Which rows form an adjacent pair is defined in **[ADR-0013](0013-gpx-stream-adjacency-via-gpxindex.md)** — not raw array indices alone.)
 2. **Elevation audit** (amended 2026-04-04) no longer emits consecutive `Δele` statistics or skipped-pair counters. **Point-level** elevation labels (`missing`, `unparsable`, `outOfBounds`, `adjacentDuplicate`) describe the channel; any `Δele` series or gap analysis is **downstream**, using physically adjacent points and those labels as needed. (Philosophy: **adjacent-only** steps for elevation *structure* remain the honest model; audit just does not aggregate Δele in-pipeline anymore.)
-3. **Time-conditioned distance deltas** in sampling pair the **same physically adjacent** segment as horizontal distance: positive `Δt` on that edge only when both times are finite and `Δt > 0`.
+3. **Time-conditioned distance deltas** in sampling pair the **same stream-adjacent** segment as horizontal distance: positive `Δt` on that edge only when both times are finite and `Δt > 0`.
 
 ## Alternatives Considered
 
@@ -47,4 +47,4 @@ Sampling audit time deltas and elevation audit elevation deltas answer different
 
 - **Risk**: Confusion between “geometry-adjacent” and “both times parseable on that edge.” **Mitigation**: Glossary and this ADR; field names in schema.
 
-**Cross-references**: [`../../project/pipeline/sampling-audit.md`](../../project/pipeline/sampling-audit.md), [`../../project/pipeline/elevation-audit.md`](../../project/pipeline/elevation-audit.md)
+**Cross-references**: [`../../project/pipeline/sampling-audit.md`](../../project/pipeline/sampling-audit.md), [`../../project/pipeline/elevation-audit.md`](../../project/pipeline/elevation-audit.md), [ADR-0013](0013-gpx-stream-adjacency-via-gpxindex.md)

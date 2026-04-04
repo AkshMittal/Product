@@ -4,6 +4,8 @@
 
 **Decisions finalized in:** design discussion session (2026-04-03). This document supersedes all earlier planning notes within it.
 
+**Note (2026-04-04):** Pair adjacency in the shipped module is **GPX-stream-adjacent** (`curr.gpxIndex === prev.gpxIndex + 1`), not every array pair `(i-1,i)`. See [ADR-0013](../../adr/audit/0013-gpx-stream-adjacency-via-gpxindex.md) and [`motion-audit.md`](motion-audit.md). Some §10–§11 loop wording below is **archival** and still says “physically adjacent” in the array sense.
+
 ---
 
 ## 1. Pipeline context (product vs old "analysis only")

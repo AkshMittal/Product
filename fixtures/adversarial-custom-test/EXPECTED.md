@@ -242,3 +242,11 @@ These are assertion targets for each adversarial GPX case.
 - expect: No missing-time tags when <time> exists on every point [missingTs eq 0]
 - expect: No positive sampling dt (middle unparsable; adjacent-only pairs are invalid-valid or valid-invalid) [positiveDeltas eq 0]
 - expect: Middle point breaks two motion pairs for time [motionTimeUnresolvable eq 2]
+
+## adv-36-gpx-gap-same-time-non-adjacent-dup
+- Title: Coordinate rejection between identical timestamps: not adjacentDuplicate
+- Why: When a GPX row is rejected between two accepted points, stream adjacency fails; same timestamp as earlier valid point should be nonAdjacentRepeat, not adjacentDuplicate (ADR-0013).
+- expect: At least one coordinate rejection [rejectedCoords atLeast 1]
+- expect: Same timestamp across gpx gap is nonAdjacentRepeat, not stream-adjacent duplicate [nonAdjacentRepeatCount atLeast 1]
+- expect: No adjacentDuplicate when stream predecessor is missing [duplicateTs eq 0]
+- expect: No stream-adjacent pairs to evaluate for motion [motionConsecutivePairs eq 0]

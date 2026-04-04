@@ -46,10 +46,10 @@ Count of points carrying each tag. Tags are non-exclusive; sums can exceed `tota
 
 - `tagCounts.missing`: `timeAbsent === true`, or point without `timeAbsent === false` and no finite `timeMs` (malformed input).
 - `tagCounts.unparsable`: `timeAbsent === false` and no finite `timeMs` (`<time>` present but empty or not parseable at ingestion).
-- `tagCounts.adjacentDuplicate`: `timestampMs === prevValidTimestampMs`. Mutually exclusive with `nonAdjacentRepeat`.
+- `tagCounts.adjacentDuplicate`: accepted point at `gpxIndex - 1` has finite `timeMs` and `timestampMs` equals it. Mutually exclusive with `nonAdjacentRepeat`.
 - `tagCounts.belowAnchor`: `timestampMs < anchorTimestampMs` (behind the monotonic high-water mark).
-- `tagCounts.belowPrevValid`: `timestampMs < prevValidTimestampMs` (actively retreating from immediate predecessor).
-- `tagCounts.nonAdjacentRepeat`: value appeared earlier in stream AND is not the immediately preceding valid point. Mutually exclusive with `adjacentDuplicate`.
+- `tagCounts.belowPrevValid`: same predecessor as `adjacentDuplicate` when it exists with finite time, and `timestampMs <` that `timeMs`.
+- `tagCounts.nonAdjacentRepeat`: value appeared earlier in stream AND not the stream-adjacent duplicate case. Mutually exclusive with `adjacentDuplicate`.
 
 ### tagIndex
 
@@ -77,8 +77,8 @@ Sparse array of per-point objects (only anomalous points). Fields present only w
 
 ### belowAnchor vs belowPrevValid distinction
 
-- `belowAnchor` only: still behind the high-water mark but locally moving forward ("in the hole, but recovering").
-- `belowAnchor + belowPrevValid` together: behind the high-water mark AND retreating further from the preceding valid point ("actively digging deeper").
+- `belowAnchor` only: still behind the high-water mark but locally moving forward relative to the **stream predecessor’s** valid time when that predecessor exists ("in the hole, but recovering").
+- `belowAnchor + belowPrevValid` together: behind the high-water mark AND strictly less than that stream predecessor’s valid time ("actively digging deeper").
 
 ### Design decisions (semantics, important)
 
@@ -91,14 +91,14 @@ Sparse array of per-point objects (only anomalous points). Fields present only w
 
 Path: `audit.sampling.time`
 
-**Time deltas:** Built only from **physically adjacent** pairs with **finite `timeMs` on both endpoints** — no gap bridging. Use `audit.temporal` for missing/unparsable/gap structure.
+**Time deltas:** Built only from **GPX-stream-adjacent** pairs (`toGpxIndex === fromGpxIndex + 1`) with **finite `timeMs` on both endpoints** — no gap bridging. Use `audit.temporal` for missing/unparsable/gap structure. See ADR-0013.
 
 ### Context
 
 - `timestampContext.hasAnyParseableTimestamp`
 - `timestampContext.hasAnyPositiveTimeDelta`
 - `timestampContext.timestampedPointsCount`
-- `timestampContext.consecutiveTimestampPairsCount`
+- `timestampContext.consecutiveTimestampPairsCount` — stream-adjacent pairs (`toGpxIndex === fromGpxIndex + 1`) with finite `timeMs` on both ends (evaluated for Δt sign).
 - `timestampContext.positiveTimeDeltaCount`
 - `timestampContext.rejections.nonPositiveTimeDeltaPairs.nonPositivePairCount`
 - `timestampContext.rejections.nonPositiveTimeDeltaPairs.events`
@@ -160,7 +160,7 @@ Path: `audit.sampling.distance`
 
 ### Pair inspection
 
-- `pairInspection.consecutivePairCount`
+- `pairInspection.consecutivePairCount` — stream-adjacent pairs with a computed step (same gate as time deltas; see ADR-0013).
 - `pairInspection.rejections.invalidDistance.count`
 
 ### Delta statistics
@@ -172,7 +172,7 @@ Path: `audit.sampling.distance`
 
 ### Clustering
 
-Operates on all distance deltas (complete population of consecutive spatial steps). `null` if
+Operates on all distance deltas (complete population of **stream-adjacent** spatial steps). `null` if
 no valid distance deltas exist.
 
 - `clustering.insertionRelativeThreshold`
@@ -229,7 +229,7 @@ Label-based, pair-centric output. Tags are **non-exclusive** — a pair receives
 
 ### summary
 
-- `summary.consecutivePairCount`: total adjacent pairs evaluated (always `points.length - 1`).
+- `summary.consecutivePairCount`: count of **GPX-stream-adjacent** pairs evaluated (`curr.gpxIndex === prev.gpxIndex + 1`), not `points.length - 1`.
 - `summary.parameters.validFloorM`: ele lower bound used for `eleUnresolvable` check.
 - `summary.parameters.validCeilingM`: ele upper bound used for `eleUnresolvable` check.
 
@@ -265,7 +265,7 @@ Per-tag arrays of pair identity objects. A pair that carries multiple tags appea
 Sparse array — only anomalous pairs. One entry per pair regardless of how many tags fire.
 
 - `fromGpxIndex` (always present)
-- `toGpxIndex` (always present) — physically adjacent to `fromGpxIndex` in the points array; gpxIndex values may not be numerically contiguous if ingestion rejected intermediate points.
+- `toGpxIndex` (always present) — **`toGpxIndex === fromGpxIndex + 1`** (consecutive GPX stream rows among accepted points). Array neighbors with a gap in `gpxIndex` are not emitted here.
 - `timeUnresolvable: true` — optional.
 - `backwardTime: true` — optional. Mutually exclusive with `zeroTimeDelta` by math; not exclusive with others.
 - `zeroTimeDelta: true` — optional. Mutually exclusive with `backwardTime` by math; not exclusive with others.

@@ -7,9 +7,9 @@ The sampling module performs an observational audit of time-delta sampling behav
 ## Core principles
 
 - Time audit and distance audit are separated.
-- **Time deltas** use **physically adjacent** pairs only: both endpoints must have finite `timeMs`. There is **no bridging** across missing or unparsable timestamps (temporal audit owns gap labeling).
-- Time-conditioned distance uses the same adjacent segment as horizontal distance when that edge has positive `Δt`.
-- Distance deltas are always computed from consecutive coordinate pairs — no timestamp dependency.
+- **Time deltas** use **GPX-stream-adjacent** pairs only (`curr.gpxIndex === prev.gpxIndex + 1`), with both endpoints having finite `timeMs`. There is **no bridging** across missing or unparsable timestamps (temporal audit owns gap labeling). See **ADR-0013**.
+- Time-conditioned distance uses the same stream-adjacent segment as horizontal distance when that edge has positive `Δt`.
+- **Distance deltas** use the **same** stream-adjacency gate as time (not every consecutive array row).
 - Clustering uses insertion-time threshold checks and final-center spread summaries.
 
 ## Input points (time channel)
@@ -23,7 +23,7 @@ Sampling uses **finite ingestion `timeMs` only** for timestamped points. It does
 - `hasAnyParseableTimestamp`: at least one parseable timestamp exists.
 - `hasAnyPositiveTimeDelta`: at least one adjacent-pair positive `Δt` exists (both endpoints finite `timeMs`).
 - `timestampedPointsCount`: points with parseable timestamp.
-- `consecutiveTimestampPairsCount`: physically adjacent pairs where **both** endpoints have finite `timeMs` (evaluated for sign; includes non-positive rejects).
+- `consecutiveTimestampPairsCount`: stream-adjacent pairs where **both** endpoints have finite `timeMs` (evaluated for sign; includes non-positive rejects).
 - `positiveTimeDeltaCount`: count of collected positive deltas.
 - `rejections.nonPositiveTimeDeltaPairs.nonPositivePairCount`: rejected parseable pairs where delta <= 0.
 - `rejections.nonPositiveTimeDeltaPairs.events`: event-level rejects.
@@ -111,7 +111,7 @@ Each cluster object includes:
 
 ### Clustering
 
-Operates on all distance deltas (the complete population of consecutive spatial steps). Same 2%
+Operates on all distance deltas (the complete population of **stream-adjacent** spatial steps). Same 2%
 relative insertion threshold algorithm as time clustering. `null` if no valid distance deltas exist.
 
 - `clustering.insertionRelativeThreshold`
@@ -173,6 +173,6 @@ Each cluster object includes:
 ## Notes
 
 - Time delta collection uses only positive deltas.
-- Distance clustering uses all consecutive distance deltas regardless of timestamp availability.
-- Distance deltas are always strictly adjacent (no gap-bridging), matching the **physically adjacent** side of ADR-0003 (elevation audit no longer emits Δele aggregates; stepping model for downstream ele deltas stays adjacent-only).
+- Distance clustering uses the same stream-adjacent distance population as pair inspection (ADR-0013 / ADR-0003).
+- Distance deltas do not bridge across non-adjacent `gpxIndex` gaps (e.g. coordinate rejections between accepted points).
 - Module output is observational and deterministic for same input order.
