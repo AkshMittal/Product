@@ -38,11 +38,12 @@ Core thesis:
 ## Current State
 
 Implemented:
-- GPX ingestion and structural validation
-- Temporal audit (missing/unparsable/duplicate/backtracking)
-- Sampling audit (2% relative clustering + drift diagnostics)
-- Motion audit (anchored pair-valid metrics)
-- Unified JSON export contract
+- GPX ingestion and structural validation (`audit.ingestion`: counts, context, `rejections.events` for coordinate failures)
+- Temporal audit (label-based: `tagCounts` / `tagIndex` / `pointAnnotations`; missing, unparsable, `belowAnchor`, stream-adjacent `adjacentDuplicate` / `belowPrevValid`, `nonAdjacentRepeat`)
+- Sampling audit (2% relative clustering for time and distance; GPX-stream-adjacent pairs per ADR-0013)
+- Motion audit (label-based pair flags; stream-adjacent pairs; no anchored timestamp chaining)
+- Elevation audit (per-point channel labels)
+- Unified JSON export contract (schema v2)
 - Single-GPX inspection workbench on `main` branch; methodology links
 - 12k-scale case study execution pipeline and reporting scripts
 
@@ -59,13 +60,14 @@ Positioning:
 - Audit output should remain descriptive and non-causal: report what happened in the stream, not why it happened.
 
 #### v1 audit completion targets (explicit)
-- Backtracking **subtype taxonomy** with deterministic evidence rules (e.g., stitched-behind-anchor vs linear regression vs duplicates-behind-anchor vs mixed).
-- Distance-based sampling clustering at parity with time-based clustering (emit both without inferring device intent).
-- Elevation audit module: observational elevation integrity + export contract (even if downstream elevation metrics ship later).
+- **Temporal / “backtracking” observables** — shipped as **non-exclusive point labels** (`belowAnchor`, `belowPrevValid`, duplicates/repeat tags, etc.). That is why the audit moved off block-based summaries: downstream correction and interpretation derive **subtype** stories (stitched vs regression vs mixed) from labels + geometry + policy—not new audit taxonomies.
+- **Distance-based sampling clustering** — shipped: same 2% insertion model as time, on GPX-stream-adjacent distance steps (ADR-0013).
+- **Elevation audit module** — shipped: observational per-point labels + export; richer downstream elevation metrics remain product work.
 
 #### Timestamp anomaly semantics (explicit)
-- Keep **adjacent duplicate timestamps** (duplicate vs previous parseable anchor) as the primary “duplicate” anomaly group.
-- If needed, represent **non-adjacent timestamp repeats** as a separate anomaly family (different semantics; not naturally a contiguous block concept).
+- **Adjacent duplicate** = same instant as the **accepted GPX predecessor row** (`gpxIndex - 1`) when that predecessor has finite `timeMs` (not “previous valid in thinned array order” when a coordinate reject sits between rows). See ADR-0013.
+- **Non-adjacent repeat** = timestamp value seen earlier in the stream but not that stream-adjacent equal-time case (`nonAdjacentRepeat` tag).
+- **Below anchor** / monotonic anchor semantics remain as in temporal audit spec.
 
 ### Post-audit processing order
 - Pipeline order should be:
@@ -74,8 +76,8 @@ Positioning:
 - Objective correction should focus first on definitional time/data usability boundaries (missing/unparsable/duplicate/non-positive/backtracking contexts).
 
 ### Correction philosophy (non-simplistic)
-- Do not assume every backtracking event is auto-removable corruption.
-- Backtracking handling should evolve toward subtype-aware + spatially aware checks (e.g., stitched-behind-anchor vs linear regression vs mixed patterns), rather than one blanket policy.
+- Do not assume every below-anchor or backward-step context is auto-removable corruption.
+- **Subtype-aware** handling (stitched-behind-anchor vs regression vs mixed patterns) belongs in **correction / interpretation** layers that consume audit labels—**not** in the audit module.
 - Track discontinuities can be valid recording gaps; jumps are not automatically invalid if elapsed time plausibly explains displacement.
 
 ### v1 scope discipline
@@ -131,9 +133,9 @@ Adoption reality check:
 - Publish concise pipeline communication assets.
 
 Exit criteria:
-- consistent schema
+- consistent schema (v2 label-based temporal/motion/elevation; sparse `pointAnnotations` + `tagIndex`)
 - deterministic reruns
-- no ambiguity between block and single-point anomaly views
+- adversarial suite passing; ingestion rejections use `audit.ingestion.rejections.events` naming
 
 ## Phase 1: User-Facing Logging Platform + Data Loop
 - Load case-study outputs into a queryable database.
@@ -148,7 +150,7 @@ Exit criteria:
 Minimum deliverables:
 - private-by-default track library
 - per-track audit detail view
-- block/single-point anomaly inspection
+- per-tag and per-point (sparse) anomaly inspection from audit JSON
 - anchored notes + optional photo attachments
 - export of track + audit + user annotations
 
@@ -195,7 +197,7 @@ This keeps outputs trustworthy and interpretable.
 
 ## Immediate Next Actions
 
-1) Complete audit-layer contract (including remaining backtracking distinctions, distance clustering parity, and elevation audit coverage if in v1).
+1) Treat audit-layer contract as **feature-complete** for v1 observables (label-based temporal/motion/sampling/elevation + ingestion); subtype taxonomies stay **out of audit** and live in downstream processing research.
 2) Regenerate 12k outputs on finalized schema + keep adversarial suite passing.
 3) Stand up DB-backed track library + per-track audit view (private-by-default).
 4) Add anchored notes (and optionally photos) to create a labeled data loop.
@@ -205,7 +207,7 @@ This keeps outputs trustworthy and interpretable.
 ## Open Notes / Backlog Seeds
 
 - Elevation should be integrated in relevant downstream metrics.
-- Investigate patterns inside backtracking blocks (e.g., linear regression vs stitched anomaly signatures).
-- Add distance-based sampling clustering at parity with current time-based clustering.
+- Investigate patterns for correction/interpretation using audit labels + geometry (e.g., linear regression vs stitched signatures)—**downstream**, not new audit emitters.
+- Extend adversarial / product tests when **audit** adds new tags or export fields (not for interpretation-only subtypes).
 - Add explicit correction-layer masks (versioned and reversible) before advanced interpretation.
 - Add mountain-engaged user segment scoping in product UX to reduce interpretation ambiguity.
