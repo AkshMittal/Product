@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-31-single-trackpoint</name>
+    <trkseg>
+      <trkpt lat="12.971600" lon="77.594600"><ele>100</ele><time>2026-02-14T00:00:00.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

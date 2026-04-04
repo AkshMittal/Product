@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-02T10:45:04.973Z",
+    "generatedAtUtc": "2026-04-04T08:08:21.065Z",
     "source": {
       "fileName": "adv-23-adjacent-dup-below-anchor.gpx"
     },
@@ -231,51 +231,51 @@
       }
     },
     "motion": {
-      "evaluatedPairs": {
+      "summary": {
         "consecutivePairCount": 4,
-        "forwardValidPairCount": 2
-      },
-      "rejections": {
-        "missingTimestampPairCount": 0,
-        "unparsableTimestampPairCount": 0,
-        "nonFiniteDistancePairCount": 0,
-        "backwardTimePairCount": 1,
-        "zeroTimeDeltaPairCount": 1,
-        "events": {
-          "missingTimestamp": [],
-          "unparsableTimestamp": [],
-          "nonFiniteDistance": [],
-          "backward": [
-            {
-              "fromIndex": 1,
-              "toIndex": 2,
-              "dtSec": -50,
-              "ddMeters": 12.369171083300897
-            }
-          ],
-          "zeroTimeDelta": [
-            {
-              "fromIndex": 2,
-              "toIndex": 3,
-              "dtSec": 0,
-              "ddMeters": 12.369170129229012
-            }
-          ]
+        "parameters": {
+          "validFloorM": -500,
+          "validCeilingM": 9500
         }
       },
-      "time": {
-        "validMotionTimeSeconds": 170,
-        "invalidTimeSeconds": 50,
-        "invalidTimeShareOfEvaluatedTime": 0.22727272727272727
+      "tagCounts": {
+        "backwardTime": 1,
+        "zeroTimeDelta": 1,
+        "timeUnresolvable": 0,
+        "nonFiniteDistance": 0,
+        "eleUnresolvable": 0
       },
-      "distance": {
-        "totalForwardValidDistanceMeters": 24.73834121251607
+      "tagIndex": {
+        "backwardTime": [
+          {
+            "fromGpxIndex": 1,
+            "toGpxIndex": 2
+          }
+        ],
+        "zeroTimeDelta": [
+          {
+            "fromGpxIndex": 2,
+            "toGpxIndex": 3
+          }
+        ],
+        "timeUnresolvable": [],
+        "nonFiniteDistance": [],
+        "eleUnresolvable": []
       },
-      "speed": {
-        "meanSpeedMps": 0.145519654191271,
-        "medianSpeedMps": 0.15019706858075937,
-        "maxSpeedMps": 0.17670241678786014
-      }
+      "pairAnnotations": [
+        {
+          "fromGpxIndex": 1,
+          "toGpxIndex": 2,
+          "backwardTime": true,
+          "dtSec": -50
+        },
+        {
+          "fromGpxIndex": 2,
+          "toGpxIndex": 3,
+          "zeroTimeDelta": true,
+          "dtSec": 0
+        }
+      ]
     },
     "elevation": {
       "totalPointsEvaluated": 5,
@@ -284,60 +284,45 @@
         "validFloorM": -500,
         "validCeilingM": 9500
       },
-      "channelStatistics": {
-        "minEle": 100,
-        "maxEle": 100,
-        "elevationSpanM": 0,
-        "firstValidEle": 100,
-        "firstValidEleIndex": 0,
-        "lastValidEle": 100,
-        "lastValidEleIndex": 4
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "outOfBounds": 0,
+        "adjacentDuplicate": 4
       },
-      "missing": {
-        "pointCount": 0,
-        "pointCountOverTotalPointsRatio": 0,
-        "maxBlockLength": 0,
-        "blocks": [],
-        "isolatedPointCount": 0,
-        "isolatedPointEvents": []
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "outOfBounds": [],
+        "adjacentDuplicate": [
+          1,
+          2,
+          3,
+          4
+        ]
       },
-      "outOfBounds": {
-        "pointCount": 0,
-        "pointCountOverTotalPointsRatio": 0,
-        "maxBlockLength": 0,
-        "blocks": [],
-        "isolatedPointCount": 0,
-        "isolatedPointEvents": []
-      },
-      "adjacentDuplicate": {
-        "pointCount": 4,
-        "pointCountOverTotalPointsRatio": 0.8,
-        "maxBlockLength": 4,
-        "blocks": [
-          {
-            "startIndex": 1,
-            "endIndex": 4,
-            "length": 4,
-            "value": 100
-          }
-        ],
-        "isolatedPointCount": 0,
-        "isolatedPointEvents": []
-      },
-      "consecutiveDeltas": {
-        "pairCount": 4,
-        "skippedPairsDueToMissingOrOob": 0,
-        "zeroDeltaCount": 4,
-        "maxPositiveDeltaM": null,
-        "maxNegativeDeltaM": null,
-        "maxAbsoluteDeltaM": null
-      },
-      "coPresenceWithTime": {
-        "pointsWithBothValidEleAndParseableTime": 5,
-        "pointsWithValidEleButNoTime": 0,
-        "pointsWithParseableTimeButNoEle": 0,
-        "consecutivePairsWithBothValidEleAndPositiveDt": 2
-      }
+      "pointAnnotations": [
+        {
+          "gpxIndex": 1,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 2,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 3,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 4,
+          "ele": 100,
+          "adjacentDuplicate": true
+        }
+      ]
     }
   }
 }

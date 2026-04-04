@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-02T10:43:31.618Z",
+    "generatedAtUtc": "2026-04-04T08:06:36.710Z",
     "source": {
       "fileName": "adv-10-timestamp-format-variants.gpx"
     },
@@ -57,11 +57,13 @@
       "pointAnnotations": [
         {
           "gpxIndex": 4,
-          "unparsable": true
+          "unparsable": true,
+          "timeRaw": "INVALID_TIMESTAMP_A"
         },
         {
           "gpxIndex": 5,
-          "unparsable": true
+          "unparsable": true,
+          "timeRaw": "INVALID_TIMESTAMP_B"
         }
       ]
     },
@@ -242,50 +244,60 @@
       }
     },
     "motion": {
-      "evaluatedPairs": {
+      "summary": {
         "consecutivePairCount": 7,
-        "forwardValidPairCount": 5
-      },
-      "rejections": {
-        "missingTimestampPairCount": 0,
-        "unparsableTimestampPairCount": 2,
-        "nonFiniteDistancePairCount": 0,
-        "backwardTimePairCount": 0,
-        "zeroTimeDeltaPairCount": 0,
-        "events": {
-          "missingTimestamp": [],
-          "unparsableTimestamp": [
-            {
-              "fromIndex": 3,
-              "toIndex": 4,
-              "rawTime": "INVALID_TIMESTAMP_A",
-              "ddMeters": 7.762992306560449
-            },
-            {
-              "fromIndex": 3,
-              "toIndex": 5,
-              "rawTime": "INVALID_TIMESTAMP_B",
-              "ddMeters": 15.52598385196038
-            }
-          ],
-          "nonFiniteDistance": [],
-          "backward": [],
-          "zeroTimeDelta": []
+        "parameters": {
+          "validFloorM": -500,
+          "validCeilingM": 9500
         }
       },
-      "time": {
-        "validMotionTimeSeconds": 35,
-        "invalidTimeSeconds": 0,
-        "invalidTimeShareOfEvaluatedTime": 0
+      "tagCounts": {
+        "backwardTime": 0,
+        "zeroTimeDelta": 0,
+        "timeUnresolvable": 3,
+        "nonFiniteDistance": 0,
+        "eleUnresolvable": 0
       },
-      "distance": {
-        "totalForwardValidDistanceMeters": 54.34094614480857
+      "tagIndex": {
+        "backwardTime": [],
+        "zeroTimeDelta": [],
+        "timeUnresolvable": [
+          {
+            "fromGpxIndex": 3,
+            "toGpxIndex": 4
+          },
+          {
+            "fromGpxIndex": 4,
+            "toGpxIndex": 5
+          },
+          {
+            "fromGpxIndex": 5,
+            "toGpxIndex": 6
+          }
+        ],
+        "nonFiniteDistance": [],
+        "eleUnresolvable": []
       },
-      "speed": {
-        "meanSpeedMps": 1.5525984612802448,
-        "medianSpeedMps": 1.5525983092230782,
-        "maxSpeedMps": 1.7251095703651822
-      }
+      "pairAnnotations": [
+        {
+          "fromGpxIndex": 3,
+          "toGpxIndex": 4,
+          "timeUnresolvable": true,
+          "ddMeters": 7.762992306560449
+        },
+        {
+          "fromGpxIndex": 4,
+          "toGpxIndex": 5,
+          "timeUnresolvable": true,
+          "ddMeters": 7.7629915454001
+        },
+        {
+          "fromGpxIndex": 5,
+          "toGpxIndex": 6,
+          "timeUnresolvable": true,
+          "ddMeters": 7.762990786386301
+        }
+      ]
     },
     "elevation": {
       "totalPointsEvaluated": 8,
@@ -294,60 +306,63 @@
         "validFloorM": -500,
         "validCeilingM": 9500
       },
-      "channelStatistics": {
-        "minEle": 100,
-        "maxEle": 100,
-        "elevationSpanM": 0,
-        "firstValidEle": 100,
-        "firstValidEleIndex": 0,
-        "lastValidEle": 100,
-        "lastValidEleIndex": 7
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "outOfBounds": 0,
+        "adjacentDuplicate": 7
       },
-      "missing": {
-        "pointCount": 0,
-        "pointCountOverTotalPointsRatio": 0,
-        "maxBlockLength": 0,
-        "blocks": [],
-        "isolatedPointCount": 0,
-        "isolatedPointEvents": []
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "outOfBounds": [],
+        "adjacentDuplicate": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
       },
-      "outOfBounds": {
-        "pointCount": 0,
-        "pointCountOverTotalPointsRatio": 0,
-        "maxBlockLength": 0,
-        "blocks": [],
-        "isolatedPointCount": 0,
-        "isolatedPointEvents": []
-      },
-      "adjacentDuplicate": {
-        "pointCount": 7,
-        "pointCountOverTotalPointsRatio": 0.875,
-        "maxBlockLength": 7,
-        "blocks": [
-          {
-            "startIndex": 1,
-            "endIndex": 7,
-            "length": 7,
-            "value": 100
-          }
-        ],
-        "isolatedPointCount": 0,
-        "isolatedPointEvents": []
-      },
-      "consecutiveDeltas": {
-        "pairCount": 7,
-        "skippedPairsDueToMissingOrOob": 0,
-        "zeroDeltaCount": 7,
-        "maxPositiveDeltaM": null,
-        "maxNegativeDeltaM": null,
-        "maxAbsoluteDeltaM": null
-      },
-      "coPresenceWithTime": {
-        "pointsWithBothValidEleAndParseableTime": 6,
-        "pointsWithValidEleButNoTime": 2,
-        "pointsWithParseableTimeButNoEle": 0,
-        "consecutivePairsWithBothValidEleAndPositiveDt": 4
-      }
+      "pointAnnotations": [
+        {
+          "gpxIndex": 1,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 2,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 3,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 4,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 5,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 6,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 7,
+          "ele": 100,
+          "adjacentDuplicate": true
+        }
+      ]
     }
   }
 }

@@ -52,10 +52,13 @@ function buildLinearTrack(config) {
 function trkptXml(point) {
   const lat = point.rawLat !== undefined ? point.rawLat : point.lat;
   const lon = point.rawLon !== undefined ? point.rawLon : point.lon;
-  const ele = point.ele !== undefined ? point.ele : 100;
   const hasTime = Object.prototype.hasOwnProperty.call(point, "time");
   const timeLine = hasTime && point.time !== null ? `<time>${point.time}</time>` : "";
-  return `      <trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele>${timeLine}</trkpt>`;
+  const eleLine =
+    point.omitEle === true
+      ? ""
+      : `<ele>${point.ele !== undefined ? point.ele : 100}</ele>`;
+  return `      <trkpt lat="${lat}" lon="${lon}">${eleLine}${timeLine}</trkpt>`;
 }
 
 function toTrackGpx(points, trackName) {
@@ -115,6 +118,17 @@ function metric(payload) {
   const sampling = payload.audit.sampling || {};
   const motion = payload.audit.motion || {};
   const elevation = payload.audit.elevation || {};
+  const motionConsecutive =
+    motion.summary && typeof motion.summary.consecutivePairCount === "number"
+      ? motion.summary.consecutivePairCount
+      : null;
+  const motionTaggedPairCount = Array.isArray(motion.pairAnnotations)
+    ? motion.pairAnnotations.length
+    : null;
+  const motionCleanAdjacentPairs =
+    motionConsecutive !== null && motionTaggedPairCount !== null
+      ? motionConsecutive - motionTaggedPairCount
+      : null;
   return {
     totalPoints: ingestion.counts ? ingestion.counts.totalPointCount : null,
     hasMultiplePointTypes: ingestion.context ? ingestion.context.hasMultiplePointTypes : null,
@@ -130,19 +144,21 @@ function metric(payload) {
     positiveDeltas: sampling.time && sampling.time.deltaStatistics ? sampling.time.deltaStatistics.positiveDeltaCount : null,
     clusterCountSorted: sampling.time && sampling.time.clustering ? sampling.time.clustering.sortedClusterCount : null,
     maxDeltaMs: sampling.time && sampling.time.deltaStatistics ? sampling.time.deltaStatistics.maxMs : null,
-    motionForwardValid: motion.evaluatedPairs ? motion.evaluatedPairs.forwardValidPairCount : null,
-    motionBackward: motion.rejections ? motion.rejections.backwardTimePairCount : null,
-    motionZeroDelta: motion.rejections ? motion.rejections.zeroTimeDeltaPairCount : null,
-    motionInvalidDistance: motion.rejections ? motion.rejections.nonFiniteDistancePairCount : null,
-    motionInvalidTimeRatio: motion.time ? motion.time.invalidTimeShareOfEvaluatedTime : null,
-    motionTotalValidDistanceMeters: motion.distance ? motion.distance.totalForwardValidDistanceMeters : null,
-    eleMissing: elevation.missing ? elevation.missing.pointCount : null,
-    eleOutOfBounds: elevation.outOfBounds ? elevation.outOfBounds.pointCount : null,
+    // motionForwardValid = consecutivePairCount - pairAnnotations.length (clean adjacent pairs; not stored on payload).
+    motionForwardValid: motionCleanAdjacentPairs,
+    motionBackward: motion.tagCounts ? motion.tagCounts.backwardTime : null,
+    motionZeroDelta: motion.tagCounts ? motion.tagCounts.zeroTimeDelta : null,
+    motionInvalidDistance: motion.tagCounts ? motion.tagCounts.nonFiniteDistance : null,
+    motionTimeUnresolvable: motion.tagCounts ? motion.tagCounts.timeUnresolvable : null,
+    motionEleUnresolvable: motion.tagCounts ? motion.tagCounts.eleUnresolvable : null,
+    motionConsecutivePairs: motionConsecutive,
+    motionTaggedPairCount: motionTaggedPairCount,
+    eleMissing: elevation.tagCounts ? elevation.tagCounts.missing : null,
+    eleUnparsable: elevation.tagCounts ? elevation.tagCounts.unparsable : null,
+    eleOutOfBounds: elevation.tagCounts ? elevation.tagCounts.outOfBounds : null,
+    eleAdjacentDuplicates: elevation.tagCounts ? elevation.tagCounts.adjacentDuplicate : null,
     eleValidCount: typeof elevation.validElevationPointCount === 'number' ? elevation.validElevationPointCount : null,
-    eleAdjacentDuplicates: elevation.adjacentDuplicate ? elevation.adjacentDuplicate.pointCount : null,
-    eleSpanM: elevation.channelStatistics ? elevation.channelStatistics.elevationSpanM : null,
-    eleMaxAbsDeltaM: elevation.consecutiveDeltas ? elevation.consecutiveDeltas.maxAbsoluteDeltaM : null,
-    eleCoPresenceBoth: elevation.coPresenceWithTime ? elevation.coPresenceWithTime.pointsWithBothValidEleAndParseableTime : null
+    eleAnnotationCount: elevation.pointAnnotations ? elevation.pointAnnotations.length : null
   };
 }
 
@@ -286,7 +302,7 @@ function buildCases() {
           value: 2,
           allowExpectedVariance: true
         },
-        { description: "No non-finite distance rejection", key: "motionInvalidDistance", kind: "eq", value: 0 }
+        { description: "No nonFiniteDistance motion pairs", key: "motionInvalidDistance", kind: "eq", value: 0 }
       ]
     },
     {
@@ -314,13 +330,13 @@ function buildCases() {
       },
       expectedChecks: [
         { description: "No positive delta pairs", key: "positiveDeltas", kind: "eq", value: 0 },
-        { description: "No forward-valid motion pairs", key: "motionForwardValid", kind: "eq", value: 0 }
+        { description: "No motion-clean adjacent pairs (every pair has a tag)", key: "motionForwardValid", kind: "eq", value: 0 }
       ]
     },
     {
       id: "adv-04-all-identical-timestamps",
       title: "All timestamps identical",
-      rationale: "Should produce duplicates and zero-time-delta rejections.",
+      rationale: "Should produce duplicate timestamp tags and zero-time-delta motion pair flags.",
       pointsBuilder: () => {
         const pts = buildLinearTrack({
           count: 8,
@@ -338,7 +354,7 @@ function buildCases() {
       },
       expectedChecks: [
         { description: "Duplicate timestamps detected", key: "duplicateTs", kind: "atLeast", value: 1 },
-        { description: "Motion zero-delta rejections present", key: "motionZeroDelta", kind: "atLeast", value: 1 }
+        { description: "At least one zeroTimeDelta motion pair", key: "motionZeroDelta", kind: "atLeast", value: 1 }
       ]
     },
     {
@@ -408,8 +424,8 @@ function buildCases() {
         return pts;
       },
       expectedChecks: [
-        { description: "No non-finite distance rejection", key: "motionInvalidDistance", kind: "eq", value: 0 },
-        { description: "Forward-valid motion pairs exist", key: "motionForwardValid", kind: "eq", value: 5 }
+        { description: "No nonFiniteDistance motion pairs", key: "motionInvalidDistance", kind: "eq", value: 0 },
+        { description: "Five motion-clean adjacent pairs", key: "motionForwardValid", kind: "eq", value: 5 }
       ]
     },
     {
@@ -428,7 +444,7 @@ function buildCases() {
         return pts;
       },
       expectedChecks: [
-        { description: "No non-finite distance rejection", key: "motionInvalidDistance", kind: "eq", value: 0 },
+        { description: "No nonFiniteDistance motion pairs", key: "motionInvalidDistance", kind: "eq", value: 0 },
         { description: "Positive deltas exist", key: "positiveDeltas", kind: "eq", value: 7 }
       ]
     },
@@ -516,7 +532,7 @@ function buildCases() {
       expectedChecks: [
         { description: "No coordinate rejections", key: "rejectedCoords", kind: "eq", value: 0 },
         { description: "Expected positive delta count", key: "positiveDeltas", kind: "eq", value: 19999 },
-        { description: "Expected forward-valid motion count", key: "motionForwardValid", kind: "eq", value: 19999 }
+        { description: "All 19,999 adjacent motion pairs clean", key: "motionForwardValid", kind: "eq", value: 19999 }
       ]
     },
     {
@@ -571,13 +587,13 @@ function buildCases() {
 `,
       expectedChecks: [
         { description: "Backtracking detected across segments", key: "backtracking", kind: "atLeast", value: 1 },
-        { description: "Motion backward rejections detected", key: "motionBackward", kind: "atLeast", value: 1 }
+        { description: "At least one backwardTime motion pair", key: "motionBackward", kind: "atLeast", value: 1 }
       ]
     },
     {
       id: "adv-15-static-geometry-long",
       title: "Long static geometry with valid progressing time",
-      rationale: "Zero movement should remain valid and yield zero total motion distance.",
+      rationale: "Zero movement with monotonic time: every adjacent pair should be clean for motion (finite haversine, forward dt, resolvable time, valid ele).",
       pointsBuilder: () => buildLinearTrack({
         count: 120,
         startLat: 12.9716,
@@ -588,9 +604,10 @@ function buildCases() {
         dtSec: 1
       }),
       expectedChecks: [
-        { description: "No invalid distance rejections", key: "motionInvalidDistance", kind: "eq", value: 0 },
-        { description: "Forward-valid motion exists", key: "motionForwardValid", kind: "eq", value: 119 },
-        { description: "Total valid motion distance remains zero", key: "motionTotalValidDistanceMeters", kind: "eq", value: 0 }
+        { description: "No nonFiniteDistance motion pairs", key: "motionInvalidDistance", kind: "eq", value: 0 },
+        { description: "All adjacent motion pairs clean (no tags)", key: "motionForwardValid", kind: "eq", value: 119 },
+        { description: "No backward-time motion pairs", key: "motionBackward", kind: "eq", value: 0 },
+        { description: "No zero-delta motion pairs", key: "motionZeroDelta", kind: "eq", value: 0 }
       ]
     },
     {
@@ -608,7 +625,7 @@ function buildCases() {
       },
       expectedChecks: [
         { description: "No coordinate rejections", key: "rejectedCoords", kind: "eq", value: 0 },
-        { description: "No invalid distance rejections", key: "motionInvalidDistance", kind: "eq", value: 0 },
+        { description: "No nonFiniteDistance motion pairs", key: "motionInvalidDistance", kind: "eq", value: 0 },
         { description: "Positive deltas exist", key: "positiveDeltas", kind: "eq", value: 3 }
       ]
     },
@@ -733,7 +750,7 @@ function buildCases() {
       expectedChecks: [
         { description: "Some positive deltas collected", key: "positiveDeltas", kind: "atLeast", value: 50 },
         { description: "At least one temporal anomaly detected", key: "missingTs", kind: "atLeast", value: 1 },
-        { description: "No invalid-distance rejection explosion", key: "motionInvalidDistance", kind: "eq", value: 0 }
+        { description: "No nonFiniteDistance motion pair explosion", key: "motionInvalidDistance", kind: "eq", value: 0 }
       ]
     },
     {
@@ -882,6 +899,274 @@ function buildCases() {
         { description: "No adjacentDuplicate tags (the non-adjacent repeat is not the immediately preceding point)", key: "duplicateTs", kind: "eq", value: 0 },
         { description: "Exactly one annotation entry", key: "annotationCount", kind: "eq", value: 1 }
       ]
+    },
+    {
+      id: "adv-26-motion-ele-boundary-inclusive",
+      title: "Motion ele endpoints exactly at validFloorM and validCeilingM",
+      rationale: "Motion audit uses inclusive [-500, 9500]; boundary values must not fire eleUnresolvable.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 4,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00002,
+          lonStep: 0.00002,
+          baseIso,
+          dtSec: 5
+        });
+        pts[0].ele = -500;
+        pts[1].ele = 9500;
+        pts[2].ele = 0;
+        pts[3].ele = 100;
+        return pts;
+      },
+      expectedChecks: [
+        { description: "No motion ele-unresolvable pairs at inclusive boundaries", key: "motionEleUnresolvable", kind: "eq", value: 0 },
+        { description: "All three adjacent pairs clean for motion", key: "motionForwardValid", kind: "eq", value: 3 }
+      ]
+    },
+    {
+      id: "adv-27-motion-ele-above-ceiling",
+      title: "Elevation above motion validCeilingM flags adjacent pairs",
+      rationale: "Any endpoint outside default [validFloorM, validCeilingM] makes every adjacent pair touching it eleUnresolvable (independent of time).",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 3,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00003,
+          lonStep: 0.00003,
+          baseIso,
+          dtSec: 2
+        });
+        pts[0].ele = 100;
+        pts[1].ele = 9600;
+        pts[2].ele = 200;
+        return pts;
+      },
+      expectedChecks: [
+        { description: "Two pairs affected by one out-of-range spike (prev and next)", key: "motionEleUnresolvable", kind: "eq", value: 2 },
+        { description: "Times still forward so no backward motion pairs", key: "motionBackward", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-28-motion-omit-ele-element",
+      title: "Missing GPX ele element yields motion eleUnresolvable",
+      rationale: "Ingestion sets eleAbsent true when <ele> is absent; elevation audit tags missing; motion flags eleUnresolvable on adjacent pairs.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 3,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00004,
+          lonStep: 0.00004,
+          baseIso,
+          dtSec: 3
+        });
+        pts[1].omitEle = true;
+        return pts;
+      },
+      expectedChecks: [
+        { description: "Middle point without ele tags both adjacent pairs", key: "motionEleUnresolvable", kind: "eq", value: 2 },
+        { description: "No non-finite haversine on valid coordinates", key: "motionInvalidDistance", kind: "eq", value: 0 },
+        { description: "One missing-ele point (eleAbsent)", key: "eleMissing", kind: "eq", value: 1 },
+        { description: "No unparsable ele when absent vs present is distinguished", key: "eleUnparsable", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-29-motion-stacked-backward-and-elebad",
+      title: "Same pair stacks backwardTime and eleUnresolvable",
+      rationale: "Tags are non-exclusive: one adjacent pair can carry multiple motion flags simultaneously.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 3,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00005,
+          lonStep: 0.00005,
+          baseIso,
+          dtSec: 10
+        });
+        pts[0].time = isoAt(baseIso, 0);
+        pts[1].time = isoAt(baseIso, 20);
+        pts[2].time = isoAt(baseIso, 10);
+        pts[0].ele = 100;
+        pts[1].ele = 100;
+        pts[2].ele = 9600;
+        return pts;
+      },
+      expectedChecks: [
+        { description: "Exactly one backward-time pair", key: "motionBackward", kind: "eq", value: 1 },
+        { description: "Exactly one ele-unresolvable pair (stacked on same pair as backward)", key: "motionEleUnresolvable", kind: "eq", value: 1 },
+        { description: "Leading pair still clean", key: "motionForwardValid", kind: "eq", value: 1 }
+      ]
+    },
+    {
+      id: "adv-30-motion-mixed-time-backward-zero",
+      title: "Single track mixes timeUnresolvable, backward, zero delta, and one clean pair",
+      rationale: "Six points, five pairs: trailing null so only (4,5) is timeUnresolvable. Includes zero-delta (2→3) and backward (3→4). Leading pairs (0→1) and (1→2) stay clean.",
+      pointsBuilder: () => {
+        const pts = buildLinearTrack({
+          count: 6,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00006,
+          lonStep: 0.00006,
+          baseIso,
+          dtSec: 5
+        });
+        pts[0].time = isoAt(baseIso, 0);
+        pts[1].time = isoAt(baseIso, 10);
+        pts[2].time = isoAt(baseIso, 15);
+        pts[3].time = isoAt(baseIso, 15);
+        pts[4].time = isoAt(baseIso, 5);
+        pts[5].time = null;
+        return pts;
+      },
+      expectedChecks: [
+        { description: "One pair with missing time only on the second endpoint", key: "motionTimeUnresolvable", kind: "eq", value: 1 },
+        { description: "One strictly backward dt pair (15s → 5s)", key: "motionBackward", kind: "eq", value: 1 },
+        { description: "One zero-dt pair (15s → 15s)", key: "motionZeroDelta", kind: "eq", value: 1 },
+        { description: "Exactly two pairs have no motion tags (first two pairs)", key: "motionForwardValid", kind: "eq", value: 2 }
+      ]
+    },
+    {
+      id: "adv-31-single-trackpoint",
+      title: "Single trackpoint yields zero motion pairs",
+      rationale: "motion.summary.consecutivePairCount is n-1; empty pair lists and zero tag counts.",
+      xmlBuilder: () => `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-31-single-trackpoint</name>
+    <trkseg>
+      <trkpt lat="12.971600" lon="77.594600"><ele>100</ele><time>${isoAt(baseIso, 0)}</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
+`,
+      expectedChecks: [
+        { description: "No adjacent pairs to evaluate", key: "motionConsecutivePairs", kind: "eq", value: 0 },
+        { description: "No motion pair annotations", key: "motionTaggedPairCount", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-32-unparsable-ele-element",
+      title: "Present but unparsable elevation element",
+      rationale: "When <ele> exists but is not numeric, ingestion sets eleAbsent false and ele null; elevation audit tags unparsable, not missing.",
+      xmlBuilder: () => `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="gpx-audit-adversarial-suite" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>adv-32-unparsable-ele-element</name>
+    <trkseg>
+      <trkpt lat="12.971600" lon="77.594600"><ele>100</ele><time>${isoAt(baseIso, 0)}</time></trkpt>
+      <trkpt lat="12.971700" lon="77.594700"><ele>not-a-number</ele><time>${isoAt(baseIso, 5)}</time></trkpt>
+      <trkpt lat="12.971800" lon="77.594800"><ele>102</ele><time>${isoAt(baseIso, 10)}</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
+`,
+      expectedChecks: [
+        { description: "Exactly one unparsable ele point", key: "eleUnparsable", kind: "eq", value: 1 },
+        { description: "No missing-ele points when every trkpt has an ele child", key: "eleMissing", kind: "eq", value: 0 },
+        { description: "Two valid in-bounds ele points", key: "eleValidCount", kind: "eq", value: 2 }
+      ]
+    },
+    {
+      id: "adv-33-empty-time-element-mid-track",
+      title: "Empty <time></time> is unparsable not missing",
+      rationale:
+        "Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012).",
+      pointsBuilder: () => {
+        return buildLinearTrack({
+          count: 4,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00004,
+          lonStep: 0.00004,
+          baseIso,
+          dtSec: 10,
+          mutator: (pts) => {
+            pts[0].time = isoAt(baseIso, 0);
+            pts[1].time = isoAt(baseIso, 10);
+            pts[2].time = "";
+            pts[3].time = isoAt(baseIso, 30);
+          }
+        });
+      },
+      expectedChecks: [
+        { description: "Exactly one unparsable timestamp (empty <time> body)", key: "unparsableTs", kind: "eq", value: 1 },
+        { description: "No missing-time points (every trkpt has a <time> child)", key: "missingTs", kind: "eq", value: 0 },
+        {
+          description: "Sampling bridges positive dt across invalid point (prev valid to next valid)",
+          key: "positiveDeltas",
+          kind: "eq",
+          value: 2
+        },
+        { description: "Two motion pairs touch the non-finite timeMs endpoint", key: "motionTimeUnresolvable", kind: "eq", value: 2 },
+        { description: "Only the last pair has both endpoints with finite timeMs and no motion tags", key: "motionForwardValid", kind: "eq", value: 1 }
+      ]
+    },
+    {
+      id: "adv-34-missing-time-vs-empty-time",
+      title: "No <time> child vs empty <time></time>",
+      rationale:
+        "Missing requires timeAbsent true (no element). Empty element is timeAbsent false with null timeMs — unparsable. Distinction must not rely on Date.parse downstream.",
+      pointsBuilder: () => {
+        return buildLinearTrack({
+          count: 3,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00004,
+          lonStep: 0.00004,
+          baseIso,
+          dtSec: 10,
+          mutator: (pts) => {
+            delete pts[0].time;
+            pts[1].time = "";
+            pts[2].time = isoAt(baseIso, 10);
+          }
+        });
+      },
+      expectedChecks: [
+        { description: "One missing-time point (no <time> element)", key: "missingTs", kind: "eq", value: 1 },
+        { description: "One unparsable-time point (empty <time> body)", key: "unparsableTs", kind: "eq", value: 1 },
+        { description: "No positive time deltas (only one parseable instant at end)", key: "positiveDeltas", kind: "eq", value: 0 },
+        { description: "Both adjacent pairs time-unresolvable for motion", key: "motionTimeUnresolvable", kind: "eq", value: 2 },
+        { description: "No motion-clean pairs", key: "motionForwardValid", kind: "eq", value: 0 }
+      ]
+    },
+    {
+      id: "adv-35-time-whitespace-only-body",
+      title: "Whitespace-only <time> body trims to unparsable",
+      rationale:
+        "Ingestion trims text; all-whitespace becomes empty string → timeRaw null, timeMs null, timeAbsent false → unparsable.",
+      pointsBuilder: () => {
+        return buildLinearTrack({
+          count: 3,
+          startLat: 12.9716,
+          startLon: 77.5946,
+          latStep: 0.00004,
+          lonStep: 0.00004,
+          baseIso,
+          dtSec: 10,
+          mutator: (pts) => {
+            pts[0].time = isoAt(baseIso, 0);
+            pts[1].time = "   \t\n  ";
+            pts[2].time = isoAt(baseIso, 20);
+          }
+        });
+      },
+      expectedChecks: [
+        { description: "Whitespace-only body counts as unparsable", key: "unparsableTs", kind: "eq", value: 1 },
+        { description: "No missing-time tags when <time> exists on every point", key: "missingTs", kind: "eq", value: 0 },
+        {
+          description: "One positive delta (bridge from first valid to last; middle invalid does not add a second consecutive-valid pair)",
+          key: "positiveDeltas",
+          kind: "eq",
+          value: 1
+        },
+        { description: "Middle point breaks two motion pairs for time", key: "motionTimeUnresolvable", kind: "eq", value: 2 }
+      ]
     }
   ];
 }
@@ -931,7 +1216,8 @@ function renderReport(results) {
     lines.push(`  - adjacentDuplicate=${r.metrics.duplicateTs}, belowAnchor=${r.metrics.backtracking}, belowPrevValid=${r.metrics.belowPrevValidCount}, nonAdjacentRepeat=${r.metrics.nonAdjacentRepeatCount}`);
     lines.push(`  - annotationCount=${r.metrics.annotationCount}`);
     lines.push(`  - positiveDeltas=${r.metrics.positiveDeltas}, clusterCountSorted=${r.metrics.clusterCountSorted}, maxDeltaMs=${r.metrics.maxDeltaMs}`);
-    lines.push(`  - motionForwardValid=${r.metrics.motionForwardValid}, motionBackward=${r.metrics.motionBackward}, motionZeroDelta=${r.metrics.motionZeroDelta}, motionInvalidDistance=${r.metrics.motionInvalidDistance}, motionInvalidTimeRatio=${r.metrics.motionInvalidTimeRatio}, motionTotalValidDistanceMeters=${r.metrics.motionTotalValidDistanceMeters}`);
+    lines.push(`  - motionConsecutivePairs=${r.metrics.motionConsecutivePairs}, motionTaggedPairCount=${r.metrics.motionTaggedPairCount}, motionCleanAdjacent=${r.metrics.motionForwardValid}, motionBackward=${r.metrics.motionBackward}, motionZeroDelta=${r.metrics.motionZeroDelta}, motionTimeUnresolvable=${r.metrics.motionTimeUnresolvable}, motionInvalidDistance=${r.metrics.motionInvalidDistance}, motionEleUnresolvable=${r.metrics.motionEleUnresolvable}`);
+    lines.push(`  - eleMissing=${r.metrics.eleMissing}, eleUnparsable=${r.metrics.eleUnparsable}, eleOutOfBounds=${r.metrics.eleOutOfBounds}, eleAdjacentDup=${r.metrics.eleAdjacentDuplicates}, eleValid=${r.metrics.eleValidCount}, eleAnnotationCount=${r.metrics.eleAnnotationCount}`);
     lines.push("");
   }
 

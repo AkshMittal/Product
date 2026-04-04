@@ -1,6 +1,6 @@
 # Adversarial Suite Report
 
-- Overall: strictPass=23, expectedVariance=2, failed=0, total=25
+- Overall: strictPass=33, expectedVariance=2, failed=0, total=35
 
 ## adv-01-exact-2pct-boundary - Exactly 2% clustering boundary
 - Intent: Values exactly 2% apart should not merge under strict '< 0.02' rule.
@@ -14,49 +14,53 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=7, clusterCountSorted=1, maxDeltaMs=10200
-  - motionForwardValid=7, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=86.5841842254577
+  - motionConsecutivePairs=7, motionTaggedPairCount=0, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
 ## adv-02-near-boundary-float - Near-boundary floating precision
 - Intent: Very near-boundary deltas should remain stable and finite.
 - Status: EXPECTED_VARIANCE
 - Checks:
   - EXPECTED_VARIANCE | At least two regimes may be detected (boundary precision can collapse to one cluster) | expected atLeast 2 | actual 1
-  - PASS | No non-finite distance rejection | expected eq 0 | actual 0
+  - PASS | No nonFiniteDistance motion pairs | expected eq 0 | actual 0
 - Key metrics:
   - totalPoints=8, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=0
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=7, clusterCountSorted=1, maxDeltaMs=10200
-  - motionForwardValid=7, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=79.6599268291036
+  - motionConsecutivePairs=7, motionTaggedPairCount=0, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
 ## adv-03-single-valid-timestamp - Single valid timestamp only
 - Intent: No pairs should be time-valid when only one timestamp is parseable.
 - Status: PASS
 - Checks:
   - PASS | No positive delta pairs | expected eq 0 | actual 0
-  - PASS | No forward-valid motion pairs | expected eq 0 | actual 0
+  - PASS | No motion-clean adjacent pairs (every pair has a tag) | expected eq 0 | actual 0
 - Key metrics:
   - totalPoints=7, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=4, unparsable=2
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=6
   - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
-  - motionForwardValid=0, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=0
+  - motionConsecutivePairs=6, motionTaggedPairCount=6, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=6, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
 ## adv-04-all-identical-timestamps - All timestamps identical
-- Intent: Should produce duplicates and zero-time-delta rejections.
+- Intent: Should produce duplicate timestamp tags and zero-time-delta motion pair flags.
 - Status: PASS
 - Checks:
   - PASS | Duplicate timestamps detected | expected atLeast 1 | actual 7
-  - PASS | Motion zero-delta rejections present | expected atLeast 1 | actual 7
+  - PASS | At least one zeroTimeDelta motion pair | expected atLeast 1 | actual 7
 - Key metrics:
   - totalPoints=8, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=0
   - adjacentDuplicate=7, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=7
   - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
-  - motionForwardValid=0, motionBackward=0, motionZeroDelta=7, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=0
+  - motionConsecutivePairs=7, motionTaggedPairCount=7, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=7, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
 ## adv-05-alternating-backtracking - Alternating forward/backtracking
 - Intent: Backtracking points should be detected repeatedly without forced block inflation.
@@ -70,7 +74,8 @@
   - adjacentDuplicate=0, belowAnchor=3, belowPrevValid=3, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=3, clusterCountSorted=2, maxDeltaMs=10000
-  - motionForwardValid=3, motionBackward=3, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0.2631578947368421, motionTotalValidDistanceMeters=34.75474920573766
+  - motionConsecutivePairs=6, motionTaggedPairCount=3, motionCleanAdjacent=3, motionBackward=3, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
 ## adv-06-large-forward-jump - Single large forward jump outlier
 - Intent: Outlier should increase max delta and often add a cluster.
@@ -84,27 +89,29 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=9, clusterCountSorted=2, maxDeltaMs=300000
-  - motionForwardValid=9, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=89.05801737360363
+  - motionConsecutivePairs=9, motionTaggedPairCount=0, motionCleanAdjacent=9, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=9, eleValid=10, eleAnnotationCount=9
 
 ## adv-07-dateline-crossing - Dateline crossing distance
 - Intent: Crossing +179.9/-179.9 should remain finite.
 - Status: PASS
 - Checks:
-  - PASS | No non-finite distance rejection | expected eq 0 | actual 0
-  - PASS | Forward-valid motion pairs exist | expected eq 5 | actual 5
+  - PASS | No nonFiniteDistance motion pairs | expected eq 0 | actual 0
+  - PASS | Five motion-clean adjacent pairs | expected eq 5 | actual 5
 - Key metrics:
   - totalPoints=6, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=0
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=5, clusterCountSorted=1, maxDeltaMs=5000
-  - motionForwardValid=5, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=222468.64573838445
+  - motionConsecutivePairs=5, motionTaggedPairCount=0, motionCleanAdjacent=5, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
 ## adv-08-polar-latitude - High-latitude geometry stress
 - Intent: Near-pole coordinates should still compute finite haversine distances.
 - Status: PASS
 - Checks:
-  - PASS | No non-finite distance rejection | expected eq 0 | actual 0
+  - PASS | No nonFiniteDistance motion pairs | expected eq 0 | actual 0
   - PASS | Positive deltas exist | expected eq 7 | actual 7
 - Key metrics:
   - totalPoints=8, rejectedCoords=0, hasMultiplePointTypes=false
@@ -112,7 +119,8 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=7, clusterCountSorted=1, maxDeltaMs=3000
-  - motionForwardValid=7, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=283.5439261576003
+  - motionConsecutivePairs=7, motionTaggedPairCount=0, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
 ## adv-09-mixed-point-types - Mixed GPX point types
 - Intent: Ingestion should flag multi-point-type context correctly.
@@ -126,7 +134,8 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=4, clusterCountSorted=1, maxDeltaMs=5000
-  - motionForwardValid=4, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=62.103935411009516
+  - motionConsecutivePairs=4, motionTaggedPairCount=0, motionCleanAdjacent=4, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=5, eleAnnotationCount=0
 
 ## adv-10-timestamp-format-variants - Timestamp format variants
 - Intent: Valid variants parse; malformed strings are counted as unparsable.
@@ -140,7 +149,8 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=2
   - positiveDeltas=5, clusterCountSorted=4, maxDeltaMs=15000
-  - motionForwardValid=5, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=54.34094614480857
+  - motionConsecutivePairs=7, motionTaggedPairCount=3, motionCleanAdjacent=4, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=7, eleValid=8, eleAnnotationCount=7
 
 ## adv-11-backtracking-after-invalid-gap - Backtracking after missing/unparsable gap
 - Intent: Anchor-based backtracking should survive invalid timestamp gaps.
@@ -155,7 +165,8 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=3, clusterCountSorted=3, maxDeltaMs=16000
-  - motionForwardValid=3, motionBackward=1, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0.16216216216216217, motionTotalValidDistanceMeters=28.213271718599017
+  - motionConsecutivePairs=6, motionTaggedPairCount=3, motionCleanAdjacent=3, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
 ## adv-12-large-scale-20k - Large scale 20k points
 - Intent: Volume stress: validates count/ratio stability at scale.
@@ -163,14 +174,15 @@
 - Checks:
   - PASS | No coordinate rejections | expected eq 0 | actual 0
   - PASS | Expected positive delta count | expected eq 19999 | actual 19999
-  - PASS | Expected forward-valid motion count | expected eq 19999 | actual 19999
+  - PASS | All 19,999 adjacent motion pairs clean | expected eq 19999 | actual 19999
 - Key metrics:
   - totalPoints=20000, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=0
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=19999, clusterCountSorted=1, maxDeltaMs=1000
-  - motionForwardValid=19999, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=3104.981897039338
+  - motionConsecutivePairs=19999, motionTaggedPairCount=0, motionCleanAdjacent=19999, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=19999, eleValid=20000, eleAnnotationCount=19999
 
 ## adv-13-mixed-all-anomalies - Mixed anomalies in one track
 - Intent: Combines ingestion reject + missing + unparsable + duplicate + backtracking.
@@ -187,43 +199,47 @@
   - adjacentDuplicate=1, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=1
   - annotationCount=4
   - positiveDeltas=8, clusterCountSorted=4, maxDeltaMs=32000
-  - motionForwardValid=8, motionBackward=1, motionZeroDelta=1, motionInvalidDistance=0, motionInvalidTimeRatio=0.24, motionTotalValidDistanceMeters=114.57163463184098
+  - motionConsecutivePairs=12, motionTaggedPairCount=5, motionCleanAdjacent=7, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=3, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=12, eleValid=13, eleAnnotationCount=12
 
 ## adv-14-multi-trkseg-backtrack - Multiple track segments with cross-segment backtrack
 - Intent: Ensures chronological regressions across trkseg boundaries are detected.
 - Status: PASS
 - Checks:
   - PASS | Backtracking detected across segments | expected atLeast 1 | actual 1
-  - PASS | Motion backward rejections detected | expected atLeast 1 | actual 1
+  - PASS | At least one backwardTime motion pair | expected atLeast 1 | actual 1
 - Key metrics:
   - totalPoints=6, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=0
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=1
   - positiveDeltas=4, clusterCountSorted=2, maxDeltaMs=11000
-  - motionForwardValid=4, motionBackward=1, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0.1875, motionTotalValidDistanceMeters=62.103929331331585
+  - motionConsecutivePairs=5, motionTaggedPairCount=1, motionCleanAdjacent=4, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
 ## adv-15-static-geometry-long - Long static geometry with valid progressing time
-- Intent: Zero movement should remain valid and yield zero total motion distance.
+- Intent: Zero movement with monotonic time: every adjacent pair should be clean for motion (finite haversine, forward dt, resolvable time, valid ele).
 - Status: PASS
 - Checks:
-  - PASS | No invalid distance rejections | expected eq 0 | actual 0
-  - PASS | Forward-valid motion exists | expected eq 119 | actual 119
-  - PASS | Total valid motion distance remains zero | expected eq 0 | actual 0
+  - PASS | No nonFiniteDistance motion pairs | expected eq 0 | actual 0
+  - PASS | All adjacent motion pairs clean (no tags) | expected eq 119 | actual 119
+  - PASS | No backward-time motion pairs | expected eq 0 | actual 0
+  - PASS | No zero-delta motion pairs | expected eq 0 | actual 0
 - Key metrics:
   - totalPoints=120, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=0, unparsable=0
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=119, clusterCountSorted=1, maxDeltaMs=1000
-  - motionForwardValid=119, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=0
+  - motionConsecutivePairs=119, motionTaggedPairCount=0, motionCleanAdjacent=119, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=119, eleValid=120, eleAnnotationCount=119
 
 ## adv-16-boundary-lat-lon-valid - Coordinate boundary values
 - Intent: Latitude/longitude edge values should remain valid and finite.
 - Status: PASS
 - Checks:
   - PASS | No coordinate rejections | expected eq 0 | actual 0
-  - PASS | No invalid distance rejections | expected eq 0 | actual 0
+  - PASS | No nonFiniteDistance motion pairs | expected eq 0 | actual 0
   - PASS | Positive deltas exist | expected eq 3 | actual 3
 - Key metrics:
   - totalPoints=4, rejectedCoords=0, hasMultiplePointTypes=false
@@ -231,7 +247,8 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=0
   - positiveDeltas=3, clusterCountSorted=1, maxDeltaMs=5000
-  - motionForwardValid=3, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=20015086.796012316
+  - motionConsecutivePairs=3, motionTaggedPairCount=0, motionCleanAdjacent=3, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=3, eleValid=4, eleAnnotationCount=3
 
 ## adv-17-time-parse-fuzz - Timestamp parse fuzz
 - Intent: Mixes very valid and very invalid timestamp strings in one stream.
@@ -246,7 +263,8 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=6
   - positiveDeltas=5, clusterCountSorted=4, maxDeltaMs=25000
-  - motionForwardValid=5, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=43.75788961452254
+  - motionConsecutivePairs=11, motionTaggedPairCount=9, motionCleanAdjacent=2, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=9, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=11, eleValid=12, eleAnnotationCount=11
 
 ## adv-18-duplicate-singletons - Duplicate singletons vs duplicate blocks
 - Intent: Isolated duplicate events should appear in singleton fields.
@@ -259,7 +277,8 @@
   - adjacentDuplicate=2, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=2
   - positiveDeltas=7, clusterCountSorted=2, maxDeltaMs=6000
-  - motionForwardValid=7, motionBackward=0, motionZeroDelta=2, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=49.06803667975294
+  - motionConsecutivePairs=9, motionTaggedPairCount=2, motionCleanAdjacent=7, motionBackward=0, motionZeroDelta=2, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=9, eleValid=10, eleAnnotationCount=9
 
 ## adv-19-missing-singletons-and-block - Missing singleton and block split
 - Intent: Ensures single-point missing anomalies are not hidden by block summaries.
@@ -272,7 +291,8 @@
   - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=7, clusterCountSorted=3, maxDeltaMs=6000
-  - motionForwardValid=7, motionBackward=0, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=46.57795611851415
+  - motionConsecutivePairs=10, motionTaggedPairCount=5, motionCleanAdjacent=5, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=5, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=10, eleValid=11, eleAnnotationCount=10
 
 ## adv-20-seeded-random-walk - Seeded random-walk fuzz
 - Intent: Deterministic pseudo-random walk with sporadic anomalies for robustness.
@@ -280,14 +300,15 @@
 - Checks:
   - PASS | Some positive deltas collected | expected atLeast 50 | actual 463
   - PASS | At least one temporal anomaly detected | expected atLeast 1 | actual 12
-  - PASS | No invalid-distance rejection explosion | expected eq 0 | actual 0
+  - PASS | No nonFiniteDistance motion pair explosion | expected eq 0 | actual 0
 - Key metrics:
   - totalPoints=500, rejectedCoords=0, hasMultiplePointTypes=false
   - missing=12, unparsable=13
   - adjacentDuplicate=11, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
   - annotationCount=36
   - positiveDeltas=463, clusterCountSorted=6, maxDeltaMs=6000
-  - motionForwardValid=463, motionBackward=0, motionZeroDelta=11, motionInvalidDistance=0, motionInvalidTimeRatio=0, motionTotalValidDistanceMeters=3969.365587363155
+  - motionConsecutivePairs=499, motionTaggedPairCount=61, motionCleanAdjacent=438, motionBackward=0, motionZeroDelta=11, motionTimeUnresolvable=50, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=499, eleValid=500, eleAnnotationCount=499
 
 ## adv-21-nonadjacent-repeat-streamwide - Non-adjacent repeat detected stream-wide
 - Intent: A timestamp value that reappears after intervening valid points should be tagged nonAdjacentRepeat, not adjacentDuplicate. Must also receive belowAnchor and belowPrevValid since the repeat is behind the current high-water mark.
@@ -303,7 +324,8 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=1
   - annotationCount=1
   - positiveDeltas=4, clusterCountSorted=2, maxDeltaMs=30000
-  - motionForwardValid=4, motionBackward=1, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0.25, motionTotalValidDistanceMeters=49.47668147028578
+  - motionConsecutivePairs=5, motionTaggedPairCount=1, motionCleanAdjacent=4, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
 
 ## adv-22-locally-recovering-backtrack - Locally recovering backtrack: belowAnchor without belowPrevValid
 - Intent: After a drop below the anchor, a sequence progressing forward locally is still belowAnchor but is NOT belowPrevValid. Only the initial drop point is belowPrevValid. Tests the tag distinction between 'still in the hole' vs 'actively digging'.
@@ -318,7 +340,8 @@
   - adjacentDuplicate=0, belowAnchor=4, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=4
   - positiveDeltas=5, clusterCountSorted=3, maxDeltaMs=100000
-  - motionForwardValid=5, motionBackward=1, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0.21052631578947367, motionTotalValidDistanceMeters=61.84584682928451
+  - motionConsecutivePairs=6, motionTaggedPairCount=1, motionCleanAdjacent=5, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=6, eleValid=7, eleAnnotationCount=6
 
 ## adv-23-adjacent-dup-below-anchor - Adjacent duplicate that is also below anchor gets both tags
 - Intent: Tags are non-exclusive. An adjacent duplicate occurring during a backtracking block should simultaneously carry adjacentDuplicate and belowAnchor, but NOT belowPrevValid (equal, not strictly less) and NOT nonAdjacentRepeat (is adjacent).
@@ -334,7 +357,8 @@
   - adjacentDuplicate=1, belowAnchor=2, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=2
   - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=100000
-  - motionForwardValid=2, motionBackward=1, motionZeroDelta=1, motionInvalidDistance=0, motionInvalidTimeRatio=0.22727272727272727, motionTotalValidDistanceMeters=24.73834121251607
+  - motionConsecutivePairs=4, motionTaggedPairCount=2, motionCleanAdjacent=2, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=4, eleValid=5, eleAnnotationCount=4
 
 ## adv-24-anchor-no-advance-on-dup - Anchor does not advance during adjacent duplicate run
 - Intent: The monotonic anchor only advances on genuine forward progress. A run of adjacent duplicates must not move the anchor. A belowAnchor point after the dup-run must still be detected correctly.
@@ -349,7 +373,8 @@
   - adjacentDuplicate=2, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
   - annotationCount=3
   - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=50000
-  - motionForwardValid=1, motionBackward=1, motionZeroDelta=2, motionInvalidDistance=0, motionInvalidTimeRatio=0.2857142857142857, motionTotalValidDistanceMeters=12.36917203736586
+  - motionConsecutivePairs=4, motionTaggedPairCount=3, motionCleanAdjacent=1, motionBackward=1, motionZeroDelta=2, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=4, eleValid=5, eleAnnotationCount=4
 
 ## adv-25-multi-tag-convergence - Single point receives nonAdjacentRepeat + belowAnchor + belowPrevValid simultaneously
 - Intent: A non-adjacent repeat that falls below the anchor and below its predecessor should carry all three tags in a single annotation object.
@@ -366,4 +391,169 @@
   - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=1
   - annotationCount=1
   - positiveDeltas=3, clusterCountSorted=3, maxDeltaMs=50000
-  - motionForwardValid=3, motionBackward=1, motionZeroDelta=0, motionInvalidDistance=0, motionInvalidTimeRatio=0.1111111111111111, motionTotalValidDistanceMeters=37.10751229581697
+  - motionConsecutivePairs=4, motionTaggedPairCount=1, motionCleanAdjacent=3, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=4, eleValid=5, eleAnnotationCount=4
+
+## adv-26-motion-ele-boundary-inclusive - Motion ele endpoints exactly at validFloorM and validCeilingM
+- Intent: Motion audit uses inclusive [-500, 9500]; boundary values must not fire eleUnresolvable.
+- Status: PASS
+- Checks:
+  - PASS | No motion ele-unresolvable pairs at inclusive boundaries | expected eq 0 | actual 0
+  - PASS | All three adjacent pairs clean for motion | expected eq 3 | actual 3
+- Key metrics:
+  - totalPoints=4, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=0
+  - positiveDeltas=3, clusterCountSorted=1, maxDeltaMs=5000
+  - motionConsecutivePairs=3, motionTaggedPairCount=0, motionCleanAdjacent=3, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=4, eleAnnotationCount=0
+
+## adv-27-motion-ele-above-ceiling - Elevation above motion validCeilingM flags adjacent pairs
+- Intent: Any endpoint outside default [validFloorM, validCeilingM] makes every adjacent pair touching it eleUnresolvable (independent of time).
+- Status: PASS
+- Checks:
+  - PASS | Two pairs affected by one out-of-range spike (prev and next) | expected eq 2 | actual 2
+  - PASS | Times still forward so no backward motion pairs | expected eq 0 | actual 0
+- Key metrics:
+  - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=0
+  - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=2000
+  - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=2
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=1, eleAdjacentDup=0, eleValid=2, eleAnnotationCount=1
+
+## adv-28-motion-omit-ele-element - Missing GPX ele element yields motion eleUnresolvable
+- Intent: Ingestion sets eleAbsent true when <ele> is absent; elevation audit tags missing; motion flags eleUnresolvable on adjacent pairs.
+- Status: PASS
+- Checks:
+  - PASS | Middle point without ele tags both adjacent pairs | expected eq 2 | actual 2
+  - PASS | No non-finite haversine on valid coordinates | expected eq 0 | actual 0
+  - PASS | One missing-ele point (eleAbsent) | expected eq 1 | actual 1
+  - PASS | No unparsable ele when absent vs present is distinguished | expected eq 0 | actual 0
+- Key metrics:
+  - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=0
+  - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=3000
+  - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=2
+  - eleMissing=1, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=2, eleAnnotationCount=1
+
+## adv-29-motion-stacked-backward-and-elebad - Same pair stacks backwardTime and eleUnresolvable
+- Intent: Tags are non-exclusive: one adjacent pair can carry multiple motion flags simultaneously.
+- Status: PASS
+- Checks:
+  - PASS | Exactly one backward-time pair | expected eq 1 | actual 1
+  - PASS | Exactly one ele-unresolvable pair (stacked on same pair as backward) | expected eq 1 | actual 1
+  - PASS | Leading pair still clean | expected eq 1 | actual 1
+- Key metrics:
+  - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
+  - annotationCount=1
+  - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=20000
+  - motionConsecutivePairs=2, motionTaggedPairCount=1, motionCleanAdjacent=1, motionBackward=1, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=1
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=1, eleAdjacentDup=1, eleValid=2, eleAnnotationCount=2
+
+## adv-30-motion-mixed-time-backward-zero - Single track mixes timeUnresolvable, backward, zero delta, and one clean pair
+- Intent: Six points, five pairs: trailing null so only (4,5) is timeUnresolvable. Includes zero-delta (2→3) and backward (3→4). Leading pairs (0→1) and (1→2) stay clean.
+- Status: PASS
+- Checks:
+  - PASS | One pair with missing time only on the second endpoint | expected eq 1 | actual 1
+  - PASS | One strictly backward dt pair (15s → 5s) | expected eq 1 | actual 1
+  - PASS | One zero-dt pair (15s → 15s) | expected eq 1 | actual 1
+  - PASS | Exactly two pairs have no motion tags (first two pairs) | expected eq 2 | actual 2
+- Key metrics:
+  - totalPoints=6, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=1, unparsable=0
+  - adjacentDuplicate=1, belowAnchor=1, belowPrevValid=1, nonAdjacentRepeat=0
+  - annotationCount=3
+  - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=10000
+  - motionConsecutivePairs=5, motionTaggedPairCount=3, motionCleanAdjacent=2, motionBackward=1, motionZeroDelta=1, motionTimeUnresolvable=1, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=5, eleValid=6, eleAnnotationCount=5
+
+## adv-31-single-trackpoint - Single trackpoint yields zero motion pairs
+- Intent: motion.summary.consecutivePairCount is n-1; empty pair lists and zero tag counts.
+- Status: PASS
+- Checks:
+  - PASS | No adjacent pairs to evaluate | expected eq 0 | actual 0
+  - PASS | No motion pair annotations | expected eq 0 | actual 0
+- Key metrics:
+  - totalPoints=1, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=0
+  - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - motionConsecutivePairs=0, motionTaggedPairCount=0, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=1, eleAnnotationCount=0
+
+## adv-32-unparsable-ele-element - Present but unparsable elevation element
+- Intent: When <ele> exists but is not numeric, ingestion sets eleAbsent false and ele null; elevation audit tags unparsable, not missing.
+- Status: PASS
+- Checks:
+  - PASS | Exactly one unparsable ele point | expected eq 1 | actual 1
+  - PASS | No missing-ele points when every trkpt has an ele child | expected eq 0 | actual 0
+  - PASS | Two valid in-bounds ele points | expected eq 2 | actual 2
+- Key metrics:
+  - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=0
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=0
+  - positiveDeltas=2, clusterCountSorted=1, maxDeltaMs=5000
+  - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=0, motionInvalidDistance=0, motionEleUnresolvable=2
+  - eleMissing=0, eleUnparsable=1, eleOutOfBounds=0, eleAdjacentDup=0, eleValid=2, eleAnnotationCount=1
+
+## adv-33-empty-time-element-mid-track - Empty <time></time> is unparsable not missing
+- Intent: Ingestion sets timeAbsent false and timeMs null for empty body; temporal tags unparsable (not missing). Motion/sampling use finite timeMs only (ADR-0012).
+- Status: PASS
+- Checks:
+  - PASS | Exactly one unparsable timestamp (empty <time> body) | expected eq 1 | actual 1
+  - PASS | No missing-time points (every trkpt has a <time> child) | expected eq 0 | actual 0
+  - PASS | Sampling bridges positive dt across invalid point (prev valid to next valid) | expected eq 2 | actual 2
+  - PASS | Two motion pairs touch the non-finite timeMs endpoint | expected eq 2 | actual 2
+  - PASS | Only the last pair has both endpoints with finite timeMs and no motion tags | expected eq 1 | actual 1
+- Key metrics:
+  - totalPoints=4, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=1
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=1
+  - positiveDeltas=2, clusterCountSorted=2, maxDeltaMs=20000
+  - motionConsecutivePairs=3, motionTaggedPairCount=2, motionCleanAdjacent=1, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=2, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=3, eleValid=4, eleAnnotationCount=3
+
+## adv-34-missing-time-vs-empty-time - No <time> child vs empty <time></time>
+- Intent: Missing requires timeAbsent true (no element). Empty element is timeAbsent false with null timeMs — unparsable. Distinction must not rely on Date.parse downstream.
+- Status: PASS
+- Checks:
+  - PASS | One missing-time point (no <time> element) | expected eq 1 | actual 1
+  - PASS | One unparsable-time point (empty <time> body) | expected eq 1 | actual 1
+  - PASS | No positive time deltas (only one parseable instant at end) | expected eq 0 | actual 0
+  - PASS | Both adjacent pairs time-unresolvable for motion | expected eq 2 | actual 2
+  - PASS | No motion-clean pairs | expected eq 0 | actual 0
+- Key metrics:
+  - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=1, unparsable=1
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=2
+  - positiveDeltas=0, clusterCountSorted=0, maxDeltaMs=null
+  - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=2, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=2, eleValid=3, eleAnnotationCount=2
+
+## adv-35-time-whitespace-only-body - Whitespace-only <time> body trims to unparsable
+- Intent: Ingestion trims text; all-whitespace becomes empty string → timeRaw null, timeMs null, timeAbsent false → unparsable.
+- Status: PASS
+- Checks:
+  - PASS | Whitespace-only body counts as unparsable | expected eq 1 | actual 1
+  - PASS | No missing-time tags when <time> exists on every point | expected eq 0 | actual 0
+  - PASS | One positive delta (bridge from first valid to last; middle invalid does not add a second consecutive-valid pair) | expected eq 1 | actual 1
+  - PASS | Middle point breaks two motion pairs for time | expected eq 2 | actual 2
+- Key metrics:
+  - totalPoints=3, rejectedCoords=0, hasMultiplePointTypes=false
+  - missing=0, unparsable=1
+  - adjacentDuplicate=0, belowAnchor=0, belowPrevValid=0, nonAdjacentRepeat=0
+  - annotationCount=1
+  - positiveDeltas=1, clusterCountSorted=1, maxDeltaMs=20000
+  - motionConsecutivePairs=2, motionTaggedPairCount=2, motionCleanAdjacent=0, motionBackward=0, motionZeroDelta=0, motionTimeUnresolvable=2, motionInvalidDistance=0, motionEleUnresolvable=0
+  - eleMissing=0, eleUnparsable=0, eleOutOfBounds=0, eleAdjacentDup=2, eleValid=3, eleAnnotationCount=2

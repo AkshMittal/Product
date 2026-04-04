@@ -1,5 +1,7 @@
 # Adversarial Validation Status
 
+> **Note (2026-04):** This file is a **historical run snapshot**. The harness and JSON schema have since moved to label-based **temporal** (`tagCounts`, `pointAnnotations`) and **motion** (`tagCounts`, `tagIndex`, `pairAnnotations`). For current field paths, see [`project/pipeline/json-schema-v2-glossary.md`](../project/pipeline/json-schema-v2-glossary.md) and `scripts/generate-gpx-adversarial-suite.js` `metric()`.
+
 Date: 2026-03-20  
 Branch: `case-study`  
 Runner: `.\.tools\node-v24.13.1-win-x64\node.exe`
@@ -35,12 +37,12 @@ Both cases are marked `EXPECTED_VARIANCE` because clustering can remain a single
 
 ## Fix Applied Before Final Rerun
 
-Updated `scripts/generate-gpx-adversarial-suite.js` metric extraction to read schema v2 field names:
+Updated `scripts/generate-gpx-adversarial-suite.js` metric extraction (as of that date) toward schema v2. **Superseded mapping today:**
 
-- ingestion counts moved to `ingestion.counts.*`
-- temporal anomaly counts moved to `pointCount` / `isolatedPointCount`
-- sampling keys moved to `positiveDeltaCount` and `sortedClusterCount`
-- motion keys moved to `evaluatedPairs.*`, `rejections.*PairCount`, `invalidTimeShareOfEvaluatedTime`, and `totalForwardValidDistanceMeters`
+- ingestion: `ingestion.counts.*` (unchanged)
+- temporal: `temporal.tagCounts.*`, `temporal.pointAnnotations.length` (not legacy bucket `pointCount` / `isolatedPointCount` as primary)
+- sampling: `sampling.time.deltaStatistics.*`, `sampling.time.clustering.*` (see glossary for exact paths)
+- motion: `motion.summary.consecutivePairCount`, `motion.tagCounts.*`, `motion.pairAnnotations`; derived clean-pair metric uses `consecutivePairCount - pairAnnotations.length` (not `evaluatedPairs.forwardValidPairCount`, `rejections.*`, `time.*`, `distance.*`, or `speed.*`)
 
 ## Current Status Decision
 
