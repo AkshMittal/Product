@@ -54,21 +54,31 @@ function parsePointElement(pointElement, gpxIndex, pointType) {
     };
   }
   
-  // <ele> is optional - keep point even if elevation is missing or invalid, store as null
+  // <ele> is optional — distinguish absent element vs present-but-unparseable for elevation audit
   const eleElement = pointElement.querySelector('ele');
-  const ele = eleElement ? parseFloat(eleElement.textContent) : null;
-  // Store as null if parsing failed or element doesn't exist
-  const elevation = (ele !== null && !isNaN(ele)) ? ele : null;
+  var eleAbsent = true;
+  var elevation = null;
+  if (eleElement) {
+    eleAbsent = false;
+    const parsedEle = parseFloat(eleElement.textContent);
+    elevation = (parsedEle !== null && !isNaN(parsedEle)) ? parsedEle : null;
+  }
   
-  // <time> is optional child element, preserve as string if present
+  // <time> is optional — preserve raw string; parse once for downstream symmetry with eleAbsent/ele
   const timeElement = pointElement.querySelector('time');
+  let timeAbsent = true;
   let timeRaw = null;
+  let timeMs = null;
   if (timeElement) {
+    timeAbsent = false;
     const t = timeElement.textContent.trim();
     timeRaw = t === "" ? null : t;
+    if (timeRaw !== null) {
+      const parsedMs = Date.parse(timeRaw);
+      timeMs = isNaN(parsedMs) ? null : parsedMs;
+    }
   }
 
-  
   // <extensions> must be preserved as DOM node for future pipeline stages
   // Do not parse or inspect contents - preserve entire node structure
   const extensionsElement = pointElement.querySelector('extensions');
@@ -82,7 +92,10 @@ function parsePointElement(pointElement, gpxIndex, pointType) {
       lat: lat,
       lon: lon,
       ele: elevation,
+      eleAbsent: eleAbsent,
       timeRaw: timeRaw,
+      timeAbsent: timeAbsent,
+      timeMs: timeMs,
       extensions: extensions  // Preserved DOM node, not parsed
     },
     rejectionReason: null,
@@ -111,7 +124,8 @@ function parseGPX(gpxString) {
   let totalPointsFound = 0;
   let pointsDiscarded = 0;
   let firstRejectionLogged = false;
-  const rejectedCoordinates = [];
+  /** Built into audit.ingestion.rejections.events (coordinate rejects only). */
+  const rejectionEvents = [];
   const pointTypeCounts = { wpt: 0, rtept: 0, trkpt: 0 };
   let hasAnyTimestamps = false;
   
@@ -120,7 +134,8 @@ function parseGPX(gpxString) {
     const result = parsePointElement(pointElement, gpxIndex++, pointType);
     if (result.valid) {
       points.push(result.point);
-      if (result.point.timeRaw !== null) {
+      const p = result.point;
+      if (p.timeAbsent === false || (p.timeAbsent !== true && p.timeRaw !== null)) {
         hasAnyTimestamps = true;
       }
     } else {
@@ -132,7 +147,7 @@ function parseGPX(gpxString) {
         firstRejectionLogged = true;
       }
       // Collect all rejected coordinates for flagged events
-      rejectedCoordinates.push({
+      rejectionEvents.push({
         gpxIndex: result.rawData.gpxIndex,
         pointType: result.rawData.pointType,
         rawLat: result.rawData.lat,
@@ -189,7 +204,7 @@ function parseGPX(gpxString) {
           hasAnyTimestampValues: hasAnyTimestamps
         },
         rejections: {
-          events: rejectedCoordinates
+          events: rejectionEvents
         }
       }
     }

@@ -1,0 +1,322 @@
+{
+  "metadata": {
+    "schemaVersion": "2.0.0",
+    "generatedAtUtc": "2026-04-04T10:34:29.166Z",
+    "source": {
+      "fileName": "adv-25-multi-tag-convergence.gpx"
+    },
+    "summary": {
+      "totalPointCount": 5
+    }
+  },
+  "audit": {
+    "ingestion": {
+      "counts": {
+        "totalPointCount": 5,
+        "validPointCount": 5,
+        "rejectedPointCount": 0,
+        "pointTypeCounts": {
+          "wpt": 0,
+          "rtept": 0,
+          "trkpt": 5
+        }
+      },
+      "context": {
+        "hasMultiplePointTypes": false,
+        "hasAnyTimestampValues": true
+      },
+      "rejections": {
+        "events": []
+      }
+    },
+    "temporal": {
+      "totalPointsEvaluated": 5,
+      "session": {
+        "rawSessionDurationSec": 70,
+        "parseableTimestampPointCount": 5
+      },
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "adjacentDuplicate": 0,
+        "belowAnchor": 1,
+        "belowPrevValid": 1,
+        "nonAdjacentRepeat": 1
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "adjacentDuplicate": [],
+        "belowAnchor": [
+          3
+        ],
+        "belowPrevValid": [
+          3
+        ],
+        "nonAdjacentRepeat": [
+          3
+        ]
+      },
+      "pointAnnotations": [
+        {
+          "gpxIndex": 3,
+          "timestampMs": 1771027250000,
+          "anchorMs": 1771027260000,
+          "nonAdjacentRepeat": true,
+          "firstOccurrenceGpxIndex": 1,
+          "belowAnchor": true,
+          "depthFromAnchorMs": 10000,
+          "belowPrevValid": true
+        }
+      ]
+    },
+    "sampling": {
+      "time": {
+        "timestampContext": {
+          "hasAnyParseableTimestamp": true,
+          "hasAnyPositiveTimeDelta": true,
+          "timestampedPointsCount": 5,
+          "consecutiveTimestampPairsCount": 4,
+          "positiveTimeDeltaCount": 3,
+          "rejections": {
+            "nonPositiveTimeDeltaPairs": {
+              "nonPositivePairCount": 1,
+              "events": [
+                {
+                  "fromIndex": 2,
+                  "toIndex": 3,
+                  "delta": -10000
+                }
+              ]
+            }
+          }
+        },
+        "deltaStatistics": {
+          "positiveDeltaCount": 3,
+          "minMs": 10000,
+          "maxMs": 50000,
+          "medianMs": 20000
+        },
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "sortedClusterCount": 3,
+          "sequentialClusterCount": 3,
+          "sortedClusterCountOverTotalDeltasRatio": 1,
+          "sequentialClusterCountOverTotalDeltasRatio": 1,
+          "sequentialOverSortedClusterCountRatio": 1,
+          "clusters": [
+            {
+              "centerSec": 10,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.3333333333333333,
+              "minSec": 10,
+              "maxSec": 10,
+              "spreadSec": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationSec": 0,
+              "maxInsertionAbsoluteDeviationSec": 0,
+              "finalMeanAbsoluteDeviationSec": 0,
+              "finalMaxAbsoluteDeviationSec": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerSec": 20,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.3333333333333333,
+              "minSec": 20,
+              "maxSec": 20,
+              "spreadSec": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationSec": 0,
+              "maxInsertionAbsoluteDeviationSec": 0,
+              "finalMeanAbsoluteDeviationSec": 0,
+              "finalMaxAbsoluteDeviationSec": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            },
+            {
+              "centerSec": 50,
+              "count": 1,
+              "clusterShareOfTotalDeltas": 0.3333333333333333,
+              "minSec": 50,
+              "maxSec": 50,
+              "spreadSec": 0,
+              "meanInsertionRelativeDeviation": 0,
+              "maxInsertionRelativeDeviation": 0,
+              "meanInsertionAbsoluteDeviationSec": 0,
+              "maxInsertionAbsoluteDeviationSec": 0,
+              "finalMeanAbsoluteDeviationSec": 0,
+              "finalMaxAbsoluteDeviationSec": 0,
+              "finalMeanRelativeDeviation": 0,
+              "finalMaxRelativeDeviation": 0,
+              "finalSpreadOverCenterRatio": 0
+            }
+          ]
+        },
+        "normalization": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 3,
+          "sortedClusterCount": 3,
+          "sequentialClusterCount": 3,
+          "meanFinalAbsoluteDeviationSec": 0,
+          "maxFinalAbsoluteDeviationSec": 0,
+          "meanFinalRelativeDeviation": 0,
+          "maxFinalRelativeDeviation": 0,
+          "sortedClusterCountOverTotalDeltasRatio": 1,
+          "sequentialClusterCountOverTotalDeltasRatio": 1,
+          "sequentialOverSortedClusterCountRatio": 1,
+          "nonZeroFinalDeviationCount": 0,
+          "zeroFinalDeviationCount": 3
+        }
+      },
+      "distance": {
+        "pairInspection": {
+          "consecutivePairCount": 4,
+          "rejections": {
+            "invalidDistance": {
+              "count": 0
+            }
+          }
+        },
+        "deltaStatistics": {
+          "deltaCount": 4,
+          "minMeters": 12.36916917515021,
+          "maxMeters": 12.36917203736586,
+          "medianMeters": 12.369170606264955
+        },
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 4,
+          "sortedClusterCount": 1,
+          "sequentialClusterCount": 1,
+          "sortedClusterCountOverTotalDeltasRatio": 0.25,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.25,
+          "sequentialOverSortedClusterCountRatio": 1,
+          "clusters": [
+            {
+              "centerMeters": 12.369170606264955,
+              "count": 4,
+              "clusterShareOfTotalDeltas": 1,
+              "minMeters": 12.36916917515021,
+              "maxMeters": 12.36917203736586,
+              "spreadMeters": 0.0000028622156502677853,
+              "meanInsertionRelativeDeviation": 8.677475972086859e-8,
+              "maxInsertionRelativeDeviation": 1.54265551252981e-7,
+              "meanInsertionAbsoluteDeviationMeters": 0.0000010733317337141557,
+              "maxInsertionAbsoluteDeviationMeters": 0.0000019081368485274197,
+              "finalMeanAbsoluteDeviationMeters": 9.540718837186546e-7,
+              "finalMaxAbsoluteDeviationMeters": 0.0000014311147449319606,
+              "finalMeanRelativeDeviation": 7.713305233541038e-8,
+              "finalMaxRelativeDeviation": 1.157001379063447e-7,
+              "finalSpreadOverCenterRatio": 2.3139915693442534e-7
+            }
+          ]
+        },
+        "normalization": {
+          "insertionRelativeThreshold": 0.02,
+          "totalDeltaCount": 4,
+          "sortedClusterCount": 1,
+          "sequentialClusterCount": 1,
+          "meanFinalAbsoluteDeviationMeters": 9.540718837186546e-7,
+          "maxFinalAbsoluteDeviationMeters": 0.0000014311147449319606,
+          "meanFinalRelativeDeviation": 7.713305233541038e-8,
+          "maxFinalRelativeDeviation": 1.157001379063447e-7,
+          "sortedClusterCountOverTotalDeltasRatio": 0.25,
+          "sequentialClusterCountOverTotalDeltasRatio": 0.25,
+          "sequentialOverSortedClusterCountRatio": 1,
+          "nonZeroFinalDeviationCount": 4,
+          "zeroFinalDeviationCount": 0
+        },
+        "timeConditionedDeltaCount": 3
+      }
+    },
+    "motion": {
+      "summary": {
+        "consecutivePairCount": 4,
+        "parameters": {
+          "validFloorM": -500,
+          "validCeilingM": 9500
+        }
+      },
+      "tagCounts": {
+        "backwardTime": 1,
+        "zeroTimeDelta": 0,
+        "timeUnresolvable": 0,
+        "nonFiniteDistance": 0,
+        "eleUnresolvable": 0
+      },
+      "tagIndex": {
+        "backwardTime": [
+          {
+            "fromGpxIndex": 2,
+            "toGpxIndex": 3
+          }
+        ],
+        "zeroTimeDelta": [],
+        "timeUnresolvable": [],
+        "nonFiniteDistance": [],
+        "eleUnresolvable": []
+      },
+      "pairAnnotations": [
+        {
+          "fromGpxIndex": 2,
+          "toGpxIndex": 3,
+          "backwardTime": true,
+          "dtSec": -10
+        }
+      ]
+    },
+    "elevation": {
+      "totalPointsEvaluated": 5,
+      "validElevationPointCount": 5,
+      "parameters": {
+        "validFloorM": -500,
+        "validCeilingM": 9500
+      },
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "outOfBounds": 0,
+        "adjacentDuplicate": 4
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "outOfBounds": [],
+        "adjacentDuplicate": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "pointAnnotations": [
+        {
+          "gpxIndex": 1,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 2,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 3,
+          "ele": 100,
+          "adjacentDuplicate": true
+        },
+        {
+          "gpxIndex": 4,
+          "ele": 100,
+          "adjacentDuplicate": true
+        }
+      ]
+    }
+  }
+}

@@ -22,10 +22,10 @@ Pipeline intent:
 
 Audit emits deterministic observables and structures:
 
-- point-level flags such as missing/unparsable timestamps
-- pair-level classifications such as dt sign and geometry validity
-- blocks vs isolated-point views in stream order
-- sampling diagnostics for time and distance
+- point-level tags such as missing/unparsable timestamps (`audit.temporal` label-based output)
+- pair-level motion flags and stream-adjacent sampling deltas (`audit.motion`, `audit.sampling`; adjacency by `gpxIndex`, ADR-0013)
+- sparse `pointAnnotations` plus `tagIndex` / `tagCounts` (not legacy block buckets in the export)
+- sampling clustering diagnostics for time and distance
 
 Audit does not decide whether a metric should be computed. It only describes what is present and what happened in the stream.
 
@@ -65,7 +65,7 @@ Interpretation and kinematic plausibility checks are versioned policy layers app
 
 Examples:
 
-- stitched/reordering hypotheses for backtracking subtypes
+- stitched/reordering hypotheses built from audit labels (e.g., `belowAnchor`) in **interpretation**—not additional audit subtypes
 - speed/acceleration outlier rejection
 - map-matching / route snapping
 
@@ -83,13 +83,15 @@ Per point:
 - unparsable: timestamp exists but cannot be parsed
 - parseable: timestamp can be parsed into milliseconds
 
-### Pair states
+### Pair states (time-conditioned)
 
-Per consecutive pair where both points are parseable:
+Use **GPX-stream-adjacent** pairs only: both endpoints accepted, `curr.gpxIndex === prev.gpxIndex + 1`, and both have finite `timeMs` (same gate as `audit.sampling` time deltas and `audit.motion` time predicates). Then:
 
 - forward-valid: `dt > 0`
-- duplicate: `dt = 0` (adjacent duplicates are the primary duplicate semantics)
+- duplicate / zero delta: `dt === 0` on that stream-adjacent edge
 - backward: `dt < 0`
+
+**Point-level** “duplicate” in `audit.temporal` is separate: `adjacentDuplicate` compares to the accepted predecessor at `gpxIndex - 1` with finite `timeMs`; repeats across gaps are `nonAdjacentRepeat` (ADR-0013).
 
 ### Objective eligibility rules (examples)
 
@@ -112,7 +114,7 @@ Per consecutive pair where both points are parseable:
 
 Backtracking and related anomalies should be treated as:
 
-- audit outputs (blocks, isolated points, evidence rules)
+- audit outputs (`belowAnchor`, `belowPrevValid`, and related tags; sparse annotations + indices)
 - participation exclusions for metric families that cannot be trusted under those contexts
 
 MVP rule of thumb:

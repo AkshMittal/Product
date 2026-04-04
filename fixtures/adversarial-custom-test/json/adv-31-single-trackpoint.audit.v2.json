@@ -1,0 +1,149 @@
+{
+  "metadata": {
+    "schemaVersion": "2.0.0",
+    "generatedAtUtc": "2026-04-04T10:34:29.191Z",
+    "source": {
+      "fileName": "adv-31-single-trackpoint.gpx"
+    },
+    "summary": {
+      "totalPointCount": 1
+    }
+  },
+  "audit": {
+    "ingestion": {
+      "counts": {
+        "totalPointCount": 1,
+        "validPointCount": 1,
+        "rejectedPointCount": 0,
+        "pointTypeCounts": {
+          "wpt": 0,
+          "rtept": 0,
+          "trkpt": 1
+        }
+      },
+      "context": {
+        "hasMultiplePointTypes": false,
+        "hasAnyTimestampValues": true
+      },
+      "rejections": {
+        "events": []
+      }
+    },
+    "temporal": {
+      "totalPointsEvaluated": 1,
+      "session": {
+        "rawSessionDurationSec": 0,
+        "parseableTimestampPointCount": 1
+      },
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "adjacentDuplicate": 0,
+        "belowAnchor": 0,
+        "belowPrevValid": 0,
+        "nonAdjacentRepeat": 0
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "adjacentDuplicate": [],
+        "belowAnchor": [],
+        "belowPrevValid": [],
+        "nonAdjacentRepeat": []
+      },
+      "pointAnnotations": []
+    },
+    "sampling": {
+      "time": {
+        "timestampContext": {
+          "hasAnyParseableTimestamp": true,
+          "hasAnyPositiveTimeDelta": false,
+          "timestampedPointsCount": 1,
+          "consecutiveTimestampPairsCount": 0,
+          "positiveTimeDeltaCount": 0,
+          "rejections": {
+            "nonPositiveTimeDeltaPairs": {
+              "nonPositivePairCount": 0,
+              "events": []
+            }
+          }
+        },
+        "deltaStatistics": {
+          "positiveDeltaCount": 0,
+          "minMs": null,
+          "maxMs": null,
+          "medianMs": null
+        },
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "sortedClusterCount": 0,
+          "sequentialClusterCount": 0,
+          "sortedClusterCountOverTotalDeltasRatio": 0,
+          "sequentialClusterCountOverTotalDeltasRatio": 0,
+          "sequentialOverSortedClusterCountRatio": 0,
+          "clusters": []
+        },
+        "normalization": null
+      },
+      "distance": {
+        "pairInspection": {
+          "consecutivePairCount": 0,
+          "rejections": {
+            "invalidDistance": {
+              "count": 0
+            }
+          }
+        },
+        "deltaStatistics": null,
+        "clustering": null,
+        "normalization": null,
+        "timeConditionedDeltaCount": 0
+      }
+    },
+    "motion": {
+      "summary": {
+        "consecutivePairCount": 0,
+        "parameters": {
+          "validFloorM": -500,
+          "validCeilingM": 9500
+        }
+      },
+      "tagCounts": {
+        "backwardTime": 0,
+        "zeroTimeDelta": 0,
+        "timeUnresolvable": 0,
+        "nonFiniteDistance": 0,
+        "eleUnresolvable": 0
+      },
+      "tagIndex": {
+        "backwardTime": [],
+        "zeroTimeDelta": [],
+        "timeUnresolvable": [],
+        "nonFiniteDistance": [],
+        "eleUnresolvable": []
+      },
+      "pairAnnotations": []
+    },
+    "elevation": {
+      "totalPointsEvaluated": 1,
+      "validElevationPointCount": 1,
+      "parameters": {
+        "validFloorM": -500,
+        "validCeilingM": 9500
+      },
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "outOfBounds": 0,
+        "adjacentDuplicate": 0
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "outOfBounds": [],
+        "adjacentDuplicate": []
+      },
+      "pointAnnotations": []
+    }
+  }
+}

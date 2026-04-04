@@ -1,7 +1,0 @@
-i think i completely forgot that elevation is a thing in gpx. use it in relevant places afterwards.
-
-regression pattern for backtracking to check if the backtracking block that is recorded is linearly regressing or is a stitched anomaly
-
-distance based sampling. 
-
-rn we are assuming that the sampling type is consistent across the whole gpx but a more realistic scenario can definetly happen that a device uses smart sampling for say battery optimisation etc at some point. so different sampling modes can even be presenet. need segementation

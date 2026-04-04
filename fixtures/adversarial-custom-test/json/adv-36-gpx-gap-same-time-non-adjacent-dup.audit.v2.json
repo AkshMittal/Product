@@ -1,0 +1,177 @@
+{
+  "metadata": {
+    "schemaVersion": "2.0.0",
+    "generatedAtUtc": "2026-04-04T10:34:29.213Z",
+    "source": {
+      "fileName": "adv-36-gpx-gap-same-time-non-adjacent-dup.gpx"
+    },
+    "summary": {
+      "totalPointCount": 3
+    }
+  },
+  "audit": {
+    "ingestion": {
+      "counts": {
+        "totalPointCount": 3,
+        "validPointCount": 2,
+        "rejectedPointCount": 1,
+        "pointTypeCounts": {
+          "wpt": 0,
+          "rtept": 0,
+          "trkpt": 3
+        }
+      },
+      "context": {
+        "hasMultiplePointTypes": false,
+        "hasAnyTimestampValues": true
+      },
+      "rejections": {
+        "events": [
+          {
+            "gpxIndex": 1,
+            "pointType": "trkpt",
+            "rawLat": "bad",
+            "rawLon": "77.5946",
+            "rawEle": "100",
+            "rawTime": "2026-02-14T00:01:39.000Z",
+            "reason": "Invalid coordinates: lat=\"bad\", lon=\"77.5946\" (not parseable as numbers)"
+          }
+        ]
+      }
+    },
+    "temporal": {
+      "totalPointsEvaluated": 2,
+      "session": {
+        "rawSessionDurationSec": 0,
+        "parseableTimestampPointCount": 2
+      },
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "adjacentDuplicate": 0,
+        "belowAnchor": 0,
+        "belowPrevValid": 0,
+        "nonAdjacentRepeat": 1
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "adjacentDuplicate": [],
+        "belowAnchor": [],
+        "belowPrevValid": [],
+        "nonAdjacentRepeat": [
+          2
+        ]
+      },
+      "pointAnnotations": [
+        {
+          "gpxIndex": 2,
+          "timestampMs": 1771027200000,
+          "anchorMs": 1771027200000,
+          "nonAdjacentRepeat": true,
+          "firstOccurrenceGpxIndex": 0
+        }
+      ]
+    },
+    "sampling": {
+      "time": {
+        "timestampContext": {
+          "hasAnyParseableTimestamp": true,
+          "hasAnyPositiveTimeDelta": false,
+          "timestampedPointsCount": 2,
+          "consecutiveTimestampPairsCount": 0,
+          "positiveTimeDeltaCount": 0,
+          "rejections": {
+            "nonPositiveTimeDeltaPairs": {
+              "nonPositivePairCount": 0,
+              "events": []
+            }
+          }
+        },
+        "deltaStatistics": {
+          "positiveDeltaCount": 0,
+          "minMs": null,
+          "maxMs": null,
+          "medianMs": null
+        },
+        "clustering": {
+          "insertionRelativeThreshold": 0.02,
+          "sortedClusterCount": 0,
+          "sequentialClusterCount": 0,
+          "sortedClusterCountOverTotalDeltasRatio": 0,
+          "sequentialClusterCountOverTotalDeltasRatio": 0,
+          "sequentialOverSortedClusterCountRatio": 0,
+          "clusters": []
+        },
+        "normalization": null
+      },
+      "distance": {
+        "pairInspection": {
+          "consecutivePairCount": 0,
+          "rejections": {
+            "invalidDistance": {
+              "count": 0
+            }
+          }
+        },
+        "deltaStatistics": null,
+        "clustering": null,
+        "normalization": null,
+        "timeConditionedDeltaCount": 0
+      }
+    },
+    "motion": {
+      "summary": {
+        "consecutivePairCount": 0,
+        "parameters": {
+          "validFloorM": -500,
+          "validCeilingM": 9500
+        }
+      },
+      "tagCounts": {
+        "backwardTime": 0,
+        "zeroTimeDelta": 0,
+        "timeUnresolvable": 0,
+        "nonFiniteDistance": 0,
+        "eleUnresolvable": 0
+      },
+      "tagIndex": {
+        "backwardTime": [],
+        "zeroTimeDelta": [],
+        "timeUnresolvable": [],
+        "nonFiniteDistance": [],
+        "eleUnresolvable": []
+      },
+      "pairAnnotations": []
+    },
+    "elevation": {
+      "totalPointsEvaluated": 2,
+      "validElevationPointCount": 2,
+      "parameters": {
+        "validFloorM": -500,
+        "validCeilingM": 9500
+      },
+      "tagCounts": {
+        "missing": 0,
+        "unparsable": 0,
+        "outOfBounds": 0,
+        "adjacentDuplicate": 1
+      },
+      "tagIndex": {
+        "missing": [],
+        "unparsable": [],
+        "outOfBounds": [],
+        "adjacentDuplicate": [
+          2
+        ]
+      },
+      "pointAnnotations": [
+        {
+          "gpxIndex": 2,
+          "ele": 100,
+          "adjacentDuplicate": true
+        }
+      ]
+    }
+  }
+}

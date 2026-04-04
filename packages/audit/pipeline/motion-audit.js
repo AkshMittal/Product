@@ -1,11 +1,10 @@
 /**
  * Motion Audit Module
- * Computes motion metrics independently from sampling audit.
- * Exposes: auditMotion(points)
+ * Adjacent-pair label flags only (no kinematic aggregates, no anchored chaining).
+ * Exposes: auditMotion(points, params?)
  */
 
 /**
- * Calculates haversine distance between two points in meters.
  * @param {number} lat1
  * @param {number} lon1
  * @param {number} lat2
@@ -24,177 +23,193 @@ function haversineDistanceMotion(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Audits motion metrics from consecutive points.
- * @param {Array<{lat:number, lon:number, timeRaw:string|null}>} points
+ * Instant for motion pair math: finite ingestion `timeMs` only (no Date.parse; use audit.temporal for missing vs unparsable).
+ * @param {{timeMs?:number|null}} point
+ * @returns {number} ms since epoch, or NaN if no finite timeMs
+ */
+function endpointTimeMsForMotion(point) {
+  if (typeof point.timeMs === 'number' && isFinite(point.timeMs)) {
+    return point.timeMs;
+  }
+  return NaN;
+}
+
+/**
+ * Endpoint elevation is valid for motion pair eligibility when finite and in [floor, ceiling].
+ * undefined treated like null (invalid).
+ * @param {unknown} ele
+ * @param {number} floorM
+ * @param {number} ceilingM
+ * @returns {boolean}
+ */
+function endpointEleValidMotion(ele, floorM, ceilingM) {
+  if (ele === undefined || ele === null) {
+    return false;
+  }
+  if (typeof ele !== 'number' || isNaN(ele)) {
+    return false;
+  }
+  return ele >= floorM && ele <= ceilingM;
+}
+
+/**
+ * GPX stream adjacency: consecutive source rows share gpxIndex+1 (ingestion may drop rejects).
+ * @param {{gpxIndex?:number}} prev
+ * @param {{gpxIndex?:number}} curr
+ * @returns {boolean}
+ */
+function gpxStreamAdjacentPair(prev, curr) {
+  var a = prev.gpxIndex;
+  var b = curr.gpxIndex;
+  if (typeof a !== 'number' || !isFinite(a)) {
+    return false;
+  }
+  if (typeof b !== 'number' || !isFinite(b)) {
+    return false;
+  }
+  return b === a + 1;
+}
+
+/**
+ * @param {Array<{lat:number, lon:number, timeMs:number|null, ele?:number|null, gpxIndex:number}>} points
+ * @param {{validFloorM?:number, validCeilingM?:number}|undefined} params
  * @returns {Object}
  */
-function auditMotion(points) {
-  // Joint (time + distance) counters using valid-timestamp anchor chaining.
-  var consecutivePairCount = 0;
-  var forwardValidCount = 0;
-  var backwardCount = 0;
-  var zeroTimeDeltaCount = 0;
-
-  // Explicit rejection counters for anchored pair auditing.
-  var missingTimestampCount = 0;
-  var unparsableTimestampCount = 0;
-  var nonFiniteDistanceCount = 0;
-  var missingTimestampEvents = [];
-  var unparsableTimestampEvents = [];
-  var nonFiniteDistanceEvents = [];
-  var backwardEvents = [];
-  var zeroTimeDeltaEvents = [];
-
-  var validMotionTimeSeconds = 0;
-  var invalidTimeSeconds = 0;
-  var totalValidDistanceMeters = 0;
-
-  var speedSamples = [];
-
-  var prevPoint = null;
-  var prevTimestampMs = null;
-
-  for (var i = 0; i < points.length; i++) {
-    var curr = points[i];
-
-    var currentTimestampMs = null;
-    var currentTimestampState = 'valid';
-
-    if (curr.timeRaw === null) {
-      currentTimestampState = 'missing';
-    } else {
-      currentTimestampMs = Date.parse(curr.timeRaw);
-      if (isNaN(currentTimestampMs)) {
-        currentTimestampState = 'unparsable';
-        currentTimestampMs = null;
-      }
+function auditMotion(points, params) {
+  var validFloorM = -500;
+  var validCeilingM = 9500;
+  if (params && typeof params === 'object') {
+    if (typeof params.validFloorM === 'number' && isFinite(params.validFloorM)) {
+      validFloorM = params.validFloorM;
     }
-
-    if (prevPoint !== null) {
-      consecutivePairCount++;
-    }
-
-    if (currentTimestampMs !== null && prevTimestampMs !== null && prevPoint !== null) {
-      var deltaTSec = (currentTimestampMs - prevTimestampMs) / 1000;
-      var distanceMeters = haversineDistanceMotion(prevPoint.lat, prevPoint.lon, curr.lat, curr.lon);
-
-      // Reject distance only if non-finite.
-      if (!isFinite(distanceMeters)) {
-        nonFiniteDistanceCount++;
-        nonFiniteDistanceEvents.push({
-          fromIndex: prevPoint.gpxIndex,
-          toIndex: curr.gpxIndex,
-          dtSec: deltaTSec,
-          ddMeters: distanceMeters
-        });
-      } else if (deltaTSec > 0) {
-        forwardValidCount++;
-        validMotionTimeSeconds += deltaTSec;
-        totalValidDistanceMeters += distanceMeters;
-        speedSamples.push(distanceMeters / deltaTSec);
-      } else if (deltaTSec === 0) {
-        zeroTimeDeltaCount++;
-        invalidTimeSeconds += 0;
-        zeroTimeDeltaEvents.push({
-          fromIndex: prevPoint.gpxIndex,
-          toIndex: curr.gpxIndex,
-          dtSec: deltaTSec,
-          ddMeters: distanceMeters
-        });
-      } else {
-        backwardCount++;
-        invalidTimeSeconds += Math.abs(deltaTSec);
-        backwardEvents.push({
-          fromIndex: prevPoint.gpxIndex,
-          toIndex: curr.gpxIndex,
-          dtSec: deltaTSec,
-          ddMeters: distanceMeters
-        });
-      }
-    } else if (prevPoint !== null) {
-      var distanceMetersNoTime = haversineDistanceMotion(prevPoint.lat, prevPoint.lon, curr.lat, curr.lon);
-      if (currentTimestampState === 'missing') {
-        missingTimestampCount++;
-        missingTimestampEvents.push({
-          fromIndex: prevPoint.gpxIndex,
-          toIndex: curr.gpxIndex,
-          rawTime: curr.timeRaw,
-          ddMeters: distanceMetersNoTime
-        });
-      } else if (currentTimestampState === 'unparsable') {
-        unparsableTimestampCount++;
-        unparsableTimestampEvents.push({
-          fromIndex: prevPoint.gpxIndex,
-          toIndex: curr.gpxIndex,
-          rawTime: curr.timeRaw,
-          ddMeters: distanceMetersNoTime
-        });
-      }
-    }
-
-    // Anchor update: only valid timestamps advance anchor pair reference.
-    if (currentTimestampMs !== null) {
-      prevPoint = { lat: curr.lat, lon: curr.lon, gpxIndex: curr.gpxIndex };
-      prevTimestampMs = currentTimestampMs;
+    if (typeof params.validCeilingM === 'number' && isFinite(params.validCeilingM)) {
+      validCeilingM = params.validCeilingM;
     }
   }
 
-  var invalidTimeRatioDenominator = validMotionTimeSeconds + invalidTimeSeconds;
-  var invalidTimeRatio = invalidTimeRatioDenominator > 0
-    ? invalidTimeSeconds / invalidTimeRatioDenominator
-    : 0;
+  var tagCounts = {
+    backwardTime: 0,
+    zeroTimeDelta: 0,
+    timeUnresolvable: 0,
+    nonFiniteDistance: 0,
+    eleUnresolvable: 0
+  };
+  var tagIndex = {
+    backwardTime: [],
+    zeroTimeDelta: [],
+    timeUnresolvable: [],
+    nonFiniteDistance: [],
+    eleUnresolvable: []
+  };
+  var pairAnnotations = [];
 
-  var meanSpeedMs = null;
-  var medianSpeedMs = null;
-  var maxSpeedMs = null;
+  var n = points.length;
+  var consecutivePairCount = 0;
 
-  if (speedSamples.length > 0) {
-    var sortedSpeeds = speedSamples.slice().sort(function (a, b) { return a - b; });
-    meanSpeedMs = validMotionTimeSeconds > 0 ? totalValidDistanceMeters / validMotionTimeSeconds : null;
-    maxSpeedMs = sortedSpeeds[sortedSpeeds.length - 1];
+  if (n <= 1) {
+    return {
+      audit: {
+        motion: {
+          summary: {
+            consecutivePairCount: consecutivePairCount,
+            parameters: {
+              validFloorM: validFloorM,
+              validCeilingM: validCeilingM
+            }
+          },
+          tagCounts: tagCounts,
+          tagIndex: tagIndex,
+          pairAnnotations: pairAnnotations
+        }
+      }
+    };
+  }
 
-    var mid = Math.floor(sortedSpeeds.length / 2);
-    if (sortedSpeeds.length % 2 === 0) {
-      medianSpeedMs = (sortedSpeeds[mid - 1] + sortedSpeeds[mid]) / 2;
-    } else {
-      medianSpeedMs = sortedSpeeds[mid];
+  for (var i = 1; i < n; i++) {
+    var prev = points[i - 1];
+    var curr = points[i];
+    if (!gpxStreamAdjacentPair(prev, curr)) {
+      continue;
+    }
+    consecutivePairCount++;
+    var pairRef = { fromGpxIndex: prev.gpxIndex, toGpxIndex: curr.gpxIndex };
+
+    var prevTsMs = endpointTimeMsForMotion(prev);
+    var currTsMs = endpointTimeMsForMotion(curr);
+    var bothTimestampsFinite = isFinite(prevTsMs) && isFinite(currTsMs);
+
+    var ddMeters = haversineDistanceMotion(prev.lat, prev.lon, curr.lat, curr.lon);
+
+    var prevEleOk = endpointEleValidMotion(prev.ele, validFloorM, validCeilingM);
+    var currEleOk = endpointEleValidMotion(curr.ele, validFloorM, validCeilingM);
+    var elePairOk = prevEleOk && currEleOk;
+
+    var ann = {
+      fromGpxIndex: prev.gpxIndex,
+      toGpxIndex: curr.gpxIndex
+    };
+    var hasAnyTag = false;
+
+    if (!bothTimestampsFinite) {
+      ann.timeUnresolvable = true;
+      hasAnyTag = true;
+      tagCounts.timeUnresolvable++;
+      tagIndex.timeUnresolvable.push(pairRef);
+    }
+
+    if (bothTimestampsFinite) {
+      var dtSec = (currTsMs - prevTsMs) / 1000;
+      if (dtSec < 0) {
+        ann.backwardTime = true;
+        ann.dtSec = dtSec;
+        hasAnyTag = true;
+        tagCounts.backwardTime++;
+        tagIndex.backwardTime.push(pairRef);
+      } else if (dtSec === 0) {
+        ann.zeroTimeDelta = true;
+        ann.dtSec = 0;
+        hasAnyTag = true;
+        tagCounts.zeroTimeDelta++;
+        tagIndex.zeroTimeDelta.push(pairRef);
+      }
+    }
+
+    if (!isFinite(ddMeters)) {
+      ann.nonFiniteDistance = true;
+      hasAnyTag = true;
+      tagCounts.nonFiniteDistance++;
+      tagIndex.nonFiniteDistance.push(pairRef);
+    }
+
+    if (!elePairOk) {
+      ann.eleUnresolvable = true;
+      hasAnyTag = true;
+      tagCounts.eleUnresolvable++;
+      tagIndex.eleUnresolvable.push(pairRef);
+    }
+
+    if (ann.timeUnresolvable && isFinite(ddMeters) && !ann.nonFiniteDistance) {
+      ann.ddMeters = ddMeters;
+    }
+
+    if (hasAnyTag) {
+      pairAnnotations.push(ann);
     }
   }
 
   return {
     audit: {
       motion: {
-        evaluatedPairs: {
+        summary: {
           consecutivePairCount: consecutivePairCount,
-          forwardValidPairCount: forwardValidCount
-        },
-        rejections: {
-          missingTimestampPairCount: missingTimestampCount,
-          unparsableTimestampPairCount: unparsableTimestampCount,
-          nonFiniteDistancePairCount: nonFiniteDistanceCount,
-          backwardTimePairCount: backwardCount,
-          zeroTimeDeltaPairCount: zeroTimeDeltaCount,
-          events: {
-            missingTimestamp: missingTimestampEvents,
-            unparsableTimestamp: unparsableTimestampEvents,
-            nonFiniteDistance: nonFiniteDistanceEvents,
-            backward: backwardEvents,
-            zeroTimeDelta: zeroTimeDeltaEvents
+          parameters: {
+            validFloorM: validFloorM,
+            validCeilingM: validCeilingM
           }
         },
-        time: {
-          validMotionTimeSeconds: validMotionTimeSeconds,
-          invalidTimeSeconds: invalidTimeSeconds,
-          invalidTimeShareOfEvaluatedTime: invalidTimeRatio
-        },
-        distance: {
-          totalForwardValidDistanceMeters: totalValidDistanceMeters
-        },
-        speed: {
-          meanSpeedMps: meanSpeedMs,
-          medianSpeedMps: medianSpeedMs,
-          maxSpeedMps: maxSpeedMs
-        }
+        tagCounts: tagCounts,
+        tagIndex: tagIndex,
+        pairAnnotations: pairAnnotations
       }
     }
   };

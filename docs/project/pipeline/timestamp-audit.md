@@ -2,211 +2,150 @@
 
 ## Overview
 
-The Timestamp Audit Module performs an observational audit pass on timestamp data in GPX points. It analyzes timestamp quality and ordering without mutating, reordering, or normalizing the data. This module is read-only and provides diagnostic information about timestamp issues in the parsed GPX data.
+The Timestamp Audit Module performs an observational, per-point labeling pass on timestamp data in GPX points. It analyzes timestamp quality and ordering without mutating, reordering, or normalizing the data. The output is a set of non-exclusive boolean tags applied only to anomalous points.
+
+No point is presumed correct or incorrect. The audit records what is observable — not what should be done about it. Classification and correction decisions belong to downstream layers.
 
 ## Purpose
 
-This module serves as a diagnostic tool to identify timestamp-related data quality issues. It helps understand:
-- How many points have missing timestamps
-- How many timestamps cannot be parsed
-- Whether timestamps are in correct chronological order
-- The severity of any timestamp ordering issues
+- Identify points with missing or unparsable timestamps (ingestion-time issues)
+- Label points that are behind the monotonic high-water mark (`belowAnchor`)
+- Label points that are actively retreating from their **GPX stream predecessor’s** valid timestamp (`belowPrevValid`)
+- Label points whose timestamp equals the **stream predecessor**’s valid time (`adjacentDuplicate`)
+- Detect stream-wide timestamp value recurrence via a hash map (`nonAdjacentRepeat`)
+- Provide tag-indexed output (fast set-level queries) and point-annotated output (sequential correction workflow) simultaneously
 
 ## Function
 
 ### `auditTimestamps(points)`
 
-Audits timestamps in an array of points and returns metadata about timestamp quality and ordering.
-
 **Parameters:**
-- `points` (Array): Array of point objects with `timeRaw` property
+- `points` (Array): Ingestion-shaped point objects (`gpxIndex`, `timeAbsent`, `timeMs`, optional `timeRaw` for forwarding in unparsable annotations only)
 
 **Returns:**
-- `Object` (audit metadata) containing:
-  - `totalPointsChecked` (number): Total number of points analyzed
-  - `missingTimestampCount` (number): Points where `timeRaw === null`
-  - `unparsableTimestampCount` (number): Points where `Date.parse()` returns `NaN`
-  - `duplicateTimestampCount` (number): Points with timestamps equal to the previous valid timestamp
-  - `backwardTimestampCount` (number): Points with timestamps less than the previous valid timestamp
-  - `strictlyIncreasingCount` (number): Points with timestamps greater than the previous valid timestamp (correct order)
-  - `maxBackwardJumpMs` (number|null): Maximum observed backward time delta in milliseconds, or `null` if no backward jumps
-  - `backwardTimestampEvents` (Array): Array of backward timestamp transition events, each containing:
-    - `index` (number): Index of the current point with backward timestamp
-    - `prevIndex` (number): Index of the previous point
-    - `prevTime` (string): Formatted time string of previous timestamp (HH:MM:SS)
-    - `currTime` (string): Formatted time string of current timestamp (HH:MM:SS)
-  - `duplicateTimestampEvents` (Array): Array of duplicate timestamp events, each containing:
-    - `index` (number): Index of the current point with duplicate timestamp
-    - `prevIndex` (number): Index of the previous point
-    - `time` (string): Formatted time string of the duplicate timestamp (HH:MM:SS)
-
-**Side Effects:**
-- Logs audit results to console with detailed breakdown
-
-## Helper Functions
-
-### `formatTime(timeRaw)` (Internal)
-
-Formats a timestamp string for display in flagged events.
-
-**Parameters:**
-- `timeRaw` (string): Raw timestamp string
-
-**Returns:**
-- `string`: Formatted time string in `HH:MM:SS` format, or original string if unparsable
-
-**Behavior:**
-- Parses timestamp using `Date` constructor
-- Formats as `HH:MM:SS` with zero-padding
-- Returns original string if parsing fails
-- Returns empty string if input is null/undefined
-
-## Audit Process
-
-### 1. Missing Timestamp Detection
-
-Points where `timeRaw === null` are counted as missing. These points are skipped for all comparison operations.
-
-### 2. Timestamp Parsing
-
-For non-null timestamps, the module attempts to parse using `Date.parse(timeRaw)`:
-- If parsing succeeds (returns a number), the timestamp is considered valid
-- If parsing fails (returns `NaN`), the point is counted as unparsable and skipped for comparisons
-
-### 3. Timestamp Comparison
-
-Only successfully parsed timestamps are compared. The module maintains:
-
-- `lastValidTimestampMs`: previous parseable timestamp in original point order (for **adjacent duplicate** detection)
-- `anchorTimestampMs`: a monotonic **high-water mark** (for **backtracking** detection). This anchor only advances when the stream reaches or exceeds it.
-
-For each valid timestamp (after the first one), the module checks:
-
-- **Adjacent duplicate (primary duplicate family)**: `timestampMs === lastValidTimestampMs`
-- **Backtracking (primary backtracking family)**: `timestampMs < anchorTimestampMs`
-- **Monotonic forward (non-backtracking)**: `timestampMs >= anchorTimestampMs` (and then `anchorTimestampMs = timestampMs`)
-
-Notes:
-
-- Adjacent duplicates remain their own anomaly family even if they occur inside a backtracking region.
-- Non-adjacent repeated timestamps that occur *within* a backtracking region remain **primary backtracking**; repeat structure may be recorded only as a secondary annotation.
-
-### 4. Maximum Backtracking Depth Tracking
-
-When a backtracking timestamp is detected, the module calculates the depth from the monotonic anchor:
-```
-depthFromAnchor = anchorTimestampMs - timestampMs
-```
-
-The maximum depth observed across all points is tracked and reported.
-
-## Important Behaviors
-
-### Read-Only Operation
-
-- **Does NOT mutate points**: Points are never modified
-- **Does NOT reorder data**: Original point order is preserved
-- **Does NOT normalize timestamps**: Timestamps remain in their original format
-- **Does NOT store parsed milliseconds**: Parsed milliseconds are temporary and not stored on point objects
-
-### Comparison Rules
-
-1. **Missing timestamps are not compared**: Points with `timeRaw === null` are skipped entirely
-2. **Unparsable timestamps are not compared**: Points where `Date.parse()` fails are skipped
-3. **Only valid timestamps are compared**: Comparison only occurs between successfully parsed timestamps
-4. **Equal timestamps are allowed**: Duplicate timestamps are logged but not treated as errors
-5. **Backtracking timestamps are logged but not fixed**: The module reports issues but does not attempt to correct them
-
-### First Point Handling
-
-The first point with a valid timestamp has no previous timestamp to compare against, so it is not counted in any comparison metrics (duplicate, backward, or strictly increasing).
-
-## Console Output
-
-The module automatically logs audit results to the console in the following format:
-
-```
-=== Timestamp Audit Results ===
-Total points checked: <number>
-Missing timestamps: <number>
-Unparsable timestamps: <number>
-Duplicate timestamps: <number>
-Backward timestamps: <number>
-Strictly increasing timestamps: <number>
-Maximum backward jump (ms): <number> or 'N/A (no backward jumps observed)'
-Maximum backward jump (seconds): <number>
-================================
-```
-
-## Usage Example
-
-```javascript
-// After parsing GPX file
-const parseResult = await parseGPXFile(file);
-const points = parseResult.points;
-
-// Run timestamp audit
-const auditMetadata = auditTimestamps(points);
-
-// Access audit results
-console.log(`Missing timestamps: ${auditMetadata.missingTimestampCount}`);
-console.log(`Backward timestamps: ${auditMetadata.backwardTimestampCount}`);
-console.log(`Max backward jump: ${auditMetadata.maxBackwardJumpMs}ms`);
-```
-
-## Expected Point Structure
-
-Points passed to this module must have a `timeRaw` property:
-
 ```javascript
 {
-  timeRaw: string | null  // Raw timestamp string or null if missing
-  // ... other point properties
+  audit: {
+    temporal: {
+      totalPointsEvaluated,     // total points seen
+      session: {
+        rawSessionDurationSec,          // (lastValidMs - firstValidMs) / 1000, or null
+        parseableTimestampPointCount    // points with finite ingestion timeMs
+      },
+      tagCounts: {
+        missing,             // timeAbsent === true, or malformed point without finite timeMs
+        unparsable,          // timeAbsent === false and no finite timeMs
+        adjacentDuplicate,   // same as accepted point at gpxIndex-1 with finite timeMs
+        belowAnchor,         // timestampMs < anchorTimestampMs (monotonic high-water mark)
+        belowPrevValid,      // timestampMs < predecessor’s timeMs (predecessor = accepted gpxIndex-1 with finite time)
+        nonAdjacentRepeat    // value seen earlier in stream, but NOT stream-adjacent duplicate
+      },
+      tagIndex: {
+        missing:            [...gpxIndexes],
+        unparsable:         [...gpxIndexes],
+        adjacentDuplicate:  [...gpxIndexes],
+        belowAnchor:        [...gpxIndexes],
+        belowPrevValid:     [...gpxIndexes],
+        nonAdjacentRepeat:  [...gpxIndexes]
+      },
+      pointAnnotations: [   // sparse — only anomalous points emitted
+        // missing point example:
+        { gpxIndex, missing: true },
+        // unparsable point example:
+        { gpxIndex, unparsable: true, timeRaw?: string|null },
+        // valid-but-anomalous point example (all applicable tags flat on object):
+        {
+          gpxIndex,
+          timestampMs,
+          anchorMs,
+          belowAnchor?: true,
+          depthFromAnchorMs?: number,       // anchorMs - timestampMs; only when belowAnchor
+          belowPrevValid?: true,
+          adjacentDuplicate?: true,
+          nonAdjacentRepeat?: true,
+          firstOccurrenceGpxIndex?: number  // only when nonAdjacentRepeat
+        }
+      ]
+    }
+  }
 }
 ```
 
+## Tag Definitions and Exact Conditions
+
+Tags are non-exclusive. A point receives every tag that applies. Missing and unparsable points do not receive any comparative tags (they terminate the per-point loop early).
+
+| Tag | Condition | Metadata |
+|---|---|---|
+| `missing` | `timeAbsent === true`, or `timeAbsent` not `false` and no finite `timeMs` | — |
+| `unparsable` | `timeAbsent === false` and `timeMs` not finite | optional forwarded `timeRaw` on annotation (not parsed here) |
+| `adjacentDuplicate` | Accepted point at `gpxIndex - 1` exists with finite `timeMs`, and `timestampMs ===` that `timeMs` | — |
+| `belowAnchor` | `timestampMs < anchorTimestampMs` | `depthFromAnchorMs` |
+| `belowPrevValid` | Predecessor as above exists and `timestampMs <` its `timeMs` | — |
+| `nonAdjacentRepeat` | `seenTimestamps.has(timestampMs)` AND not `adjacentDuplicate` (stream-adjacent equal-time case) | `firstOccurrenceGpxIndex` |
+
+Note: `adjacentDuplicate` and `nonAdjacentRepeat` are mutually exclusive by definition (a point cannot be simultaneously adjacent and non-adjacent to the same value).
+
+## Anchor and State Semantics
+
+- **`anchorTimestampMs`**: monotonic high-water mark. Initialized to the first valid timestamp. Advances only when `timestampMs > anchorTimestampMs`. Adjacent duplicates and below-anchor points do not move the anchor.
+
+**Stream predecessor for comparative tags:** `adjacentDuplicate` and `belowPrevValid` use the **accepted** point at **`gpxIndex - 1`** (if present) with **finite `timeMs`**. If that GPX row was rejected or has no parseable time, those two tags are not applied via a “previous valid in array order” fallback. See **ADR-0013**.
+
+The `seenTimestamps` Map stores the first gpxIndex of every timestamp value encountered. It is populated once per value (not updated on re-occurrence). This gives O(1) lookup per point, avoiding O(N²) behavior in tracks with no repeats.
+
+## belowAnchor vs belowPrevValid Distinction
+
+These two tags cover overlapping but distinct cases:
+
+- `belowAnchor` only: the point is behind the monotonic high-water mark but is locally progressing forward relative to its predecessor. The stream is "still in the hole" but moving in the right direction.
+- `belowAnchor + belowPrevValid` together: the point both lags the high-water mark AND retreats further from its immediate predecessor. The stream is "actively digging deeper".
+
+Example: `T=0, T=100, T=60, T=70, T=80, T=90, T=110`
+- T=60: belowAnchor ✓, belowPrevValid ✓ (dropped below anchor=100 and below prev=100)
+- T=70: belowAnchor ✓, belowPrevValid ✗ (still behind anchor=100, but 70 > 60 locally)
+- T=80, T=90: same as T=70
+- T=110: no tags (advances anchor to 110)
+
+## Classification Design Decisions (non-exclusive architecture)
+
+### Decision 1: Tags are non-exclusive
+
+In the previous block-based architecture, adjacent duplicate detection had priority over backtracking. This caused a point that was simultaneously equal to its predecessor AND below the anchor to be classified only as "duplicate", hiding the backtracking condition.
+
+The tag-based architecture removes this priority ordering. Every applicable tag fires. A point below the anchor that is also an adjacent duplicate receives both `belowAnchor` and `adjacentDuplicate`. The correction layer sees the full picture without needing to re-derive it.
+
+### Decision 2: The anchor does not advance on duplicates or below-anchor points
+
+`anchorTimestampMs` only advances when `timestampMs > anchorTimestampMs`. A run of adjacent duplicates "stalls" the anchor; a below-anchor point cannot move it backward. This means the anchor is a strict monotonic high-water mark over genuinely new forward progress.
+
+Concretely: `T=0, T=50, T=50, T=50, T=30` → anchor stays at T=50 through all three duplicates; T=30 is correctly tagged `belowAnchor` against anchor=T=50.
+
+### Decision 3: Adjacent duplicate excludes nonAdjacentRepeat
+
+The `nonAdjacentRepeat` check is gated on `!isAdjacentDup`. A point that equals its **stream predecessor’s** valid time is tagged `adjacentDuplicate`, not `nonAdjacentRepeat`, even if the value appeared earlier in the stream. These two tags are structurally mutually exclusive.
+
+### Decision 4: No "large forward jump" tag
+
+A large positive timestamp step cannot be classified as anomalous from timestamps alone. It may be an intentional recording pause, a device restart, or a stitching artifact — the audit has no way to distinguish. Any jump threshold would be an interpretation. Downstream layers use geometry and continuity to evaluate forward jumps. The sampling audit exposes raw deltas for that purpose.
+
+### Decision 5: Stream-wide nonAdjacentRepeat (not block-local)
+
+Non-adjacent repeat detection covers the full stream via a `Map<timestampMs, firstGpxIndex>`. A re-occurring value 1000 points later is detected the same as one 3 points later. The audit records the fact of recurrence and the first known position; it does not claim which occurrence is correct. "First" is only an ordering fact.
+
+### Decision 6: Time-period overlap between segments is downstream
+
+Detecting whether a backtracking region's time range overlaps (not just matches) previously observed time ranges is a range analysis problem. Example: `[1, 3, 5, 7, 9]` and `[2, 4, 6, 8]` have dense interval overlap with zero identical timestamps. This kind of analysis requires a global view of the full track and typically benefits from geometry. It is explicitly out of scope for the timestamp audit module.
+
+## Output Structure Notes
+
+`tagIndex` is optimized for set-level queries (e.g., "which points are belowAnchor?") and downstream passes that need only a specific tag's population.
+
+`pointAnnotations` is optimized for sequential processing (e.g., a correction layer reading points in order and needing all tags for each anomalous point in one lookup).
+
+Both are complementary and are emitted together without duplication concerns — they serve different algorithmic patterns.
+
 ## Dependencies
 
-- Browser `Date.parse()` API (native, no external dependencies)
-
-## Classification Precedence and Design Decisions
-
-These are the explicit design choices made in the classification logic. They are recorded here so that anyone reviewing audit output — or reconsidering these rules later — knows what was decided and why.
-
-### Decision 1: Duplicate check runs before backtracking check
-
-The check `timestampMs === lastValidTimestampMs` (adjacent duplicate) runs before `timestampMs < anchorTimestampMs` (backtracking). A point that satisfies both conditions is classified as **duplicate**, not backtracking.
-
-**Rationale**: Adjacent duplicates are the simplest and most structurally distinct anomaly. They are the most likely to be identified and corrected first in downstream layers. Keeping them as their own primary family — even when they sit below the monotonic anchor — means the audit output is pre-sorted by the natural correction order of later layers. This is observational, not policy: the audit is describing what the stream contains in a way that maps cleanly to how downstream layers encounter it.
-
-### Decision 2: Adjacent duplicates can shorten or terminate a backtracking block
-
-When a backtracking point is immediately followed by a point with the same timestamp value, the follower is classified as **duplicate** (not backtracking). This means an adjacent duplicate peels off the trailing edge of a backtracking block.
-
-Concretely: a stream like `T=12, T=8, T=8, T=15` produces one backtracking singleton (the first `T=8`) and one duplicate singleton (the second `T=8`). The backtracking block ends at length 1 even though both `T=8` points are below the anchor.
-
-A reviewer seeing a backtracking singleton immediately adjacent to a duplicate singleton at the same timestamp value should read this as: the first point entered the backtracking region; the second point was an adjacent repeat of the previous parseable point. Both observations are true. The dup-first rule separates them into their natural families.
-
-### Decision 3: The anchor does not advance on duplicate points
-
-A duplicate is caught by the `=== lastValidTimestampMs` check before it can reach the `>= anchorTimestampMs` branch. This means `anchorTimestampMs` is not updated when duplicates are processed.
-
-Consequence: a long run of adjacent duplicates at the current anchor value "stalls" the anchor rather than advancing it. The anchor only advances when a strictly new high-water mark is observed. This is correct behavior: the anchor is a monotonic high-water mark over *distinct forward progress* in the timestamp stream, and adjacent repetitions do not constitute forward progress.
-
-Concretely: a stream like `T=10, T=10, T=10, T=10, T=8` produces a duplicate block of length 3 (the three repeated `T=10` points), then one backtracking singleton (`T=8`). The backtracking is measured against anchor `T=10`, which never moved during the duplicate run.
-
-### Decision 4: Non-adjacent repeated timestamps inside a backtracking block remain primary backtracking
-
-When the same timestamp value appears more than once within a contiguous backtracking block, but not as adjacent duplicates, those repeat occurrences are classified as **backtracking** (not duplicate). The repeat structure is recorded only as a secondary annotation (`repeatInBacktrackingBlock` on the event, `nonAdjacentRepeatPointCount` and `repeats` on the block) and does not affect the primary anomaly family.
-
-**Rationale**: inside a backtracking region, the stream has already departed from monotonic order. The salient observable is the backtracking itself. The fact that a particular timestamp value recurs within that region is secondary structural information, not a new anomaly class.
-
----
-
-## Notes
-
-- This module is purely observational and does not modify data
-- Parsed milliseconds are calculated temporarily and never stored
-- The module processes points sequentially in array order
-- A point contributes to exactly one primary comparison counter (duplicate, backtracking, or monotonic forward)
-- The first valid timestamp establishes the baseline for subsequent comparisons
+- Ingestion supplies `timeAbsent` and `timeMs` (`Date.parse` runs only in ingestion for GPX `<time>` text). This module does not parse `timeRaw`.
+- `Map` (ES6, available in all target environments)

@@ -9,9 +9,10 @@
  * @param {string} [input.fileName]
  * @param {number} [input.totalPointCount]
  * @param {Object|null} [input.ingestionAudit]
- * @param {Object|null} [input.temporalAudit]
+ * @param {Object|null} [input.temporalAudit] Label-based temporal: tagCounts, tagIndex, pointAnnotations (see pipeline glossary).
  * @param {Object|null} [input.samplingAudit]
- * @param {Object|null} [input.motionAudit]
+ * @param {Object|null} [input.motionAudit] Label-based motion: summary, tagCounts, tagIndex, pairAnnotations (see pipeline glossary).
+ * @param {Object|null} [input.elevationAudit] Label-based elevation: tagCounts, tagIndex, pointAnnotations (see pipeline glossary).
  * @returns {Object}
  */
 function buildAuditExportPayload(input) {
@@ -19,6 +20,7 @@ function buildAuditExportPayload(input) {
   var temporalAudit = input && input.temporalAudit ? input.temporalAudit : null;
   var samplingAudit = input && input.samplingAudit ? input.samplingAudit : null;
   var motionAudit = input && input.motionAudit ? input.motionAudit : null;
+  var elevationAudit = input && input.elevationAudit ? input.elevationAudit : null;
 
   var derivedTotalPointCount = ingestionAudit &&
     ingestionAudit.counts &&
@@ -45,7 +47,8 @@ function buildAuditExportPayload(input) {
       ingestion: ingestionAudit,
       temporal: temporalAudit,
       sampling: samplingAudit,
-      motion: motionAudit
+      motion: motionAudit,
+      elevation: elevationAudit
     }
   };
 }
