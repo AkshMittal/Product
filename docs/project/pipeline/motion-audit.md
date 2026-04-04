@@ -1,38 +1,59 @@
-# `motion-audit.js`
+# Motion audit module
 
 ## Purpose
 
-`motion-audit.js` computes motion metrics from consecutive ingestion points, independent from sampling audit decisions.
+`motion-audit.js` performs an **observational, adjacent-pair labeling** pass: it records which consecutive point pairs are mechanically eligible for downstream kinematics (horizontal / 3D), without computing speed, distance totals, time totals, or other derived metrics. Those belong in downstream layers.
+
+The module is independent from sampling audit decisions; it walks the same ingestion-ordered point array.
 
 ## Public API
 
-- `auditMotion(points)`
+- `auditMotion(points, params?)`
+- Optional `params`:
+  - `validFloorM` (default `-500`) — lower bound for endpoint elevation considered valid for motion.
+  - `validCeilingM` (default `9500`) — upper bound for the same.
 
-Input point shape:
+Elevation bounds apply only to the **`eleUnresolvable`** predicate; they mirror the motion slice of eligibility, not the full elevation-audit channel contract.
 
-- `lat`, `lon`
-- `timeRaw` (ISO string or `null`)
-- `gpxIndex`
+## Input point shape
+
+- `lat`, `lon` — numbers (finite after ingestion)
+- `timeMs` — number (finite ms since epoch) or `null` from ingestion; motion uses **only** finite `timeMs` for time deltas (no `Date.parse`). Missing vs unparsable is not re-derived here — see `audit.temporal`.
+- `gpxIndex` — number (stable ingestion index)
+- `ele` — optional; `number`, `null`, or omitted (`undefined` is treated like missing for motion ele checks)
 
 ## Core behavior
 
-- Uses haversine distance per adjacent pair.
-- Uses anchored timestamp chaining (`prevTimestampMs`) to evaluate valid motion pairs.
-- Classifies pairs into:
-  - forward-valid (`dtSec > 0`)
-  - zero-delta (`dtSec === 0`)
-  - backward-time (`dtSec < 0`)
-  - missing/unparsable timestamp cases
-  - non-finite distance cases
+- Evaluates **every physically adjacent pair** `(points[i - 1], points[i])` for `i = 1 … n - 1`.
+- **No anchored timestamp chaining** — no `prevTimestampMs` that skips points; pairs do not bridge across timestamp gaps.
+- Computes haversine horizontal distance between the two endpoints.
+- Applies **five independent, non-exclusive** boolean predicates per pair. A pair receives every tag whose condition holds (e.g. backward time and bad elevation on the same pair both appear on one `pairAnnotations` entry).
 
-## Returned metrics (high level)
+Tag names and exact conditions are specified in [`json-schema-v2-glossary.md`](json-schema-v2-glossary.md) under **`audit.motion`**.
 
-- Pair counters (consecutive, forward-valid, backward, zero-delta).
-- Distance/time totals from valid forward pairs.
-- Speed sample distribution from valid forward pairs.
-- Event arrays for rejected or anomalous pair classes (with `fromIndex` / `toIndex`).
+## Output shape (summary)
+
+Returned as `audit.motion`:
+
+| Area | Role |
+|------|------|
+| `summary.consecutivePairCount` | Always `max(0, points.length - 1)`. |
+| `summary.parameters` | `validFloorM`, `validCeilingM` actually used. |
+| `tagCounts` | Per-tag counts of **pairs** carrying that tag (non-exclusive; sums can exceed `consecutivePairCount`). |
+| `tagIndex` | Per tag, an array of pair identities `{ fromGpxIndex, toGpxIndex }`. |
+| `pairAnnotations` | **Sparse** — one object per pair with at least one tag; stacked flags on the same object. Optional `dtSec` / `ddMeters` per glossary rules. |
+
+**Not emitted:** “forward-valid pair count,” time/distance/speed aggregates, or legacy rejection bucket counters. Pairs with **no** motion tags are identified by **absence** from `pairAnnotations`. A safe derived count is:
+
+`consecutivePairCount - pairAnnotations.length`
+
+Do **not** substitute `consecutivePairCount - sum(tagCounts)` — tags stack on the same pair, so `tagCounts` over-count pairs.
+
+## Relationship to temporal audit
+
+`timeUnresolvable` means one or both endpoints do not yield a finite parsed time for this pair. It does **not** re-label *why* (missing vs unparsable); use `audit.temporal` for point-level cause.
 
 ## Notes
 
-- This module does not mutate points.
-- This module feeds downstream visual diagnostics and anomaly cards; it is not a rendering module.
+- Does not mutate points.
+- Same dual projection pattern as temporal audit: **sparse annotations by entity** (`pairAnnotations`) plus **label → index** (`tagIndex`), with **`tagCounts`** for quick summaries.
