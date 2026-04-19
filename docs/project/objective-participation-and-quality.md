@@ -110,6 +110,22 @@ Use **GPX-stream-adjacent** pairs only: both endpoints accepted, `curr.gpxIndex 
 
 ---
 
+## Correction layer participation vs audit modules (MVP)
+
+Cross-reference: **`implementation_plan.md`** — **§ Audit pipeline: module-wise flags** and **§ Audit modules vs correction participation (MVP)**.
+
+Summary for **time-centric correction** (reorder / overlap / duplicate-time):
+
+- **Ingestion rejections** — not in **`points`**; cannot participate.
+- **`audit.temporal`** — primary driver for correction.
+- **`audit.sampling`** — time deltas and **coverageRatio**; **invalid distance** pairs optional safety for spatial-step policy.
+- **`audit.motion`** — not required for correction participation gating; pair tags restate temporal + elevation endpoint issues.
+- **`audit.elevation`** — secondary for correction MVP; **`outOfBounds`** is audit-labeled only (**`ele`** may remain numeric on the point); elevation **`adjacentDuplicate`** is observational.
+
+Downstream combines **`audit`**, **`correction.participation`**, and **`correction.excludedFromTrust`** (correction-only) per handoff contract.
+
+---
+
 ## Backtracking and "cleaning" (MVP discipline)
 
 Backtracking and related anomalies should be treated as:
