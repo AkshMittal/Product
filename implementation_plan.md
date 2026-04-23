@@ -1,529 +1,855 @@
 # Correction Layer — MVP Implementation Plan
 
-The correction layer is the first post-audit processing stage. It consumes the immutable audit output, applies a versioned decision tree to determine canonical traversal order and timestamp eligibility, and produces a **correction metadata profile** plus a **pre-split handoff** to later layers (see **§ Handoff: pre-split lists**). **Kinematic correction, smoothing, and metrics** consume **`canonicalTrustedPoints`** by default — **not** the raw `points` array and **not** a single list that requires every consumer to re-derive “who is trustworthy” from masks.
+This plan supersedes all prior versions. It encodes architectural decisions reached through first-principles discussion. Many decisions reverse or replace earlier "AI slop" wording from prior iterations — do **not** treat older comments as authoritative.
 
-**Raw observations remain immutable.** **`workingOrderedPoints`** mutates only during **early** stages (**dedupe**, **reversal**) and **`resolution-apply`**. **Proposal modules** (**`block-proposal`**, **`singleton-proposal`**, **`duplicate-proposal`**) **only emit** candidate corrections (and optional **local** flags from their own rules); they **do not** implement **overlap** or **coupling** logic. **`overlap-detection`** and **`coupling-detection`** are **read-only** on order: both **consume the same** **`correction.proposals[]`** (plus **`workingOrderedPoints`**, **`auditResult`**, **`correction.spineIntervals`**, and any shared context you version). **`resolution-apply`** applies corrections that pass **both** gates (**§ MVP architecture**). **Correction uses a multipass loop** (**§ Multipass correction and spine**): after each **`resolution-apply`** that mutates order, **recompute** **`overlap-detection`** and **`coupling-detection`** on the **new** snapshot; **rebuild** **`correction.proposals[]`** from the three proposal modules and **recompute** **`spineIntervals`** so brackets and overlap stories stay honest. **New** `correction.proposals[]` entries on a **later** pass are **normal** when an apply **unlocks** geometry (e.g. **seam duplicate-time** after **`block-reorder`** with **closed** bracket socket — **§ Block overlap**, **§ Monotonic capability**). No silent repair. All decisions are logged.
+The correction layer is the first post-audit processing stage. It consumes the immutable audit output, applies a versioned decision tree per `trkSegIndex`, and produces a **correction metadata profile** plus a **pre-split handoff** to later layers (see **§ Handoff: pre-split lists**). **Kinematic correction, smoothing, and metrics** consume **`canonicalTrustedPoints`** by default — **not** the raw `points` array.
 
-**Traversal neighbours:** After **reversal**, **adjacent dedupe**, or **`resolution-apply`**, **immediate neighbours in `workingOrderedPoints` order** change even though **`gpxIndex`** on surviving points is unchanged. Any stage that uses **neighbours or brackets** reads them from the **current** snapshot appropriate to that phase (proposal phase uses the post–early-mutation snapshot).
-
-**Sampling baseline (non-block backtrack):** Empirical **time-delta / sampling-density** checks (e.g. “is this candidate’s implied local behaviour consistent with neighbours?”) must use **original file order by `gpxIndex`**, over a **±`localWindowSize`** window (default **5**, versioned in profile). **Do not** derive that baseline from **consecutive pairs in `workingOrderedPoints` order** — after reorder or drop, traversal adjacency can join **non-consecutive `gpxIndex`** values and **distort** apparent Δt vs true recording density.
-
-**Unfixed / rejected / non-winner rows:** The layer **applies fixes within scope**; it **does not erase** observations from **provenance** merely because they were **not** fixed, **failed** a guard, or **lost** a same-time competition. They are **flagged**, **listed in `correction.excludedFromTrust`**, and **omitted from `canonicalTrustedPoints`**. They **remain** in **`correction.fullOrderedPoints`** for **honesty / UX** (one ordered trace, grey-out, tooltips) without forcing dumb layers to filter. **Drops** only where policy **removes** a row from **all** ordered traces (e.g. **100% adjacent exact duplicate**). Same-time **non-winners** (when a winner is chosen): **flag** + **excludedFromTrust** + **fullOrderedPoints**; **log**; **no** silent erase from metadata.
+**Raw observations remain immutable.** **`workingOrderedPoints`** mutates only during **early stages** (dedupe, reversal, deterministic export fix), inside **per-segment `resolution-apply`**, and inside **edge reconciliation** (Phase 2). Proposal modules emit candidate corrections only.
 
 ---
 
-## Terminology: **block** vs **non-block** (“singleton”)
+## Architectural shape (high level)
 
-| Term | Meaning in this plan |
-|------|----------------------|
-| **Block** (detection) | A **maximal contiguous** run of `belowAnchor` points in **`workingOrderedPoints`** order. **`block-proposal`** emits **`block-finding`** per run with **§ Internal monotonicity** classification — **not** socket / overlap verdicts (those belong to **`overlap-detection`**). |
-| **Non-block** / **singleton** (product sense) | **Not** such a chunk: **isolated** backtrack points **and** same-`timeMs` rows handled under **`duplicate-proposal`**. When the enclosing **`belowAnchor`** context is **monotonically capable**, **do not** treat **all** rows sharing a `timeMs` as one competition pool — **partition** by **competition segment** (**§ Monotonic capability and duplicate competition scoping**). |
+The pipeline is **multilayered with a global runner** (D1):
 
-Do **not** read “singleton” as only **block size 1** unless explicitly stated.
+1. **Audit layer** runs to completion; produces immutable `audit` payload with per-segment summaries and per-segment per-module aggregates. **Audit no longer classifies export faults** — it only emits structural observations.
+2. **Correction layer** fires only after audit completes. Internally it runs:
+   - **Pre-segment phase:** participation, global+per-segment reversal, deterministic export fix (chunk reorder, duplicate-segment exclusion).
+   - **First spine build** (per-segment, after pre-segment phase).
+   - **Phase 1 — per-segment terminal solve** (segments processed in ascending `trkSegIndex` order; each runs its own multipass loop to terminal: idle, stalemate, or `multipassMaxIterations` cap).
+   - **Phase 2 — edge reconciliation** (single pairwise pass over adjacent segment boundaries; staged edge proposals from Phase 1 are evaluated here).
+   - **Phase 3 — global residual diagnostic sweep** (read-only; logs any belowAnchor/belowPrevValid-equivalent residuals across the final canonical traversal — for telemetry, never acts).
+3. **Correction-export** assembles the handoff.
 
----
-
-## Terminology: **bracket** vs **socket**
-
-| Term | Meaning |
-|------|---------|
-| **Bracket** | The **anchor points** (and their usable times **`t_prev`**, **`t_next`**) that **frame** a contiguous **`belowAnchor`** run in the **intended** forward time story. **Not** defined as "whatever immediate `workingOrderedPoints` neighbours the slab has" if those neighbours may still be **inside** the same fault. **Brackets** are chosen by **`overlap-detection`** per **versioned** rules (first point **before** / after the **maximal** run that lies **outside** it, informed by **`correction.spineIntervals`** and participation policy). |
-| **Socket** | After **`B_min`** / **`B_max`** (min / max usable `timeMs` over the block) are known: the **predicate** that the block's time envelope **fits** between bracket times — MVP **closed socket:** **`B_min ≥ t_prev`** and **`B_max ≤ t_next`** (equality allowed; seam duplicate-time deferred to **`duplicate-proposal`** — **§ Monotonic capability**). Socket is computed in **`overlap-detection`**, **not** **`block-proposal`**. |
-
-**Example (times only):** Traversal `... A [ B C D ] E ...` — **`A`** and **`E`** are **outside** the `belowAnchor` run `{B,C,D}`. **`t_prev(A) = 10`**, **`t_next(E) = 30`**, **`B_min = 12`**, **`B_max = 25`**: socket holds (**12 ≥ 10**, **25 ≤ 30**). If **`B_min = 8`**: socket fails (**8 < 10**) → **`overlap.block`**. If neither **`A`** nor **`E`** can be found outside the run: **`no-bracket`**, no reorder.
+**No global belowAnchor/belowPrevValid tags.** All temporal-anomaly tagging is **per-segment** from this point forward. The global concept is replaced by Phase 3's diagnostic sweep, which is observational only and never gates apply decisions.
 
 ---
 
-## MVP: what we **resolve** vs **flag only**
+## Terminology
 
-| Situation | MVP action |
-|-----------|------------|
-| **Overlapping or partially overlapping blocks** (two+ time stories: socket / interval / equality / duplicate-time, **mixed** allowed) | **`overlap.block`** + **`overlapDiagnostics`**; **flag + mask** — **no** reorder, **no** partial block fix. **Partial** overlap = **same** treatment as **full** overlap. |
-| **Chunk reorder (perfect-fit)** | **`block-proposal`** emits **`kind: 'block-finding'`** (span + **§ Internal monotonicity**). **`overlap-detection`** computes brackets, **`B_min`/`B_max`**, closed socket, overlap vs **`socket-ok`**; emits **`correction.overlapBlockResolution[]`**. **`resolution-apply`** performs **`block-reorder`** only for **`socket-ok`** findings that are **also** coupling-safe — **no** kinematic on chunk (MVP) |
-| **Same `timeMs`, different coords** (after adjacent dedupe) | **`duplicate-reorder`** in **`duplicate-proposal`** with **segment-scoped** competition groups (**§ Monotonic capability and duplicate competition scoping**); **kinematic** within each group; **apply** only if **overlap-safe** **and** **coupling-independent** |
-| **Backtrack non-block** | **`singleton-insert`** **proposal** + sampling + **kinematic** in **`singleton-proposal`**; **apply** only if **overlap-safe** **and** **coupling-independent** |
-| **Non-adjacent 100% exact duplicates** | **`duplicate-proposal`**: **`duplicate.exact_group_unresolved`**, **flag + mask** — **not** **`singleton-proposal`** |
+### Segment
 
-### Proposal discipline (MVP)
+A `<trkseg>` element. Each accepted `<trkpt>` carries `trkSegIndex` (globally 0-based across all `<trk>` elements, document order). Segmentation is **the** primary scoping axis of this layer.
 
-**Proposal modules** answer only: “**what correction do I believe this anomaly class needs?**” (or emit **local** flags such as sampling/kinematic failures **within** that module’s scope). They **must not** compute **referential coupling** or **temporal-overlap vetoes** — that belongs in **`coupling-detection`** and **`overlap-detection`**, which both read **`correction.proposals[]`**.
+### Spine interval
 
-**Apply rule:** A proposal is **executed** in **`resolution-apply`** only if it is **allowed** by **overlap-detection** **and** **allowed** by **coupling-detection** (**AND**). Exact fields (`vetoedProposalIds`, `independentProposalIds`, masks, etc.) are **versioned** in the **`correction`** profile.
+A **maximal forward-monotonic run with strictly positive Δt** of usable-time points within **one** `trkSegIndex`, **excluding** duplicate-time cluster members.
 
-**Pipeline order** for **building** proposals within **one pass** is fixed for determinism (e.g. **block → singleton → duplicate**); **overlap** and **coupling** run **after** that pass’s **`proposals`** and **before** **`resolution-apply`**. See **§ Multipass correction and spine** for how passes repeat.
+**Concrete example.** Within one segment, times `1 2 3 4 5 5 5 6 7 8` produce two spine intervals: `[1..4]` and `[6..8]`. None of the three `5`s are on the spine — the duplicate-time cluster is excluded.
 
-**Who owns duplicate “competition” clustering:** **`duplicate-proposal`** (including **§ Monotonic capability** segment / tether rules). **`overlap-detection`** answers **temporal narrative** permission (**veto / mask**); it **does not** replace **`duplicate-proposal`** when deciding **which indices share a kinematic competition pool**.
+The spine predicate is **purely mechanical**:
 
-**Who owns chunk bracket / socket:** **`overlap-detection`** only. **`block-proposal`** emits **`block-finding`**; it **does not** decide **`t_prev`/`t_next`**, **socket fit**, or **`block-reorder`** payload. **`coupling-detection`** interprets **referential** dependence between **independent** proposals (**`block-finding`**, **`singleton-insert`**, **`duplicate-proposal`** outputs, etc.).
+- Forward-monotonic in traversal order
+- Strictly positive Δt between consecutive included points
+- Excludes any point that shares its `timeMs` with another point in the segment (duplicate-time cluster member)
+
+Spine intervals are re-derived from current `workingOrderedPoints` after every mutation. Two adjacent spine intervals merge naturally when intervening points satisfy the predicate after correction. There is no separate "is the gap complete enough" test in this layer — that judgment (Δt-cadence consistency, recording-pause vs continuous gap) belongs to downstream smoothing/kinematic-section selection, **not** to the spine layer.
+
+### Spine envelope (per segment)
+
+The min and max `timeMs` over **spine points in that segment**. Used as the segment time envelope for the scope gate. Non-spine points (singletons, duplicate-time cluster members, blocks) do **not** define the envelope by themselves; they are evaluated against it. **Boundary edge cases** are handled in Phase 2 (see **§ Phase 2 — edge reconciliation**).
+
+### Block
+
+A maximal contiguous run of `belowAnchor`-equivalent points within **one** `trkSegIndex`, in current `workingOrderedPoints` traversal order.
+
+### Singleton (non-block)
+
+An isolated backtrack point or same-`timeMs` row not part of a contiguous block run. Includes block-size-1 cases.
+
+### Bracket / socket
+
+- **Bracket:** the anchor points (and times `t_prev`, `t_next`) that frame a block in the intended forward time story. Selected by `overlap-detection` from spine and outside-the-run rules.
+- **Socket:** the closed-interval predicate `B_min ≥ t_prev AND B_max ≤ t_next` over the block's usable time envelope `[B_min, B_max]`. Computed by `overlap-detection`, not `block-proposal`.
+
+### Traversal-adjacent vs stream-adjacent
+
+- **Stream-adjacent:** `curr.gpxIndex === prev.gpxIndex + 1`. Immutable — defined on raw input. Used **only** for raw-input checks (initial ingestion analysis, raw audit pair definitions).
+- **Traversal-adjacent:** consecutive in current `workingOrderedPoints`. Mutable — recomputed after every reorder, drop, or insert. **This is the canonical adjacency for all correction-layer dedupe and neighbour analysis.** Re-evaluated after every mutation including chunk reorder.
+
+### Per-segment terminal
+
+A segment is "terminal" when its multipass loop has hit one of: `idle` (all proposals applied + verification pass empty), `stalemate` (proposals exist but none applyable), `no-proposals` (none generated), or `max-iterations` (cap hit). Phase 2 only runs once **all segments** are terminal.
+
+### Edge proposal
+
+A proposal generated in Phase 1 whose corrected position would land at or near the segment's first or last spine point — i.e. the proposal would alter the segment's boundary. These are **staged but not applied** in Phase 1. They are reconciled in Phase 2 against the adjacent segment's facing edge.
+
+### Multipass cap
+
+`multipassMaxIterations`, default **500** per segment. Safety net only — design exit is `idle` or `stalemate`. Hitting the cap is logged as a defect signal, not a normal outcome.
 
 ---
 
-## Overlap vs coupling (plain language)
+## Audit layer contract (what correction reads)
 
-- **Overlap (correction sense):** **Time overlap** that implies **two or more incompatible stories** about the same stretch of the recording — e.g. block **vs** bracket gap (strict socket), **equality / spine** conflict, **duplicate `timeMs`** inside or at the edge of a block, **partial** fit, or **any mixture** of these. That **can** be **cross-anomaly** in the data (block-shaped regions **vs** non-block placement, duplicate-time knots **vs** chunk narrative, etc.); the **MVP implementation** is **block-anchored** in **§ Block overlap** plus flags such as **`overlap.singleton_block_conflict`**. It is **not** “GPS noise”; it is **conflicting temporal narratives**. MVP: **detect overlap** → **flag + mask**, **no** chunk reorder for **overlap-flagged** blocks — **do not** force a single exclusive cause when reality is **mixed** (see **§ Block overlap: detection and diagnostics**).
+The audit layer is **purely observational**. Post-segmentation, it does **not** compute global belowAnchor / belowPrevValid tags, and it does **not** classify export faults. It emits:
 
-- **Coupling / reference instability:** Fix **A** needs neighbour/bracket **B**, but **B** is **also** being corrected or **flagged** — **no** safe order. **`coupling-detection`** marks **referential** **coupled** blobs from **`proposals`**. MVP: **flag**; **no** partial-apply where policy forbids. **“Secondary overlap”** in discussion = **this dependency mess**, **not** new interval events on rescan.
+### Per-segment structural summaries (ingestion)
+
+`audit.ingestion.segmentSummaries[]` — one entry per `trkSegIndex`:
+
+```
+SegmentSummary {
+  trackIndex:      number,
+  segIndex:        number,
+  globalSegIndex:  number,         // = trkSegIndex on accepted points
+  pointCount:      number,
+  usableTimeCount: number,
+  firstTimeMs:     number | null,  // first parseable timestamp in document order
+  lastTimeMs:      number | null,  // last parseable timestamp in document order
+  minTimeMs:       number | null,
+  maxTimeMs:       number | null,
+  firstLat:        number | null,  // boundary coords for impliedDistance/Speed
+  firstLon:        number | null,
+  lastLat:         number | null,
+  lastLon:         number | null
+}
+```
+
+### Per-module per-segment aggregates
+
+Each audit module (`timestamp-audit`, `sampling-audit`, `motion-audit`, `elevation-audit`) emits a `perSegment[trkSegIndex]` slice alongside its global counts. Existing module schemas continue to expose totals; the per-segment slices are additive. The correction layer reads the per-segment slices; global counts remain available for telemetry only.
+
+### Per-segment temporal tags
+
+`audit.temporal.perSegment[trkSegIndex]` carries point-level tags scoped to that segment: `belowAnchor`, `belowPrevValid`, `adjacentDuplicate`, `nonAdjacentRepeat`, `missing`, `unparsable`. These tags are **defined relative to the segment** — `belowAnchor` means "below the anchor anchored within this segment." Cross-segment relationships are not tagged here.
+
+### Boundary observations (no classification)
+
+`audit.ingestion.segmentBoundaries[]` — one entry per inter-segment boundary (`fromTrkSegIndex`, `toTrkSegIndex`):
+
+```
+SegmentBoundary {
+  fromTrkSegIndex:    number,
+  toTrkSegIndex:      number,
+  trackIndex:         number,
+  gapMs:              number | null,    // next.firstTimeMs - curr.lastTimeMs
+  impliedDistanceM:   number | null,    // Haversine using boundary coords
+  impliedSpeedKph:    number | null
+}
+```
+
+Every boundary emits one entry. **No threshold, no classification.** The correction layer decides whether a given boundary is `chunk_ordering`, `duplicate_chunk`, `segment_boundary_gap` (formerly `missing_chunk_fault`), `timestamp_discontinuity`, or none of the above.
+
+### Validity for waypoints/routes (C4)
+
+`audit.waypoints[]` and `audit.routes[]` are forwarded as-is. Each entry carries a per-element validity flag. Correction does **not** mutate these collections. Renderers read validity flags and decide whether to draw.
+
+### What audit no longer emits (post-segmentation)
+
+- Global `belowAnchor` / `belowPrevValid` tag arrays. (Per-segment tags only.)
+- `audit.exportFaults[]` with classified fault types. (Replaced by raw `audit.ingestion.segmentBoundaries[]`; correction classifies.)
+
+### rawTime capture
+
+**Deferred.** Not captured in MVP. If post-MVP DST/timezone analysis becomes useful, audit can be re-extended without breaking correction. The cost-of-deferral is one re-parse of timestamps when needed.
+
+---
+
+## Pipeline order (correction layer)
+
+```
+correctionRunner({ points, auditResult }):
+  1. participation-check
+       — global mode / coverageRatio
+       — segmentParticipationProfiles[] (per trkSegIndex)
+       — early return if full skip
+  2. objective-adjacent-dedupe
+       — stream-adjacent only at this stage (raw input)
+       — recompute correction-idle predicate (per-segment); skip downstream if all clean
+  3. reversal-check
+       — global full-array reversal hypothesis
+       — per-segment reversal for isFullyReversed segments
+  4. Deterministic export fix phase (correction-owned classification)
+       — segment-boundary classification: chunk_ordering, duplicate_chunk,
+         segment_boundary_gap, timestamp_discontinuity
+       — apply chunk reorder and duplicate-segment exclusion
+       — recompute correction-idle predicate
+  5. Spine intervals (first build, per-segment)
+  6. Phase 1 — per-segment terminal solve
+       FOR each trkSegIndex in ascending order:
+         multipass loop until terminal (idle / stalemate / no-proposals /
+         max-iterations); edge proposals staged, not applied
+  7. Phase 2 — edge reconciliation (single pairwise pass)
+       FOR each adjacent (S[i], S[i+1]):
+         resolve staged edge proposals against neighbour stability;
+         double-unstable → flag edge_coupling_unstable
+  8. Phase 3 — global residual diagnostic sweep
+       read-only scan over final canonicalPoints; log any cross-segment
+       below-prev-valid / below-anchor residuals
+  9. correction-export
+```
+
+---
+
+## Phase 1 — per-segment terminal solve
+
+Each segment is processed in ascending `trkSegIndex` order. The next segment does not begin until the current segment has reached terminal.
+
+### Per-segment multipass loop
+
+For one segment S:
+
+```
+loop:
+  iterationsRun_S++
+  if iterationsRun_S >= multipassMaxIterations: exit('max-iterations')
+
+  proposals_S = block-proposal(S) ∪ singleton-proposal(S) ∪ duplicate-proposal(S)
+                — all scoped to S; never reference points outside S except for
+                  the next-to-edge stability check (described below)
+
+  scope-gate(proposals_S, S.spineEnvelope):
+    drop any proposal whose corrected position falls outside S's spine envelope
+    UNLESS the proposal is an edge proposal (would land on or extend the
+    segment's first/last spine slot) — these are staged for Phase 2
+
+  if proposals_S empty: exit('no-proposals')
+
+  overlap-detection(proposals_S)
+  coupling-detection(proposals_S)
+  applyable_S = proposals_S \ overlapVetoed \ couplingBlocked
+
+  if applyable_S empty: exit('stalemate')
+
+  resolution-apply(applyable_S)   — mutates workingOrderedPoints for S only
+  recompute spineIntervals[S]
+  recompute correctionIdle[S]
+  if correctionIdle[S]: exit('correction-idle')
+
+  if applyable_S == proposals_S:
+    verification-pass:
+      rebuild proposals_S; run overlap + coupling; do NOT apply
+      if rebuilt proposals_S empty: exit('idle')
+      else continue
+```
+
+### Edge proposals
+
+A proposal is an **edge proposal** if applying it would alter the segment's `spineEnvelope` boundary:
+
+- **Singleton-insert:** target slot is at the segment's current first or last spine position (would extend the envelope on that side).
+- **Block-finding:** the block's `[B_min, B_max]` overlaps or extends past the current envelope edge on either side.
+- **Duplicate-reorder:** affects a competition group whose containing spine interval is the segment's first or last.
+
+Edge proposals are **staged in `correction.stagedEdgeProposals[trkSegIndex]`**, not dropped, not applied. They participate in Phase 2.
+
+### Coupling scope (locked rule)
+
+Coupling-detection runs **strictly intra-segment** in Phase 1. Disturbance zones, kinematic traversal neighbours, and spine queries never cross `trkSegIndex`. The only cross-segment reference allowed is for **edge proposals**, and that reference is deferred to Phase 2.
+
+---
+
+## Phase 2 — edge reconciliation
+
+Runs **once** after every segment has reached terminal. Pairwise over adjacent segment boundaries in ascending order.
+
+### Per-boundary algorithm
+
+For boundary between S[i] and S[i+1]:
+
+1. Gather `stagedEdgeProposals[i].lastEdge` and `stagedEdgeProposals[i+1].firstEdge`.
+2. Determine **neighbour stability** on each side:
+   - S[i]'s last spine point is **stable** iff (a) it is on the spine and (b) it has no staged edge proposal pending on it.
+   - Symmetric for S[i+1]'s first spine point.
+3. Resolve:
+
+| S[i].lastEdge stable? | S[i+1].firstEdge stable? | Action |
+|---|---|---|
+| Yes | Yes | No staged proposals to evaluate → no-op. |
+| Yes | No (S[i+1] has staged edge) | Evaluate S[i+1].firstEdge against S[i]'s last spine point as a neighbour reference. Apply `insert` / `block-reorder` if seam check passes (insert: time/sequence ordering vs S[i].lastTime; block: no overlap with S[i]'s tail block). |
+| No | Yes | Symmetric. |
+| No | No | **Double-unstable coupling.** Flag the pair as `edge_coupling_unstable`. Do not resolve either. Both staged proposals are discarded; their target points remain in `workingOrderedPoints` at their current positions and are added to `excludedFromTrust` with reason `edge_unresolved`. |
+
+### Phase 2 runs once
+
+A mutation applied in Phase 2 does **not** re-trigger Phase 1 for the affected segment. If a Phase 2 mutation creates a new interior anomaly, it surfaces in Phase 3's diagnostic sweep and is logged. This is a deliberate MVP simplification: cascading Phase 1 ↔ Phase 2 introduces convergence problems we cannot reason about without real data.
+
+### Cross-segment block exception (N5)
+
+If a Phase 1 block-finding extends across a segment boundary in a way that is not handled by edge reconciliation (e.g. a `4 5 6 1 | 2 3 7 8 9` structure where the misplaced sub-run straddles the boundary), the per-segment solver inside each segment still runs to terminal as if the boundary were a hard wall. Phase 2 only resolves edge proposals, not full-block reorders that span boundaries. Such structures will surface in Phase 3 as residual cross-segment below-prev-valid / below-anchor signals. **MVP does nothing about them** — we wait for telemetry to confirm whether they exist in real data before designing a corrective path.
+
+---
+
+## Phase 3 — global residual diagnostic sweep
+
+Read-only scan over the final post-correction `workingOrderedPoints`:
+
+- For every traversal-adjacent pair `(prev, curr)` with both `timeMs` finite, check `curr.timeMs >= prev.timeMs`.
+- For every point, check it is not below any previously-seen anchor (the rolling max of timestamps).
+- Aggregate violations by `trkSegIndex` pair (intra-segment vs cross-segment).
+
+Output: `correction.diagnostics.residualTemporalAnomalies[]`. This is **observational telemetry**. Phase 3 never mutates state and never triggers further correction. Its purpose is to surface patterns the per-segment + edge-reconciliation pipeline missed, so we can extend MVP based on real data.
+
+---
+
+## Adjacency primitive: traversal-adjacent
+
+After early mutations (dedupe, reversal, deterministic export fix) and after every Phase 1 `resolution-apply` and every Phase 2 mutation, **traversal adjacency changes** even though `gpxIndex` on surviving points does not. Any consumer of "neighbour" semantics inside the correction layer reads from the **current** traversal order.
+
+| Consumer | Adjacency basis |
+|---|---|
+| Initial sanity (raw input) | Stream-adjacent (`gpxIndex+1`). Immutable. |
+| `objective-adjacent-dedupe` (initial) | Stream-adjacent (raw input snapshot). |
+| `duplicate-proposal` per-pass `adjacent-exact-drop` rescan | **Traversal-adjacent** on current `workingOrderedPoints`. |
+| Block detection (`belowAnchor` runs) | **Traversal-adjacent** within one `trkSegIndex`. |
+| Bracket selection | **Traversal-adjacent**, segment-bounded, informed by `spineIntervals`. |
+| Coupling kinematic neighbours | **Traversal-adjacent**, segment-bounded. |
+| Phase 2 edge reconciliation | Cross-segment by definition (S[i].lastSpine vs S[i+1].firstSpine). |
+| Phase 3 diagnostic sweep | **Traversal-adjacent** across full canonical traversal. |
+| Sampling-baseline / Δt density | Stream-adjacent (`gpxIndex` window) — this is sampling-density, distinct from traversal adjacency. |
+
+The shift to traversal-adjacent as canonical is a real change from earlier plans. Stream-adjacent stays only where the question is genuinely about raw recording density.
+
+---
+
+## Schema cleanup: drops vs excludedFromTrust vs annotations
+
+The previous plan carried a tangle of `flags[]`, `masks[]`, `excludedFromTrust[]`, and `drops[]` with overlapping semantics. The cleaned model has **three** concepts only (see ADR-correction-0012 for full rationale):
+
+### `correction.drops[]`
+
+Points **removed from all ordered traces**. Absent from `fullOrderedPoints` and `canonicalTrustedPoints`. Reasons are limited and policy-driven:
+
+- `adjacent-exact-duplicate` — 100% identical adjacent twin (objective-adjacent-dedupe or per-pass adjacent-exact-drop).
+- `duplicate_chunk_segment` — entire segment's points removed by deterministic export fix.
+
+```
+{ gpxIndex: number, reason: DropReason, stage: string }
+```
+
+### `correction.excludedFromTrust[]`
+
+Points **kept in `fullOrderedPoints`** (UI sees them) but **omitted from `canonicalTrustedPoints`** (kinematic / smoothing does not). Each entry carries one or more reasons. No separate "masks" array — exclusion is the mask.
+
+```
+{ gpxIndex: number, reasons: ExcludedReason[], details?: object }
+```
+
+Reasons (extensible):
+
+- `same_time_non_winner` — lost a kinematic competition (legacy, superseded by `insert_competition_loser`).
+- `insert_competition_loser` — non-winner in a multi-candidate Insert competition.
+- `exact_group_unresolved` — non-adjacent identical group, MVP flag-only.
+- `cross_segment_duplicate` — same `timeMs` in different `trkSegIndex`, structurally displaced.
+- `out_of_segment_scope` — proposal target landed outside segment envelope and was not an edge proposal.
+- `edge_unresolved` — Phase 2 double-unstable; both edge proposals discarded.
+- `overlap_block_member` — point belongs to a block that hit `overlap` status (no reorder).
+- `coupling_blocked_subject` — kinematically sensitive proposal whose subject was blocked by coupling.
+- `block_kinematic_guard_failed` — block-reorder socket-ok but kinematic guard failed; block not applied.
+- `insert_kinematic_guard_failed` — insert length=1 kinematic guard failed; candidate not applied.
+- `sampling_below_neighbour_baseline` — sampling story too weak vs neighbour window.
+- `reversal_unconfirmed_member` — point inside a `segment_reversal_unconfirmed` segment.
+
+### `correction.annotations[]`
+
+*(Formerly `correction.sessionFlags[]` — renamed because the collection covers session, segment, and proposal scope, not session-only.)*
+
+Annotations attached to the **session, segment, or proposal** — not to individual surviving canonical points. These are diagnostic / UX hints that do not change trust status by themselves.
+
+```
+{ scope: 'session' | 'segment' | 'proposal',
+  scopeRef: { trkSegIndex?: number, proposalId?: string },
+  kind: AnnotationKind,
+  details?: object }
+```
+
+Kinds (extensible):
+
+- Session-scope: `geometry-only`, `timestamp-sparse`.
+- Segment-scope: `is_fully_reversed`, `segment_reversal_unconfirmed`, `chunk_ordering_resolved`, `duplicate_chunk_excluded`, `segment_boundary_gap`, `timestamp_discontinuity`, `edge_coupling_unstable`, `multipass_cap_hit`.
+- Proposal-scope (overlap/coupling): `overlap_block`, `overlap_singleton_block_conflict`, `overlap_singleton_singleton_conflict`, `overlap_spine_pierce_detected`, `overlap_bracket_missing`, `block_internal_monotonicity_fail`, `coupled_same_time_deferred`, `coupled_reference_unstable`, `adjacent_duplicate_ele_mismatch`.
+- Proposal-scope (kinematic guard outcomes): `block_reorder_kinematic_guard_failed`, `insert_kinematic_guard_failed`, `insert_competition_resolved`, `insert_competition_kinematic_guard_failed`.
+
+Kinematic-outcome annotations carry `details.kinematics` with the `KinematicCheck` payload (speedPrevKph, speedNextKph, score, thresholdKph, passed, failReason) so downstream can audit the call without re-deriving geometry. See ADR-correction-0015.
+
+A point can simultaneously be in `excludedFromTrust` and have its segment carry an annotation. The two collections answer different questions: trust (excludedFromTrust) vs context (annotations).
+
+### What is removed from prior plans
+
+- `correction.flags[]` — gone. Replaced by `annotations[]` (segment/proposal/session-scope) and `excludedFromTrust[]` (point-scope).
+- `correction.masks[]` — gone. The mask **is** exclusion from `canonicalTrustedPoints`.
+- `correction.sessionFlags[]` — renamed to `correction.annotations[]`.
+- `correction.overlapVetoedProposalIds[]` and `couplingBlockedProposalIds[]` — still computed internally as runner state but encoded in each proposal's `applied` and `skipReason` fields rather than exported as top-level arrays.
+
+---
+
+## Correction-idle predicate (per-segment)
+
+Per A9, `noCorrectionTemporalAnomalies` is evaluated **per segment**. The global short-circuit fires only when **all** segments are correction-idle. Each segment's predicate:
+
+- `audit.temporal.perSegment[seg].belowAnchor` count is 0
+- `audit.temporal.perSegment[seg].belowPrevValid` count is 0
+- `audit.temporal.perSegment[seg].nonAdjacentRepeat` count is 0
+- `audit.sampling.perSegment[seg].positiveTimeDeltaCount === audit.sampling.perSegment[seg].consecutiveTimestampPairsCount`
+- No same-time different-coords groups within the segment
+
+A segment with `correctionIdle === true` does not enter Phase 1's multipass loop.
+
+A segment with `correctionIdle === false` enters Phase 1 and runs to terminal. After Phase 1 + Phase 2 + Phase 3, the predicate is recomputed once more per segment for export-time reporting.
+
+---
+
+## Time validity (A3)
+
+`timeMs` must be **strictly positive** to be considered usable: `timeMs > 0`. A `timeMs === 0`, negative, or non-finite value is treated as `unparsable` by audit and never enters the correction usable-time set.
+
+This refines the existing audit `unparsable` semantics; no schema change required.
+
+---
+
+## Spine intervals — operational rules
+
+### First build
+
+Built **after** the deterministic export fix phase completes. Building earlier would reference stale order (chunk reorder and duplicate-segment exclusion both mutate `workingOrderedPoints`).
+
+### Per-segment scoping (locked)
+
+Every spine interval entry carries `trkSegIndex`. No interval crosses a segment boundary — the boundary is treated as a hard wall, identical to a file end. Consumers (bracket selection, pierce-check, coupling disturbance zones, edge proposal detection) restrict spine queries to the originating proposal's segment.
+
+### Re-derivation (mechanical only)
+
+After each mutating `resolution-apply` (in Phase 1) or Phase 2 mutation: re-derive spine for the affected segment(s). The predicate (forward-monotonic + strictly positive Δt + non-cluster-member) is the only test. Two spine runs merge naturally when their interveners now satisfy the predicate.
+
+The **cadence-similarity question** (does the gap between two merged runs match local sampling cadence?) is a downstream concern handled by the smoothing / kinematic-section layer — **not** the spine layer. The spine layer applies the predicate and stops.
+
+### Per-segment minTimestampPairCoverageRatio
+
+In addition to the global `minTimestampPairCoverageRatio` (default 0.8), each segment carries its own coverage ratio in its `SegmentParticipationProfile`. Segments below threshold have `mode: 'timestamp-sparse'` at segment scope; the segment's full multipass loop runs the participation-aware skip path.
+
+---
+
+## Per-segment eligibility (`segmentParticipationProfiles[]`)
+
+Produced by `participation-check` from audit's per-segment slices. One entry per `trkSegIndex`:
+
+```
+SegmentParticipationProfile {
+  trkSegIndex:                    number,
+  mode:                           'geometry-only' | 'timestamp-sparse' | 'full' | 'fully-reversed',
+  hasAnomalies:                   boolean,    // any per-segment belowAnchor / belowPrevValid
+  hasUsableTimes:                 boolean,    // ≥2 usable timeMs
+  coverageRatio:                  number,
+  isFullyReversed:                boolean,
+  spineEnvelope:                  { minTimeMs: number|null, maxTimeMs: number|null },
+                                              // updated after any mutation to the segment
+  iterationsRun:                  number,     // Phase 1 multipass iterations consumed
+  exitReason:                     string|null // set when Phase 1 terminates for this segment
+}
+```
+
+`spineEnvelope` is min/max of **spine points only** (not raw min/max of all points). Singletons and cluster members do not define the envelope; they are evaluated against it. Edge proposals (which would extend the envelope) are staged for Phase 2.
+
+---
+
+## Deterministic export fix phase (correction-owned classification)
+
+Runs once, between reversal-check and the first spine build. Operates on `workingOrderedPoints` and consumes `audit.ingestion.segmentBoundaries[]` (raw observations) plus `audit.ingestion.segmentSummaries[]`. The classification logic that previously lived in audit's `export-fault-detection.js` lives **here** in correction.
+
+### Boundary classification
+
+For each entry in `audit.ingestion.segmentBoundaries[]`:
+
+1. **`chunk_ordering`** — `next.firstTimeMs < curr.lastTimeMs` AND not a round-hour backward jump AND segment time ranges do **not** overlap (`next.maxTimeMs <= curr.minTimeMs` or similar). Resolution: schedule a chunk-reorder.
+2. **`duplicate_chunk`** — backward boundary AND segment time ranges **overlap** (`next.minTimeMs < curr.maxTimeMs AND next.maxTimeMs > curr.minTimeMs`) AND not a round-hour backward jump. Resolution: exclude one segment (MVP: the later one in document order). If the overlap region is **100% identical** point-by-point between the two segments, drop the overlapped points from the later segment; if not 100% identical, exclude the entire later segment and add annotation `duplicate_chunk_excluded` (segment-scope) with diagnostic detail.
+3. **`segment_boundary_gap`** (renamed from `missing_chunk_fault`) — `gapMs > 0`. **No threshold.** Every forward-gap boundary emits one. Resolution: pure observation. The correction layer does nothing; the renderer draws a straight line between segments. Includes `impliedDistanceM` and `impliedSpeedKph` for downstream UX context. (A8 — we cannot detect missing chunks, so we surface the gap and let UI show it.)
+4. **`timestamp_discontinuity`** — backward boundary jump approximately equal to a whole number of hours (within `timezoneShiftTolerance`, default 0.1 fraction of an hour). MVP: flag only via annotation `timestamp_discontinuity` (segment-scope) with `suspectedTimezoneOffsetHours`; no automated correction (we cannot deterministically distinguish a DST shift from a chunk reorder without `rawTime` analysis, and `rawTime` is deferred).
+
+A single boundary may carry only one of `chunk_ordering`, `duplicate_chunk`, `timestamp_discontinuity` (mutually exclusive). `segment_boundary_gap` is emitted independently for any forward gap regardless of the others (it is observational only).
+
+### Apply order
+
+1. Resolve all `chunk_ordering` classifications by sorting affected segments by their `minTimeMs` and reordering them in `workingOrderedPoints` in a single canonical pass. Log each in `correction.rearrangements` with `kind: 'segment-chunk-reorder'`.
+2. Resolve all `duplicate_chunk` classifications by excluding the later segment's points. Add to `correction.drops` with reason `duplicate_chunk_segment`. Update `segmentParticipationProfiles[]` to mark excluded segments.
+3. `timestamp_discontinuity` and `segment_boundary_gap` are flag-only.
+
+After this phase: recompute correction-idle predicate per segment. If all segments are correction-idle, short-circuit to `correction-export`.
+
+### Intra-segment timestamp violation
+
+Reframed as a **per-segment audit observation**, not an export fault classification. Every `belowPrevValid` tagged in `audit.temporal.perSegment[seg]` is, by definition, an intra-segment timestamp violation. The correction layer reads these per-segment tags directly; no separate `intra_segment_timestamp_violation` classification is needed in the deterministic phase. (Per the locked decision to drop global belowAnchor/belowPrevValid in favor of per-segment tags only, this is the natural representation.)
 
 ---
 
 ## Block overlap: detection and diagnostics (MVP)
 
-**Goal:** For each **`block-finding`** from **`block-proposal`**, decide **`socket-ok`** vs **`overlap`** (two+ time stories), populate **`correction.overlapBlockResolution[]`**, and drive **`resolution-apply`** **`block-reorder`**. **Do not** force one mutually exclusive label; **mixed** diagnostics are **expected**.
+Per **A2**: in MVP, block overlap and block-splitting are **flag-only** — no splitting algorithm, no partial reorder. The block is flagged as a whole and left in place.
 
-**Why brackets are not "array neighbours of the slab" only:** A misplaced slab's **immediate** **`workingOrderedPoints`** neighbours may still be **`belowAnchor`** or part of the **same** fault. Bracket rows must be chosen so **`t_prev`/`t_next`** reflect **where the chunk belongs** in the **forward** story — **`correction.spineIntervals`** + **outside-the-run** rules (**versioned** ADR). Failure to obtain valid brackets or socket fit contributes to **`overlap`** / **`no-bracket`**.
+For each `block-finding` from `block-proposal`:
 
-**Per-`block-finding` algorithm (conceptual — exact rules versioned in `overlap-detection` ADR):**
+1. Read `gpxIndexes`. Compute `B_min`, `B_max`.
+2. **Internal monotonicity:** if `internalMonotonicity === false` → `status: 'skipped-non-monotonic'`; emit annotation `block_internal_monotonicity_fail` (proposal-scope).
+3. **Brackets:** select `prev` / `next` anchor (and `t_prev`, `t_next`) per versioned policy from `correction.spineIntervals` (segment-scoped) and outside-the-run rules. **Boundary brackets** that would reach a segment edge: convert the `block-finding` into an **edge proposal** (staged for Phase 2) instead of selecting a cross-segment bracket — segments are hard walls in Phase 1.
+4. **Closed socket — numeric guard:** `B_min >= t_prev AND B_max <= t_next`.
+5. **Structural socket guard (corridor pierce-check):** even when numeric passes, check whether `correction.spineIntervals` contains any spine point inside `(t_prev, t_next)` whose `gpxIndex` is not a member of the block. If so, `status: 'overlap'`; emit annotation `overlap_spine_pierce_detected` (proposal-scope).
+6. **Overlap components** (observation-only): bracket / envelope violation, interval violation, equality / spine conflict, duplicate-time signal, bracket missing. Any → `status: 'overlap'`, emit annotation `overlap_block` (proposal-scope) with diagnostic details. Block members go to `excludedFromTrust` with reason `overlap_block_member`.
+7. **`socket-ok` and not conflicting** → `status: 'socket-ok'`, emit `blockReorderPayload` for `resolution-apply`.
+8. **Kinematic guard (socket-ok only):** After coupling check passes, compute `speedPrevKph` (prevAnchorPoint → block.firstPoint) and `speedNextKph` (block.lastPoint → nextAnchorPoint) using the bracket anchors. Score = speedPrevKph² + speedNextKph². If either speed exceeds `lenientMaxImpliedSpeedKph` (default 80 kph) → **do not apply**; emit annotation `block_reorder_kinematic_guard_failed` (proposal-scope) with `details.kinematics`; block member `gpxIndexes` → `excludedFromTrust` reason `block_kinematic_guard_failed`; proposal `applied: false`, `skipReason: 'kinematic_guard_failed'`. See ADR-correction-0015.
 
-1. Read **`gpxIndexes`** (or span) from **`block-finding`**. Compute **`B_min`**, **`B_max`** over the run (usable `timeMs`).
-2. **Internal monotonicity:** If **`block-finding.internalMonotonicity === false`** → set resolution **`status: 'skipped-non-monotonic'`** (no **`block-reorder`**; emit **`block.internal_monotonicity_fail`** or rely on **`block-finding`** only — versioned).
-3. **Brackets:** Select **`prev`** / **`next`** anchor (and **`t_prev`**, **`t_next`**) per **versioned** policy — **must not** default to misleading in-run neighbours; **may** use first point **before** / after the **maximal** `belowAnchor` run that lies **outside** the run, **`spineIntervals`**, file ends, etc.
-4. **Closed socket:** If **`t_prev`**, **`t_next`** usable → **`socket-ok`** iff **`B_min ≥ t_prev`** and **`B_max ≤ t_next`**. Equality at bracket may yield **seam** duplicate-time → **`duplicate-proposal`** on next pass (**§ Monotonic capability**).
-5. **Overlap components** (observation-only — do not force one cause): bracket / envelope violation, interval violation, equality / spine conflict, duplicate-time signal, bracket missing. Any conflicting narrative → **`status: 'overlap'`**, **`overlap.block`** + **`overlapDiagnostics`**, no **`blockReorderPayload`**.
-6. **`socket-ok`** and not conflicting → **`status: 'socket-ok'`**, emit **`blockReorderPayload`** (permutation / target order — versioned) for **`resolution-apply`**.
-
-**Output:**
-
-- **`correction.overlapBlockResolution[]`**: `{ findingId, status, tPrev?, tNext?, bMin?, bMax?, prevGpxIndex?, nextGpxIndex?, blockReorderPayload?, … }` (versioned).
-- **`overlapVetoedProposalIds`** (or equivalent): `block-finding` ids that are `overlap` / `no-bracket` / `skipped-non-monotonic` where policy forbids apply.
-- **`correction.overlapDiagnostics[]`**: per-region booleans / metrics, **not** a forced single cause.
-
-**MVP outcome for overlap regions:** flag + mask; `block-reorder` **not** applied for those `findingId`s. **`resolution-apply`** applies `block-reorder` **only** from **`socket-ok`** rows that are **also** coupling-safe. Bracket/socket algorithms — **versioned** in `overlap-detection` ADR.
+**MVP:** overlap regions are flagged + excluded; no reorder. Partial overlap = same treatment as full overlap. No splitting algorithm.
 
 ---
 
-## MVP flag taxonomy (`correction.flags[]`)
+## Cross-proposal footprint mapping (overlap-detection scope)
 
-Stable **`type`** strings (extend in ADR). Include **`stage`**, **`reason`**, **`gpxIndexes[]`**, optional **`relatedTimeMs`**. **Overlap block:** prefer **`overlap.block`** + **`overlapDiagnostics`** (see above) instead of separate **`overlap.block_socket_miss`** / **`overlap.block_interval_conflict`** rows — those distinctions live in **diagnostics**, not as mutually exclusive top-level types.
+Each proposal kind makes a temporal claim. Before any apply, `overlap-detection` derives each proposal's footprint and detects cross-kind collisions within the segment:
 
-| `type` (suggested) | When |
-|--------------------|------|
-| `overlap.block` | Contiguous `belowAnchor` block: **time overlap** (two+ stories) — **always** pair with **`overlapDiagnostics`** entry for that region (interval / equality / duplicate-time / bracket / partial, etc.) |
-| `overlap.singleton_block_conflict` | Block vs non-block incompatible placement |
-| `overlap.bracket_missing` | No valid `prev` / `next` bracket (may **also** appear only inside **`overlapDiagnostics.bracketMissing`** if you collapse to **`overlap.block` only** — document in ADR) |
-| `block.internal_monotonicity_fail` | Intra-block time retreat (pred in block) |
-| `coupled.same_time_deferred` | Same-time group touches overlap / unstable ref — skip competition |
-| `coupled.reference_unstable` | Bracket or neighbour inside flagged knot |
-| `coupled.block_singleton_order` | **Referential** block vs non-block order ambiguity in **`coupling-detection`** (distinct proposals cannot both apply safely); **time** tension may instead surface via **`overlap.*`** |
-| `kinematic.no_safe_move` | Comparative tie or all candidates exceed lenient backstop (**singleton** / **duplicate** paths only — **not** block reorder) |
-| `sampling.below_neighbour_baseline` | Candidate’s sampling / Δt story weaker than **gpxIndex**-window neighbour baseline (see **Sampling baseline**) |
-| `duplicate.exact_group_unresolved` | Same **`timeMs`** + lat/lon/ele **100% exact** on **≥2** points that are **not** stream-adjacent pairs on **this** snapshot — **flag + mask**, **no** kinematic competition (MVP); clears when **`adjacent-exact-drop`** applies after reorder; **not** **`singleton-proposal`** |
-| `adjacent-duplicate-ele-mismatch` | Same time+coords; **both** points have **usable** **ele** but **unequal** (MVP: **flag both**, no drop) |
-| `reversal-unconfirmed` | **Full reversal** hypothesis tried (**no** positive Δt on ingest audit **or** **endpoint envelope**); reversed snapshot **fails** **`noCorrectionTemporalAnomalies`** — order **reverted** |
+| Proposal kind | Temporal footprint |
+|---|---|
+| `block-finding` | `[B_min, B_max]` + bracket corridor `(t_prev, t_next)` |
+| `insert` (isExactGroup=false) | `targetTimeMs` + bracket neighbour times as claimed corridor for each candidate |
+| `insert` (isExactGroup=true) | `targetTimeMs` of exact group — flag-only, not active for apply gating |
+| `adjacent-exact-drop` | No temporal footprint — no corridor claim. |
 
----
+### MVP collision rules
 
-## Correction **kinds** (for export / taxonomy)
+- **Insert inside block envelope:** if `targetTimeMs` falls within `[B_min, B_max]` of any `block-finding` (regardless of socket status) → veto both via annotation `overlap_singleton_block_conflict` (proposal-scope). Block members + colliding insert candidate → `excludedFromTrust`.
+- **Insert in bracket gap (outside block envelope):** valid; evaluated independently subject to its own gates.
+- **Block envelope intersects insert competition region:** veto both via appropriate proposal-scope annotations.
+- **Two inserts with overlapping corridors:** annotation `overlap_singleton_singleton_conflict` (proposal-scope); veto both unless one corridor strictly contains the other (versioned edge policy).
 
-**Early mutations** (dedupe, reversal) are **not** proposals. After **spine** is first built (**§ Multipass correction and spine**), each **pass** runs: **proposals → overlap-detection → coupling-detection → resolution-apply**.
+All collision detection is **segment-scoped**. Cross-segment footprint comparison does not occur in Phase 1 (segments are hard walls). Cross-segment edge interactions are Phase 2's job.
 
----
+### MVP vs post-MVP
 
-## Multipass correction and spine
-
-**Why multipass:** **`resolution-apply`** changes **`workingOrderedPoints`**, so **brackets**, **neighbours**, and **time envelopes** change. A **singleton** can look like **overlap** with a **misplaced block** until **`block-reorder`** runs; after the chunk moves, the same point may be a **simple** insert. **Single-pass** apply cannot see that **future** geometry. Each iteration **rebuilds** **`correction.proposals[]`** so payloads match **current** geometry; **new** proposal rows on a later pass are **expected** when an apply **unlocks** eligibility (e.g. **`duplicate-reorder`** at a **block–spine seam** after **`block-reorder`**). **Proposal kinds** (`block-finding`, `singleton-insert`, `adjacent-exact-drop`, `duplicate-reorder`, `exact-group-flag-only`, …) are **fixed** by the pipeline design — multipass does **not** invent new **kinds**, only new **instances** when the snapshot warrants them. **`block-reorder`** is an **apply** / **`rearrangements`** **kind** produced when **`resolution-apply`** executes a **`socket-ok`** **`block-finding`** using **`overlapBlockResolution`**, **not** a row emitted by **`block-proposal`**.
-
-**Spine intervals (`correction.spineIntervals`):**
-
-- **First build:** **only after** **`reversal-check`** completes (whether reversal **accepted** or **no-op**). **Not** before — global reversal rewrites traversal and would invalidate an earlier spine.
-- **Subsequent builds:** **after each** **`resolution-apply`** that **mutates** `workingOrderedPoints` (end of a multipass **iteration**), **recompute** spine on the **current** snapshot so **overlap**, **coupling**, and **proposal** modules share one **versioned** partition of “forward runs” / gaps on **`gpxIndex`** (exact definition **versioned** — e.g. maximal runs where stream-adjacent time agrees with spine policy).
-- **Consumers:** **`block-proposal`**, **`singleton-proposal`**, **`duplicate-proposal`**, **`overlap-detection`**, **`coupling-detection`** may all **read** **`spineIntervals`** + **`workingOrderedPoints`** + **`auditResult`**.
-
-**Multipass loop (each iteration):**
-
-1. **Clear** prior iteration’s **`correction.proposals[]`** (or replace wholesale) and rebuild from **`block-proposal` → `singleton-proposal` → `duplicate-proposal`** on **current** `workingOrderedPoints`.
-2. **`overlap-detection`** — **recompute** vetoes / diagnostics / masks from **current** **`proposals`** + context.
-3. **`coupling-detection`** — **recompute** **`coupling`** from **current** **`proposals`** + context.
-4. **`resolution-apply`** — **`applyable`** = **overlap-safe ∩ coupling-safe**; if **`applyable`** is **non-empty**, apply in deterministic order (**`block-reorder`** from overlap + **`block-finding`**, then **`singleton-insert`** → **`adjacent-exact-drop`** → **`duplicate-reorder`** among other **applyable** kinds), append **`rearrangements`** (tag with **`passIndex`** if useful), **recompute** **`spineIntervals`** and **`noCorrectionTemporalAnomalies`**.
-5. **Exit** if any exit condition below holds; else **next iteration**.
-
-**Exit conditions (versioned):**
-
-- **Success / idle:** **`noCorrectionTemporalAnomalies`** is **true** after an apply → **exit** loop with **`multipass.exitReason = 'idle'`** → **`correction-export`** when the runner finishes.
-- **Fixed point (stalemate):** **`applyable`** is **empty** while **`proposals`** is **non-empty** (every current proposal is **overlap-vetoed** and/or **coupling-blocked**) → **no** mutation → **spine** unchanged → **next** iteration would repeat the same state → **exit** loop (log **`multipass.exitReason = 'stalemate'`** or equivalent).
-- **No proposals:** **`proposals`** empty → **exit** loop (nothing to evaluate).
-- **Cap:** **`multipassMaxIterations`** (default e.g. **5**, profile parameter) → **exit** with **`multipass.exitReason = 'max-iterations'`** if still not idle — **honest** export; do **not** infinite-loop.
-
-**Design intent:** The **cardinality** of **applyable** / unresolved work **tends to decrease** each iteration when applies succeed; **stalemate** is an explicit **honest** outcome.
-
-### Multipass diagnostics (recommended)
-
-For **debugging**, **regression**, and **non-determinism** hunts, log per iteration (versioned export or internal-only):
-
-- **`passIndex`**, **`proposalIds`** (or **canonical keys**: `kind` + stable footprint hash), **`applyable` ids**, **`appliedProposalIds`**, counts **overlap-vetoed** / **coupling-blocked**.
-- Optional **diff** pass *k* → *k+1*: e.g. **zombie** risk if an **`applied`** id **reappears** unchanged without justification; **proposal count** explosion.
-
-This is **not** an invariant that **`proposals`** cardinality must shrink monotonically — only a **safety net**.
+- MVP detects-and-vetoes cross-kind collisions per pass.
+- Post-MVP recovery is implicit via per-segment multipass: a singleton vetoed on pass *k* by a block's overlap zone may become viable on pass *k+1* after `block-reorder` clears that zone. No dedicated cross-kind resolver needed.
 
 ---
 
-## MVP architecture: proposals, overlap-detection, coupling-detection, resolution-apply
+## Reference stability and coupling (intra-segment)
 
-**Proposals are dumb emitters:** Each proposal module reports **its** findings / intended corrections (e.g. **`block-finding`**, **`singleton-insert`**, **`duplicate-reorder`**, **`adjacent-exact-drop`**, flag-only rows). They **do not** decide **referential coupling** or **temporal-overlap** vetoes. **Three** proposal modules are **independent** of each other; **dependence** is interpreted only by **`overlap-detection`** and **`coupling-detection`**.
+### Coupling-detection: kinematic traversal neighbours
 
-**Two analyses, same input:** **`overlap-detection`** and **`coupling-detection`** both take **`correction.proposals[]`** (and **`workingOrderedPoints`**, **`auditResult`**, **`spineIntervals`**, etc.). **Overlap** answers whether **time stories** forbid applying (including **`block-finding`** → **`overlapBlockResolution`** + **vetoes**) and **constructs** **bracket/socket** / **`blockReorderPayload`** for chunk work. **Coupling** answers whether **referential** dependencies forbid applying **some pair or blob** of proposals together. These are **orthogonal** dimensions (**§ Overlap vs coupling**). **`overlap-detection`** does **not** construct **duplicate** kinematic competition groups (**§ Proposal discipline**).
+Kinematic checks in `singleton-proposal` and `duplicate-proposal` reference the **traversal-adjacent** points with usable `timeMs` on each side of the apply location, **within the same segment**. Gaps in spine between traversal-adjacent points are allowed.
 
-**Apply gate (AND):** **`resolution-apply`** executes work **only** if **not** blocked by **overlap** (including **`block-finding`** without **`socket-ok`**) **and** **not** blocked by **coupling-detection**. **`block-reorder`** uses **`overlapBlockResolution`** + **`coupling`** + **`overlapVetoedProposalIds`**. **Implementation details** are **versioned** separately.
+`singleton-proposal` emits `tPrev`, `tNext`, `bracketGpxIndexes` in the proposal payload. `coupling-detection` reads these directly.
 
-**MVP pattern (`correctionRunner`):**
+### Bilateral disturbance zones
 
-1. **participation-check** — may **return** early (skip path).
+Every proposal that moves, inserts, or removes a point creates disturbance on two sides:
 
-2. **Early mutations:** **objective-adjacent-dedupe**, **reversal-check** — **mutate** `workingOrderedPoints`.
+- **Leaving side:** traversal neighbours of the moved/removed subject in current `workingOrderedPoints`.
+- **Arriving side:** traversal neighbours at the destination after apply.
 
-3. **Build spine (first time):** **`spine-intervals`** (or equivalent module) — **read-only**; set **`correction.spineIntervals`** from **current** snapshot + **`auditResult`** (**§ Multipass correction and spine**).
+Any proposal whose kinematic traversal neighbours include a point in another proposal's disturbance zone is **coupling-blocked** on this pass.
 
-4. **Multipass loop** (**§ Multipass correction and spine**): repeat until exit:
-   - **Proposals:** **`block-proposal` → `singleton-proposal` → `duplicate-proposal`** (replace **`correction.proposals[]`** each pass).
-   - **`overlap-detection`** → **`coupling-detection`** → **`resolution-apply`** (**AND** gate).
-   - After **apply** that **mutates** order: **recompute** **`spineIntervals`**, **`noCorrectionTemporalAnomalies`** (product short-circuit may **break** loop → export).
+### `adjacent-exact-drop` exception
 
-5. **`correction-export`**.
+Dropping a 100% exact adjacent duplicate produces a survivor that is geometrically identical. No disturbance zone is created. `adjacent-exact-drop` does not couple any other proposal.
 
-**Non-adjacent 100% exact duplicates** (same `timeMs` + lat/lon/ele): **`duplicate-proposal`** — **`exact-group-flag-only`** / **`duplicate.exact_group_unresolved`** until **stream-adjacent**; then **`adjacent-exact-drop`** each pass. **No** singleton path, **no** kinematic competition for exact groups in MVP.
+### Symmetric blocking (revised)
 
-### Design rationale
+`block-finding` (socket-ok) now has a kinematic guard (ADR-correction-0006 revised; ADR-correction-0015). Its kinematic reference points are its bracket anchors (`prevGpxIndex`, `nextGpxIndex`). If those anchors are in another proposal's disturbance zone, block-finding is **coupling-blocked** — computing the kinematic guard against unstable geometry produces unreliable results. `block-finding` now participates in `couplingBlockedProposalIds` on the same basis as `insert` proposals. The prior "asymmetric blocking" exception (block-finding coupling-blocked never) is revoked as of 2026-04-23.
 
-- **Separation of concerns:** Proposal = **finding**; overlap = **temporal** permission; coupling = **referential** permission; apply respects **both** each pass.
+### Independent computation
 
-- **Multipass:** **Overlap** and **coupling** are **recomputed** on the **current** array; **`correction.proposals[]`** is **rebuilt** each pass so payloads stay consistent with **post-apply** geometry and **new** instances can appear when eligibility unlocks (optimization: incremental refresh **later** if profiling demands).
+`coupling-detection` reads `correction.proposals[]`, `workingOrderedPoints`, and `correction.spineIntervals` only. It does **not** read overlap output. Both modules are independent computations on the same snapshot. Overlap-vetoed proposals still appear in disturbance-zone analysis — a proposal near an overlap-vetoed block may be coupling-blocked even though the block will not apply. Conservative + honest.
 
-- **Spine:** Shared **first-class** structure **after reversal** and **after each mutating apply** reduces ad hoc “implicit spine” in each module.
+### Strictly intra-segment in Phase 1
 
-- **Chunk (perfect-fit):** **`block-proposal`** emits **`block-finding`**; **`overlap-detection`** emits **`overlapBlockResolution`**; **`resolution-apply`** performs **`block-reorder`** when **`socket-ok`**; **no** lenient kinematic on chunk (MVP, **§ ADR-0006**).
+Coupling never crosses `trkSegIndex` in Phase 1. The only cross-segment reference is via the staged-edge-proposal mechanism, which surfaces in Phase 2.
 
 ---
 
-## MVP product decisions (review after MVP)
+## Adjacent dedupe (A10)
 
-| Topic | MVP choice |
-|--------|------------|
-| Pipeline order | participation → dedupe → reversal → **spine (first)** → **multipass loop:** (proposals → overlap → coupling → apply → **spine** if mutated) → **correction-export** — **§ MVP architecture**, **§ Multipass correction and spine** |
-| Multipass | **`multipassMaxIterations`** (default e.g. **5**); exit on **idle**, **stalemate** (no **`applyable`** but proposals exist), **empty proposals**, or **cap** |
-| Spine | **`correction.spineIntervals`** built **after reversal**; **recomputed** after each **mutating** **`resolution-apply`** |
-| Block overlap (incl. partial, mixed) | **Detect** time overlap (two+ stories); **`overlap.block`** + **`overlapDiagnostics`**; **flag + mask only** — **§ Block overlap: detection and diagnostics** |
-| Chunk reorder | **`block-finding`** + **`overlap-detection`** (**brackets**, **closed** socket **`B_min ≥ t_prev`**, **`B_max ≤ t_next`**, **`spineIntervals`**); **`resolution-apply`** **`block-reorder`** only when **`socket-ok`** + **§ Internal monotonicity** on finding; **no** kinematic guard on chunk (MVP) |
-| Non-block same-time | **`duplicate-proposal`**: **kinematic** competition only within a **same `timeMs` + same competition segment** (**§ Monotonic capability and duplicate competition scoping**); **not** one global group per `timeMs` across a capable slab; **apply** only if **overlap-safe** **and** **coupling-independent** |
-| Non-adjacent exact dupes | **`duplicate-proposal`** only: **`exact-group-flag-only`** / **`duplicate.exact_group_unresolved`**, **flag + mask**, **not** singleton — **no** drop until they become **stream-adjacent** (then **`adjacent-exact-drop`**); **post-MVP** may add spine-aware non-adjacent collapse |
-| Non-block backtrack | **singleton-proposal** + **lenient kinematic** + sampling; **apply** only if **overlap-safe** **and** **coupling-independent** |
-| Unfixed / failed guard / non-winner | **Flag + mask** + **`excludedFromTrust`**; **omit** from **`canonicalTrustedPoints`**; **no** discard except explicit **drop** policy (e.g. adjacent exact dup) .|
-| Handoff | **`canonicalTrustedPoints`** + **`correction.fullOrderedPoints`** + **`excludedFromTrust`** — **pre-split** at export; dumb downstream **references**, no per-frame mask recompute |
-| Adjacent dedupe | **Initial:** **`objective-adjacent-dedupe`** on **`workingOrderedPoints`** after copy — **stream-adjacent** only (**ADR-0013**), same **ele** rules (**ADR-0004**). **Every multipass iteration:** **`duplicate-proposal`** re-scans stream-adjacent exact pairs and emits **`adjacent-exact-drop`**; **`resolution-apply`** performs drops (**same** predicates / **`correction.drops`** reasons as early stage) so **reorder** can surface new adjacency |
-| Kinematic | **Singleton** + **duplicate** proposals only; **always** `kinematicChecks[]` when run; **block** reorder: **none** (MVP) |
-| Participation | **`minTimestampPairCoverageRatio` default 0.8**; `coverageRatio` + `reasons[]`; **evaluate coverage gate before** **`noCorrectionTemporalAnomalies`** (sparse tracks can still be correction-idle); downstream joins **audit + participation** for gaps |
-| `noCorrectionTemporalAnomalies` | **Correction-idle** only (see **participation-check**): recompute after **early mutations** and after **any** **`resolution-apply`** that runs; may **break** multipass early → **export** when **true** |
-| Spine narrative | **Spine** after **reversal**; **proposals** + **overlap** + **coupling** use **current** snapshot each pass |
-| Overlap vs coupling | **Both** consume **`proposals`**; **apply** requires passing **both** gates (**AND**) |
-| Coupling | **`coupling-detection`** on **all applyable proposal kinds** (**referential**); **`correction.coupling`** export; rich **`correction.analysis`** optional **Post-MVP** |
+### Initial pass (`objective-adjacent-dedupe`)
 
----
+Stream-adjacent only. Operates on raw input snapshot before any mutation. Within one `trkSegIndex` only — does not cross segment boundaries (raw stream-adjacent pairs across a `<trkseg>` boundary cannot be recording duplicates).
 
-## Internal monotonicity for chunk reorder (MVP)
+### Per-pass rescan (`duplicate-proposal` `adjacent-exact-drop`)
 
-**Eligible block:** A contiguous run of `belowAnchor` points (in `gpxIndex` / file order) where **timestamps do not retreat between consecutive points that both lie inside the block**.
+**Traversal-adjacent** on current `workingOrderedPoints`. Within one `trkSegIndex` only in Phase 1.
 
-**Precise rule:** For every stream-adjacent pair `(prev, curr)` such that **both** `prev` and `curr` are in the block, **`curr` must not have `belowPrevValid`** (equivalently `timeMs(curr) ≥ timeMs(prev)` on those edges).  
+**Cross-segment adjacent dedupe (A10):** Allowed in Phase 2 only — and only at a true segment boundary where S[i].lastPoint and S[i+1].firstPoint become traversal-adjacent across the boundary and satisfy the exact-duplicate predicate. If both points are spine-stable and identical (time + lat + lon + ele per ADR rules), drop one in Phase 2 with reason `adjacent-exact-duplicate` and `stage: 'edge-reconciliation'`. If either is unstable (has a staged edge proposal), no drop — defer to telemetry.
 
-**Boundary:** The **first** point of the block **may** carry **`belowPrevValid`** when its stream predecessor is **outside** the block (attachment to the forward bracket), e.g. times `5 → 1, 2, 3, 4` with the block `{1,2,3,4}` — only `1` is below the previous row’s time; **inside** the block, `2,3,4` only advance locally.  
+### Equality table (unchanged from prior plan)
 
-**Not eligible:** Any **intra-block** step with `timeMs` strictly decreasing vs the **previous row in the block** (`belowPrevValid` on a point whose predecessor is **also** in the block).
-
-**Do not** misread as “zero `belowPrevValid` tags on any point in the run”; that would reject every legitimate misplaced monotonic slab.
+| Situation | Action |
+|---|---|
+| Time, lat, lon, ele all exactly equal (incl. identical null/absent ele) | Drop one; `correction.drops` reason `adjacent-exact-duplicate`. |
+| Both lack usable ele | Drop one; survivor keeps absent/null ele. |
+| Exactly one usable ele | Drop the one without usable ele; survivor keeps in-band value. |
+| Both finite ele but both out-of-bounds | Drop one; survivor `ele = null`. |
+| Both have usable ele but values differ | No drop — annotation `adjacent_duplicate_ele_mismatch` (proposal-scope), both points kept. |
 
 ---
 
-## Reference stability, overlap vetoes, and coupling
+## Reversal-check
 
-### Referential instability (coupling)
+### Global reversal hypothesis
 
-**Singleton**, **duplicate**, and **block** proposals may **reference** neighbours or brackets. **`coupling-detection`** decides when **two or more** proposals **cannot** all be applied without **order** or **footprint** ambiguity (**referential** coupling — **§ Overlap vs coupling**).
+Cheap full-array reversal hypothesis. Accept iff the reversed snapshot satisfies the correction-idle predicate **for all segments**. Else revert; emit annotation `reversal_unconfirmed` (session-scope).
 
-**Terminology:** Informal **“secondary overlap”** meant this **dependency** problem, **not** extra **interval** scans.
+### Per-segment reversal
 
-### Temporal overlap (overlap-detection)
+For each segment with `isFullyReversed: true` in its `SegmentParticipationProfile`:
 
-**`overlap-detection`** decides when **time stories** forbid applying a proposal (or require masking), independent of whether proposals are **referentially** coupled. A proposal can be **uncoupled** but **overlap-vetoed**, or **coupled** but **overlap-clear**, or **both** blocked.
+1. Reverse the segment's point order within `workingOrderedPoints` (gpxIndex unchanged).
+2. **Accept** iff:
+   - Reversed segment is internally monotonic.
+   - Reversed segment's new time range is consistent with neighbouring segments: `reversedSeg.minTimeMs >= prevSeg.maxTimeMs` and `reversedSeg.maxTimeMs <= nextSeg.minTimeMs` (equality allowed at seam).
+3. Accepted: log in `correction.rearrangements` with `kind: 'segment-reversal'`; update `spineEnvelope`.
+4. Rejected: revert; emit annotation `segment_reversal_unconfirmed` (segment-scope); affected `gpxIndexes` go to `excludedFromTrust` with reason `reversal_unconfirmed_member`.
 
-### Relation to MVP runner
-
-**`resolution-apply`** uses the **AND** of **overlap-detection** and **`coupling-detection`** outputs. **`block-reorder`** runs **first** among applyable work (from **`block-finding`** + **`overlapBlockResolution`**), then **singleton → `adjacent-exact-drop` → `duplicate-reorder`** — **§ `resolution-apply`**.
-
-### Post-MVP / optional upgrade (document only until implemented)
-
-- **Multipass** is **MVP** — see **§ Multipass correction and spine**. Further **analysis** exports are optional.
-- Richer **`correction.analysis`** `{ coupledRegions, stableComponents, proposalGraph, … }` when needed.
+Global reversal runs first; per-segment runs second on whatever remains. They are mutually exclusive in practice but both paths run sequentially without interference.
 
 ---
 
-## User Review Required
+## Module catalog (correction layer)
 
-> [!IMPORTANT]
-> **Kinematic usage in this layer:** Primary signal is **comparative** (two candidates, neighbourhood continuity). A **lenient absolute** implied-speed ceiling (versioned parameter, e.g. 80 km/h — accounting for pre-smoothing jitter) is a **backstop** for **singleton** and **duplicate** proposals — **not** for **perfect-fit block reorder** (MVP: **no** kinematic guard on chunk reorder; see **§ MVP architecture**). **Every** kinematic check must emit **structured log entries** (`correction.kinematicChecks[]` or equivalent) for offline pattern study. **No** silent discard based only on a hard cap without logging.
+### `participation-check.js`
 
-> [!IMPORTANT]
-> **No schema changes to audit** for MVP unless a deliberate ADR says otherwise. The correction layer reads the first-pass audit output. If the working array is re-audited for `noCorrectionTemporalAnomalies` gating, that is a **second read-only pass** on **`workingOrderedPoints`** / **`correction.fullOrderedPoints`**, not a mutation of the original export.
+| | |
+|---|---|
+| **Inputs** | `points`, `auditResult` (per-segment summaries, per-module per-segment slices, per-segment temporal tags). |
+| **Outputs** | Global `participation` slice; `segmentParticipationProfiles[]` (runner-internal). |
+| **Mutates** | No. |
+| **Early exit** | If global mode allows full skip (correction-idle for all segments) → emit minimal handoff and return. |
 
-> [!IMPORTANT]
-> **Gap semantics for later layers.** **Default dynamics** (speed, acceleration, sectional smoothing) run on **`canonicalTrustedPoints`** — consecutive rows are **trusted-relative** neighbours, but **`gpxIndex` gaps** can still mean **ingestion rejections** or **correction drops** between trusted rows; consult **`audit.ingestion.rejections`** and **`correction.drops`**. **Ingestion rejects** never enter the numeric pipeline; they **must stay** on the **immutable audit** (and session handoff) for **UX** (“this row was rejected and why”) — gaps alone are not enough for UI honesty. **`correction.fullOrderedPoints`** + **`excludedFromTrust`** carry the full post-correction story for overlays without recomputing mask logic. See **§ Downstream continuity** and **§ Handoff: pre-split lists**.
+**Mode evaluation (global and per-segment):**
 
-> [!NOTE]
-> **`minTimestampPairCoverageRatio` (default 0.8)** gates how much of the **stream-adjacent pair budget** has usable timestamp pairs (see **participation-check**). It is a coarse MVP knob until **sectional** participation (post-MVP) handles stitched GPX with mixed regions.
-
----
-
-## Handoff: pre-split lists (dumb downstream)
-
-**Principle:** **Correction-export** does the **partition once**. Later modules **reference** `canonicalTrustedPoints`, `excludedFromTrust`, `drops`, and **audit** — they **do not** re-derive trust from scratch on every run (cheaper than repeating mask resolution; fewer foot-guns).
-
-| Handoff field | Role |
-|---------------|------|
-| **`canonicalTrustedPoints`** | Default input for **kinematic correction**, **smoothing**, **metrics** — points **not** in `excludedFromTrust` and not **dropped**. Consecutive entries are **the** polyline vertices for “trusted” work. **Time-conditioned** eligibility still uses **`audit` + participation** (gaps, missing/unparsable, etc.); **`excludedFromTrust`** lists **correction-only** exclusions. |
-| **`correction.fullOrderedPoints`** | Full traversal after correction (**drops** removed), **including** untrusted rows — **honesty / UX** (single ordered trace, grey segments, tooltips) without a second geometric merge. |
-| **`correction.excludedFromTrust`** | `{ gpxIndex, reasons[], … }[]` — **correction-layer** outcomes only (flags, masks, same-time non-winners, coupled regions, etc.). **Do not** duplicate **`audit.ingestion.rejections`** or **audit temporal** missing/unparsable / other **participation** semantics here; downstream **joins `audit` + participation** for gaps and non-participating points. |
-| **`correction.drops`** | Indices **removed** from **both** lists (e.g. adjacent exact duplicate). |
-| **`audit.ingestion.rejections`** | **Never** in pipeline arrays; **always** available on the session for UI — **why** a `gpxIndex` hole exists. |
-
-**Partition sanity (accepted ingest only):** For every **`gpxIndex`** in **`points`** at correction input: either **`gpxIndex`** ∈ **`correction.drops`** (absent from **`fullOrderedPoints`**), or the point appears in **`fullOrderedPoints`** and is either (**a**) in **`canonicalTrustedPoints`** or (**b**) listed in **`excludedFromTrust`**. **Ingestion-rejected** indices are **not** in `points`; they appear **only** in **audit** + UI merge. (Enumerate edge cases in ADR: geometry-only mode, etc.)
-
----
-
-## Downstream continuity (smoothing and segment boundaries)
-
-**Preserved for the whole passage:** Original **`gpxIndex`**, **ingestion rejections** (audit), **correction** **`drops`**, **`flags`**, **`masks`**, **`excludedFromTrust`**, **`fullOrderedPoints`** — and, once implemented, **kinematic-correction** exclusions — form the **ground truth** for “what happened along the file” vs “what we trust for local dynamics.”
-
-**Why:** After audit → correction → (later) kinematic correction, **`fullOrderedPoints`** is a **traversal-ordered** arrangement of **non-dropped** accepted points. Two **consecutive trusted** rows can still sit at **`gpxIndex`** values that are **not** consecutive in the source (e.g. … `3` → `5` with `4` rejected at ingestion). **Per-edge** Δtime and Δdistance on **`canonicalTrustedPoints`** are **span** measures when a **hole** or **untrusted** row sat between — not the same as **micro-local** sampling. **Average speed** over a long span can look **similar** to averaging finer steps, while **pairwise** Δt/Δd are **misleading** for filters that assume **neighbour = true kinematic adjacency**.
-
-**Sectional smoothing (custom algos):** **Smooth within segments**, not **across** **lie gaps**. **Segment recognition** = derive **allowed adjacency** from **`gpxIndex` discontinuities** (ingestion + drops), **`excludedFromTrust`**, and any **kinematic-correction** boundary. **`canonicalTrustedPoints`** already **omits** untrusted vertices; gaps between consecutive trusted rows still require **audit/drops** awareness.
-
-**Global / robust smoothers:** Contract must **not** assume **consecutive trusted rows = continuous physics** without **gap** checks; use **weights**, **gaps**, or **explicit** robust loss — document in the smoothing ADR.
-
-**Handoff contract:** Default **derivative-style** pipelines use **`canonicalTrustedPoints`** + **`audit`/`drops`** for gaps; **full** story for UI uses **`fullOrderedPoints`** + **`excludedFromTrust`** + **audit rejections**. Document for **kinematic smoothing** and **metric** layers in their ADRs.
-
----
-
-## Performance and architecture (expectations)
-
-- **Upload latency:** Each stage is **O(n)** or **O(n × small window)** on point count. Re-auditing snapshots for `noCorrectionTemporalAnomalies` adds a few linear passes — **acceptable for MVP**; optimize only if profiling shows a problem.
-- **Architecture:** **Explicit pipeline**: **early mutations** → **spine (first time)** → **multipass**: **all proposal modules** (read-only) → **`overlap-detection`** → **`coupling-detection`** → **`resolution-apply`** (**AND** gate); **recompute spine** after mutating apply. **Pre-split export** keeps **downstream** simple.
-
----
-
-## Audit pipeline: module-wise flags and outputs (reference)
-
-Canonical implementations live under `packages/audit/pipeline/`. Tags are **observational**; **non-exclusive** where noted. **Pair** identities use `{ fromGpxIndex, toGpxIndex }` on **stream-adjacent** accepted points (`toGpxIndex === fromGpxIndex + 1`, ADR-0013).
-
-| Module | File | Entity | Flags / anomalies / key fields |
-|--------|------|--------|--------------------------------|
-| **Ingestion** | `gpx-ingestion-module.js` | Rejected points only (not in `points`) | **`audit.ingestion.rejections.events[]`**: `gpxIndex`, `pointType`, `rawLat`, `rawLon`, `rawEle`, `rawTime`, **`reason`** (e.g. invalid coordinates, out-of-range lat/lon). Plus **`counts`** (`totalPointCount`, `validPointCount`, `rejectedPointCount`, `pointTypeCounts`) and **`context`** (`hasMultiplePointTypes`, `hasAnyTimestampValues`). |
-| **Temporal** | `timestamp-audit.js` | Per **point** (`gpxIndex`) | **`tagCounts` / `tagIndex` / `pointAnnotations`**: **`missing`**, **`unparsable`**, **`adjacentDuplicate`**, **`belowAnchor`**, **`belowPrevValid`**, **`nonAdjacentRepeat`** (non-exclusive except adjacent vs non-adjacent repeat are mutually exclusive by construction). Session: `parseableTimestampPointCount`, `totalPointsEvaluated`, `rawSessionDurationSec`. |
-| **Sampling** | `sampling-audit.js` | Stream-adjacent **pairs** (time + distance) | **`audit.sampling.time.timestampContext`**: `hasAnyParseableTimestamp`, **`hasAnyPositiveTimeDelta`**, `timestampedPointsCount`, **`consecutiveTimestampPairsCount`**, **`positiveTimeDeltaCount`**, `rejections.nonPositiveTimeDeltaPairs` (`nonPositivePairCount`, **`events`** `{ fromIndex, toIndex, delta }`). Plus **Δt statistics**, **time clustering** / **normalization** metadata. **`audit.sampling.distance`**: `pairInspection.consecutivePairCount`, `rejections.invalidDistance`, **Δd statistics**, distance clustering / normalization, `timeConditionedDeltaCount`. |
-| **Motion** | `motion-audit.js` | Stream-adjacent **pairs** | **`tagCounts` / `tagIndex` / `pairAnnotations`**: **`backwardTime`**, **`zeroTimeDelta`**, **`timeUnresolvable`** (no finite `timeMs` on one or both ends — use **`audit.temporal`** for point-level why), **`nonFiniteDistance`**, **`eleUnresolvable`** (ele missing/out of band vs motion params). Optional `dtSec`, `ddMeters` on annotations per glossary. **`summary.consecutivePairCount`**, **`summary.parameters`** (`validFloorM`, `validCeilingM`). |
-| **Elevation** | `elevation-audit.js` | Per **point** | **`tagCounts` / `tagIndex` / `pointAnnotations`**: **`missing`**, **`unparsable`**, **`outOfBounds`**, **`adjacentDuplicate`** (mutual-exclusion rules per file header). `validElevationPointCount`, `parameters` (`validFloorM`, `validCeilingM`). |
-| **Audit export** | `audit-export-module.js` | — | Assembles **`metadata`** + **`audit`** object with **`ingestion`**, **`temporal`**, **`sampling`**, **`motion`**, **`elevation`** sub-payloads; **no extra tags**. |
-
-### Audit modules vs correction participation (MVP)
-
-How each audit area relates to **which accepted points / pairs** participate in **time-centric correction** (reorder, overlap, duplicate-time, etc.). Downstream **joins `audit` + participation** for full eligibility; **`correction.excludedFromTrust`** stays **correction-only** (see **§ Handoff**).
-
-| Audit area | Role in correction participation (MVP) |
-|------------|------------------------------------------|
-| **Ingestion** | **Rejected** rows are **not** in **`points`** — they **cannot** participate; canonical list is **`audit.ingestion.rejections`**. |
-| **Temporal** | **Primary.** Point-level time story (**`missing`**, **`unparsable`**, **`belowAnchor`**, **`belowPrevValid`**, **`adjacentDuplicate`**, **`nonAdjacentRepeat`**) drives correction design; **`noCorrectionTemporalAnomalies`** uses temporal + sampling time (see **participation-check**). |
-| **Sampling** | **Time:** pair-level forward vs non-positive Δt (same stream-adjacent gate as temporal/motion). **Distance:** pairs that fail finite, non-negative **Δd** (**`rejections.invalidDistance`**) are a **safety gate** for anything that needs a trusted spatial step along the stream — rare with valid lat/lon ingest, but policy may treat those pairs as **non-participating** for spatially sensitive correction steps. |
-| **Motion** | **Not required** for correction participation gating. **`timeUnresolvable`** / **`eleUnresolvable`** / **`backwardTime`** / **`zeroTimeDelta`** at **pair** granularity **restate** conditions already visible from **`audit.temporal`** (endpoints without usable time) and **`audit.elevation`** (endpoints that fail motion’s in-band ele check, i.e. missing / unparsable / **out-of-bounds** on the point). They do **not** introduce new **`gpxIndex`** values beyond those modules. **`nonFiniteDistance`** is an edge safety net (see sampling distance). |
-| **Elevation** | **Secondary** for **time-centric** correction MVP: **`ele`** does **not** define whether a point **participates** in timestamp reorder logic. Use **`audit.elevation`** when classifying usable vs OOB for **`objective-adjacent-dedupe`**. **`elevation.adjacentDuplicate`** is **observational** (study / quality), not a correction participation switch. **Ele** resolution: **§ `objective-adjacent-dedupe`**. |
-
-Design docs: `docs/project/pipeline/*.md`, `docs/project/json-schema-v2-glossary.md`. See also **`docs/project/objective-participation-and-quality.md`** (correction vs metrics participation).
-
----
-
-## Proposed Changes
-
-### New Package: `packages/correction/`
-
-#### [NEW] `packages/correction/pipeline/participation-check.js`
-
-Reads from `audit.temporal` and `audit.sampling`. Decides **mode**, **`coverageRatio`**, then **`noCorrectionTemporalAnomalies`** (**correction-idle** — see below). **Evaluation order:** **coverage / mode first**, then **`noCorrectionTemporalAnomalies`**, so a **`timestamp-sparse`** file can still be correction-idle (no reorder work) and take the **skip** path.
-
-**Inputs from audit:**
-- `audit.temporal.session.parseableTimestampPointCount`, `totalPointsEvaluated`, `tagCounts`, `tagIndex`
-- `audit.sampling.time.timestampContext` (`hasAnyPositiveTimeDelta`, `consecutiveTimestampPairsCount`, `positiveTimeDeltaCount`, non-positive pair events as needed)
-- `audit.sampling.distance.pairInspection.consecutivePairCount` (denominator for **coverageRatio** — **stream-adjacent** pairs in the accepted array; align with live export if motion summary is used instead)
-- Optional policy: `audit.sampling.distance.pairInspection.rejections.invalidDistance` when defining **pair** participation for spatially sensitive steps (**§ Audit modules vs correction participation**). **`audit.motion`** is **not** required for **`noCorrectionTemporalAnomalies`** or **`coverageRatio`**.
-
-**Decisions emitted:**
-1. `participationProfile.mode`: `'geometry-only'` | `'full'` | `'timestamp-sparse'`
-2. `participationProfile.coverageRatio`: `consecutiveTimestampPairsCount / consecutivePairCount` (pair-level; **consecutivePairCount** = stream-adjacent pairs evaluated for distance, same basis as `objective-participation-and-quality.md`; **verify** against `audit.motion.summary.consecutivePairCount` — should match when both use ADR-0013 adjacency)
-3. `participationProfile.reasons[]`
-4. `participationProfile.noCorrectionTemporalAnomalies`: boolean (**correction-idle**)
-
-**Participation mode (evaluate in this order):**
 ```
 IF parseableTimestampPointCount === 0
   → mode = 'geometry-only', reason = 'no-parseable-timestamps'
 
-ELSE IF coverageRatio < minTimestampPairCoverageRatio (default 0.8, versioned in profile.parameters)
+ELSE IF parseableTimestampPointCount > 0
+         AND hasAnyPositiveTimeDelta === false
+  → mode = 'geometry-only', reason = 'all-timestamps-uniform'
+    (all usable timeMs are identical; no temporal ordering information)
+
+ELSE IF coverageRatio < minTimestampPairCoverageRatio (default 0.8)
   → mode = 'timestamp-sparse', reason = 'insufficient-pair-coverage'
 
 ELSE
   → mode = 'full'
 ```
 
-**`noCorrectionTemporalAnomalies` = correction-idle (MVP — this layer’s scope only):** “**No work for the correction reorder / backtrack / duplicate-time machinery**” — **not** “no temporal gaps globally.” **Do not** require zero **missing** / **unparsable** timestamps or zero **ingestion rejections**; those stay on **`audit`** and **participation** for downstream to **join**. Predicate (align field names with live `audit.sampling` / **ADR-0013**):
+Per-segment mode evaluation matches global: evaluate in the same order for each `trkSegIndex`. A segment can be `full` while another is `timestamp-sparse` or `geometry-only`.
 
-- `hasAnyPositiveTimeDelta === true`
-- On every stream-adjacent pair where **both** endpoints have finite `timeMs`, **`Δt > 0`**: e.g. `positiveTimeDeltaCount === consecutiveTimestampPairsCount` and **no** non-positive events in that eligible set
-- `audit.temporal.tagCounts` for **`belowAnchor`**, **`belowPrevValid`**, **`nonAdjacentRepeat`** are all **0** (no work for **overlap / chunk / singleton / duplicate** machinery)
+### `objective-adjacent-dedupe.js`
 
-**Explicitly out of this predicate:** **`missing`**, **`unparsable`** (gap semantics; not corrected here). **`adjacentDuplicate`** temporal tag may coexist with correction-idle only when **sampling** already shows all timestamped pairs strictly forward — if duplicate-time edges exist, sampling non-positive events or temporal counts will fail the predicate.
+| | |
+|---|---|
+| **Duty** | Stream-adjacent only on raw input; one trkSegIndex at a time; equality table above. |
+| **Mutates** | Yes (drops). |
+| **Early exit** | After mutation, recompute per-segment correction-idle predicate. If all segments idle → skip downstream. |
 
-**Skip entire correction:** If **`noCorrectionTemporalAnomalies === true`** (correction-idle) **after** the above and product rules allow **full skip** (e.g. not forcing geometry-only through a different path), **short-circuit**: `workingOrderedPoints = copy(points)`, **`canonicalTrustedPoints` = copy(points)**, **`correction.fullOrderedPoints` = copy(points)**, **`correction.excludedFromTrust` = []**, emit minimal `correction` profile noting skip reason. **Gaps** and **non-participating** points remain discoverable via **`audit`** + **`participation`**; **`excludedFromTrust`** is not used to mirror those on this path.
+### `reversal-check.js`
+
+| | |
+|---|---|
+| **Duty** | Global full-array reversal hypothesis; per-segment reversal for `isFullyReversed` segments. |
+| **Mutates** | Yes (reorder when accepted). |
+| **Early exit** | Recompute per-segment correction-idle. If all segments idle → skip downstream. |
+
+### `deterministic-export-fix.js` (NEW — replaces audit's classification)
+
+| | |
+|---|---|
+| **Duty** | Classify each entry in `audit.ingestion.segmentBoundaries[]` into `chunk_ordering` / `duplicate_chunk` / `segment_boundary_gap` / `timestamp_discontinuity` / none. Apply chunk reorder and duplicate-segment exclusion. Flag-only for boundary-gap and timestamp-discontinuity. |
+| **Mutates** | Yes (chunk reorder; duplicate-segment exclusion via drops). |
+| **Early exit** | After mutation, recompute per-segment correction-idle. If all segments idle → skip downstream. |
+
+### `spine-intervals.js`
+
+| | |
+|---|---|
+| **Duty** | Compute per-`trkSegIndex` `correction.spineIntervals` from current `workingOrderedPoints`. Predicate: forward-monotonic + strictly positive Δt + non-cluster-member, within one segment. |
+| **Mutates** | No. |
+| **Called** | First time after deterministic export fix. Re-derived after each mutating apply in Phase 1 and after each Phase 2 mutation. |
+
+### `block-proposal.js`
+
+| | |
+|---|---|
+| **Duty** | Emit `block-finding` for each maximal contiguous `belowAnchor` run within one `trkSegIndex`. Compute `internalMonotonicity`. Mark proposal as edge proposal if `[B_min, B_max]` extends the segment's `spineEnvelope` on either side. |
+| **Mutates** | No. |
+| **Scope** | Per-segment. Skipped for segments with `hasAnomalies: false`. |
+
+### `singleton-proposal.js`
+
+| | |
+|---|---|
+| **Duty** | Non-duplicate backtrack candidates. Sampling vs gpxIndex window; emit `insert` proposal (`isExactGroup: false`, `candidates.length === 1`) with `targetTimeMs`, candidate `tPrev`, `tNext`, `bracketGpxIndexes` (segment-bounded). Kinematic check computed here and embedded in candidate payload; guard disposition (gating) evaluated in `resolution-apply`. Mark as edge proposal if `targetTimeMs` would land at segment's first or last spine slot. |
+| **Mutates** | No. |
+| **Scope** | Per-segment. |
+
+### `duplicate-proposal.js`
+
+| | |
+|---|---|
+| **Duty (per pass)** | Traversal-adjacent rescan for `adjacent-exact-drop` (within segment); emit `insert` proposals for same-`timeMs`-different-coords competition groups (`isExactGroup: false`, `candidates.length ≥ 2`) with per-candidate kinematic payloads; emit `insert` proposals with `isExactGroup: true` for non-adjacent identical groups (MVP = flag-only, `applied: false`). Cross-segment same-time → `cross_segment_duplicate` (excludedFromTrust, no proposal). |
+| **Mutates** | No. |
+| **Scope** | Per-segment competition pools. Phase 2 handles cross-segment adjacent dedupe. |
+
+### `overlap-detection.js`
+
+| | |
+|---|---|
+| **Duty** | Cross-proposal footprint mapping (segment-scoped). Block path first: brackets, numeric socket, pierce-check; emit `overlapBlockResolution`. Then cross-kind collision detection. Emit `overlapVetoedProposalIds` (internal runner state) and proposal-scope annotations. |
+| **Mutates** | No. |
+| **Scope** | Per-segment proposal set. |
+
+### `coupling-detection.js`
+
+| | |
+|---|---|
+| **Duty** | Compute bilateral disturbance zones; build coupling edges; form coupled regions; emit `couplingBlockedProposalIds` and `independentProposalIds`. Kinematic reference points for `block-finding` = its bracket anchors (`prevGpxIndex`, `nextGpxIndex`); for `insert` proposals = `bracketGpxIndexes` in candidate payload. All proposal kinds with kinematic references participate symmetrically in coupling. Strictly intra-segment in Phase 1. |
+| **Mutates** | No. |
+
+### `resolution-apply.js`
+
+| | |
+|---|---|
+| **Duty** | AND gate: `applyable = proposals \ overlapVetoed \ couplingBlocked`. For `block-finding` socket-ok proposals that pass the gate: run kinematic guard before apply (speedPrev² + speedNext² metric; 80 kph per-speed threshold; fail → do not apply; block members → excludedFromTrust `block_kinematic_guard_failed`; annotation `block_reorder_kinematic_guard_failed`). For `insert` length=1 proposals: run kinematic guard; fail → do not apply; candidate → excludedFromTrust `insert_kinematic_guard_failed`; annotation `insert_kinematic_guard_failed`. For `insert` length≥2 non-exact: select winner by kinematic score (lowest sum-of-squares among passers; lowest-`gpxIndex` tiebreak; fallback to lowest score if all fail). Apply all remaining in deterministic order: block-reorder → insert (winner) → adjacent-exact-drop (descending `dropGpxIndex`). Append `rearrangements` with `passIndex` and `trkSegIndex`. |
+| **Mutates** | Yes — only mutator besides early stages and Phase 2. |
+| **Post-apply** | Recompute spine for affected segment; recompute that segment's correction-idle. If true → exit segment's Phase 1 loop. |
+
+### `edge-reconciliation.js` (NEW — Phase 2)
+
+| | |
+|---|---|
+| **Duty** | Pairwise pass over adjacent boundaries; resolve staged edge proposals against neighbour stability per the table in **§ Phase 2**. |
+| **Mutates** | Yes (single pass, no re-trigger of Phase 1). |
+| **Outputs** | Append to `rearrangements`; flag `edge_coupling_unstable` for double-unstable pairs. |
+
+### `residual-diagnostic-sweep.js` (NEW — Phase 3)
+
+| | |
+|---|---|
+| **Duty** | Read-only scan over final `workingOrderedPoints` for any traversal-adjacent backward time pairs; aggregate by intra-segment vs cross-segment. |
+| **Mutates** | No. |
+| **Outputs** | `correction.diagnostics.residualTemporalAnomalies[]`. |
+
+### `correction-export.js`
+
+| | |
+|---|---|
+| **Duty** | Build `fullOrderedPoints`, `excludedFromTrust`, `canonicalTrustedPoints`. Finalize `correction` profile with `drops`, `excludedFromTrust`, `annotations`, `rearrangements`, `multipass.perSegment[]`, `diagnostics`. Set `applied` and `skipReason` on each proposal record. Validate partition invariant. |
+| **Mutates** | No (read final snapshot). |
 
 ---
 
-#### [NEW] `packages/correction/pipeline/objective-adjacent-dedupe.js`
+## `correctionRunner` orchestration
 
-First mutation stage. **Stream-adjacent** pairs only (**ADR-0013** `curr.gpxIndex === prev.gpxIndex + 1`).
-
-**Non-adjacent 100% duplicates:** **Never** drop here, even when time+lat+lon+ele match on non-consecutive **`gpxIndex`** rows — collapsing assumes one observation is redundant on the **correct** spine when **neither** may be. **`duplicate-proposal`** / **`duplicate.exact_group_unresolved`** handles those (MVP). **Automated non-adjacent dedupe** = **post-MVP** (recursive / spine-aware policy).
-
-**Usable `ele`:** finite number inside the same **valid band** as **`audit.elevation`** / motion (e.g. profile **`validFloorM`**–**`validCeilingM`**, aligned with audit defaults). **Not usable:** missing / unparsable / **out-of-bounds** (per **`audit.elevation`**), non-finite, or null where no valid number — use **`audit.elevation.tagIndex`** when needed.
-
-**When `timeMs`, `lat`, `lon` match** (ingestion equality semantics):
-
-| Situation | Action |
-|-----------|--------|
-| **Time, lat, lon, ele** all exactly equal (including identical null/absent **ele**) | **Drop one**; **`correction.drops`** reason **`adjacent-exact-duplicate`**. |
-| **Both** lack **usable** **ele** | **Drop one**; survivor keeps absent / **`null`** **ele** as appropriate. |
-| **Exactly one** **usable** **ele** | **Drop** the point **without** usable **ele**; survivor keeps the in-band value. |
-| **Both** **finite** **ele** but **both** **out-of-bounds** | **Drop one**; survivor **`ele = null`** (and consistent **`eleAbsent`** / metadata per product rules) for downstream DEM / interpolate / smooth. |
-| **Both** have **usable** **ele** but **values differ** | **No drop** — **`correction.flags`** both **`adjacent-duplicate-ele-mismatch`**. |
-
-**When time or lat/lon differ** — partial duplicate: **flag**, **no drop**.
-
-**Immutability:** New objects for updated survivor rows (**`ele`** cleared to **`null`** where applicable); do not mutate **`audit`**.
-
-**Non-adjacent** exact groups remain **`duplicate-proposal`** — **not** **`singleton-proposal`**.
-
-**After this step:** Recompute **`noCorrectionTemporalAnomalies`** on the working snapshot (see **§ Recomputing `noCorrectionTemporalAnomalies`**). If `true`, skip all subsequent correction substeps and jump to **correction-export**.
-
----
-
-#### [NEW] `packages/correction/pipeline/reversal-check.js`
-
-**Goal:** One **cheap** global hypothesis — **full array reversal** — then an **objective** accept/reject using **`noCorrectionTemporalAnomalies`** on the **reversed** snapshot (same definition as **participation-check** / **§ Recomputing `noCorrectionTemporalAnomalies`**). Do **not** require pointwise monotonic **`timeMs`** on the reversed array; interior backtrack can remain and still fail a strict monotonic test even when reversal is the right fix.
-
-**Skip entire module (no-op):** **`geometry-only`** (participation); **all-identical** / time-useless pre-check (below); fewer than **2** finite **`timeMs`** rows in **`workingOrderedPoints`** (nothing to compare).
-
-**All-identical pre-check:**
 ```
-IF adjacentDuplicate === parseableTimestampPointCount - 1
-  OR sampling shows all non-positive Δt are exactly 0
-  → treat as time-useless / geometry-only for reversal; skip reversal (align with existing roadmap)
+correctionRunner({ points, auditResult }):
+
+  // === Pre-segment phase ===
+  participationProfile, segmentProfiles = participation-check(points, auditResult)
+
+  if all segmentProfiles correction-idle AND product allows full skip:
+    return minimal-handoff(points)
+
+  workingOrderedPoints = copy(points)
+  multipassMaxIterations = profile.multipassMaxIterations  // default 500
+
+  objective-adjacent-dedupe(workingOrderedPoints)
+  recompute per-segment correction-idle
+  if all idle: jump to correction-export
+
+  reversal-check(workingOrderedPoints, segmentProfiles)
+  recompute per-segment correction-idle
+  if all idle: jump to correction-export
+
+  deterministic-export-fix(workingOrderedPoints,
+                           audit.ingestion.segmentBoundaries,
+                           audit.ingestion.segmentSummaries)
+  recompute per-segment correction-idle
+  if all idle: jump to correction-export
+
+  spineIntervals = spine-intervals(workingOrderedPoints)  // first build
+
+  // === Phase 1 — per-segment terminal solve ===
+  stagedEdgeProposals = {}
+  FOR seg in segmentProfiles ordered by trkSegIndex ASC:
+    if seg.correctionIdle: continue
+    iter = 0
+    LOOP:
+      iter++
+      if iter >= multipassMaxIterations:
+        seg.exitReason = 'max-iterations'
+        break
+
+      // block-proposal → block-finding proposals
+      // singleton-proposal → insert proposals (length=1, isExactGroup=false)
+      // duplicate-proposal → adjacent-exact-drop + insert proposals (competition or isExactGroup)
+      proposals = block-proposal(seg) ∪ singleton-proposal(seg) ∪ duplicate-proposal(seg)
+
+      // scope gate (intra-segment only at this point)
+      for p in proposals:
+        if p targets outside seg.spineEnvelope:
+          if p is edge proposal:
+            stagedEdgeProposals[seg.trkSegIndex].add(p)
+            remove p from proposals
+          else:
+            mark p out_of_segment_scope; add subject to excludedFromTrust;
+            remove p from proposals
+
+      if proposals empty:
+        seg.exitReason = 'no-proposals'
+        break
+
+      overlapResult = overlap-detection(proposals, spineIntervals[seg])
+      couplingResult = coupling-detection(proposals, workingOrderedPoints, spineIntervals[seg])
+
+      applyable = proposals \ overlapResult.vetoed \ couplingResult.blocked
+
+      if applyable empty:
+        seg.exitReason = 'stalemate'
+        break
+
+      // resolution-apply: kinematic guard on block-finding + insert length=1 before apply;
+      // competition winner selection for insert length≥2; adjacent-exact-drop no guard
+      resolution-apply(applyable, workingOrderedPoints, spineIntervals[seg])
+      append rearrangements (with passIndex=iter, trkSegIndex=seg.trkSegIndex)
+      spineIntervals[seg] = spine-intervals(workingOrderedPoints, seg)
+      recompute seg.correctionIdle
+      if seg.correctionIdle:
+        seg.exitReason = 'correction-idle'
+        break
+
+      if applyable == proposals (full set applied):
+        // verification pass
+        rebuilt = block-proposal(seg) ∪ singleton-proposal(seg) ∪ duplicate-proposal(seg)
+        // (scope-gate again; overlap + coupling; do NOT apply)
+        if rebuilt empty:
+          seg.exitReason = 'idle'
+          break
+        // else: continue loop
+    // end LOOP
+    seg.iterationsRun = iter
+  // end FOR
+
+  // === Phase 2 — edge reconciliation ===
+  FOR boundary (S[i], S[i+1]) in ascending order:
+    edge-reconciliation(stagedEdgeProposals[i].lastEdge,
+                       stagedEdgeProposals[i+1].firstEdge,
+                       workingOrderedPoints,
+                       spineIntervals)
+    // append rearrangements with stage='edge-reconciliation';
+    // unresolvable double-unstable pairs → annotation edge_coupling_unstable (segment-scope);
+    // affected points → excludedFromTrust reason edge_unresolved
+  // re-derive spine for any segment that was mutated by Phase 2
+
+  // === Phase 3 — global residual diagnostic sweep ===
+  diagnostics = residual-diagnostic-sweep(workingOrderedPoints)
+  // observational only
+
+  // === Export ===
+  return correction-export(workingOrderedPoints, drops, excludedFromTrust,
+                          annotations, rearrangements, segmentProfiles,
+                          proposals, multipass-stats, diagnostics)
 ```
 
-**Reversal candidacy (either is enough — evaluate on current `workingOrderedPoints` after adjacent dedupe):**
-
-1. **No forward Δt (original audit):** `audit.sampling.time.timestampContext.hasAnyPositiveTimeDelta === false` on the **ingest** audit passed into the runner.
-2. **Endpoint envelope:** Let **`firstUsable`** = first row in **`workingOrderedPoints`** order with finite **`timeMs`**, **`lastUsable`** = last such. Require **≥2** usable timestamps. Let **`tMax`** / **`tMin`** be max / min **`timeMs`** over all rows with finite **`timeMs`**. **Envelope** iff **`firstUsable.timeMs === tMax`**, **`lastUsable.timeMs === tMin`**, and **`tMax > tMin`**. (Captures “file runs backward in time” at the ends even when **`hasAnyPositiveTimeDelta`** is **true** because of interior noise.)
-
-If **neither** (1) nor (2) holds → **no-op**.
-
-**Hypothesis application:** Reverse **`workingOrderedPoints`** traversal order (reverse the array; **`gpxIndex`** unchanged per point). **Re-run** read-only timestamp + sampling slice on the reversed snapshot (or equivalent) and compute **`noCorrectionTemporalAnomalies`**.
-
-- If **`noCorrectionTemporalAnomalies === true`** → **keep** reversal; record **`correction.rearrangements`** (full reversal) per schema / ADR.
-- Else → **revert** to pre-reversal order; **`correction.flags`** e.g. **`reversal-unconfirmed`** (no mutation retained).
-
-**Note:** Full reversal **inverts traversal order** — see **Traversal neighbours** at top.
-
-**After this step:** Recompute **`noCorrectionTemporalAnomalies`** on the **final** working snapshot (already evaluated for accept path; recompute once for runner consistency) → short-circuit to **correction-export** if **true**.
-
 ---
 
-#### [NEW] `packages/correction/pipeline/spine-intervals.js`
+## Output shape (MVP)
 
-**Read-only** on `workingOrderedPoints`.
-
-**Duty:** Compute **`correction.spineIntervals`** from **current** traversal order + **`auditResult`** per **versioned** rules (**§ Multipass correction and spine**). Called **once after `reversal-check`** and **again after each mutating `resolution-apply`**.
-
----
-
-#### [NEW] `packages/correction/pipeline/overlap-detection.js` (or `overlap-detector.js`)
-
-**Read-only** on `workingOrderedPoints`.
-
-**Inputs:** **`correction.proposals[]`**, **`workingOrderedPoints`**, **`auditResult`**, **`correction.spineIntervals`** (if used), and any **shared** context the profile defines.
-
-**Duty:** (**§ Block overlap**, **§ Overlap vs coupling**)
-
-- For each **`kind: 'block-finding'`**, compute **`B_min`/`B_max`**, **brackets** (**not** naïvely “immediate wrong neighbours” only — **§ Terminology: bracket vs socket**), **closed socket**, overlap components, and populate **`correction.overlapBlockResolution[]`** with **`status`** and optional **`blockReorderPayload`**.
-- For **all** proposal kinds, determine **temporal** vetoes — **`overlapVetoedProposalIds`** (or equivalent), **`flags`**, **`masks`**, **`overlapDiagnostics`**.
-
-**Does not** build **duplicate** kinematic competition clusters (**`duplicate-proposal`** owns grouping — **§ Proposal discipline**). **Exact rules** are **versioned** in ADR — not fully locked in this plan.
-
-**Mutates:** **No**.
-
----
-
-#### [NEW] `packages/correction/pipeline/block-proposal.js`
-
-**Read-only** on `workingOrderedPoints`.
-
-**Duty:** For each **maximal contiguous** **`belowAnchor`** run, emit **`correction.proposals[]`** entry **`kind: 'block-finding'`** with payload **`gpxIndexes[]`** (or **`fromGpxIndex`/`toGpxIndex`** span) and **`internalMonotonicity: boolean`** (**§ Internal monotonicity**). **Does not** compute **brackets**, **socket**, **`B_min`/`B_max`**, or **`block-reorder`** — **`overlap-detection`** (**§ Block overlap**). **Does not** consult **`overlap-detection`** / **`coupling-detection`**. **No** kinematic on chunk (MVP).
-
----
-
-#### [NEW] `packages/correction/pipeline/singleton-proposal.js`
-
-**Read-only** on `workingOrderedPoints`. **Non-duplicate** backtrack / insert candidates only — **not** same-`timeMs` equivalence classes (**`duplicate-proposal`**).
-
-- **Backtrack insert:** **Sampling / clustering** vs **`gpxIndex` ± `localWindowSize`** (see **Sampling baseline**); **lenient kinematic** logged to **`kinematicChecks[]`**. Emit **`singleton-insert`** **proposal** or **local** flags (**`sampling.*`**, **`kinematic.*`**, etc.) when **this module’s** rules fail — **not** overlap/coupling vetoes (those are **downstream**).
-- **Does not** handle **non-adjacent 100% exact duplicates** — see **`duplicate-proposal`**.
-
----
-
-#### [NEW] `packages/correction/pipeline/duplicate-proposal.js`
-
-**Read-only** on `workingOrderedPoints`. Runs **every** multipass iteration (with **`block-proposal`** and **`singleton-proposal`**).
-
-**Per-pass stream-adjacent exact duplicates (`adjacent-exact-drop`):** Scan **current** `workingOrderedPoints` for **stream-adjacent** pairs (**ADR-0013** `curr.gpxIndex === prev.gpxIndex + 1`). Where **`timeMs`**, **lat**, **lon**, and **ele** resolution match **`objective-adjacent-dedupe`** / **ADR-correction-0004** (same table as **§ `objective-adjacent-dedupe`** — full quadruplet equal, asymmetric **ele**, dual OOB, etc.), emit **`correction.proposals[]`** entries **`kind: 'adjacent-exact-drop'`** with payload **`keepGpxIndex`**, **`dropGpxIndex`** (and survivor **`ele`** hint if needed — versioned). **`resolution-apply`** performs the removal and **`correction.drops`** logging (**same** reasons as early dedupe, e.g. **`adjacent-exact-duplicate`**). **Rationale:** **`block-reorder`** can make **non-adjacent** exact twins **adjacent** in traversal order; only **`objective-adjacent-dedupe`** would miss them without this pass. **Non-adjacent** exact pairs **still** do not get **`adjacent-exact-drop`** here — they remain for **`exact-group-flag-only`** below.
-
-**Order inside this module (determinism):** (1) Detect all **`adjacent-exact-drop`** pairs on **current** `workingOrderedPoints`. (2) Build **`duplicate-reorder`** and **`exact-group-flag-only`** cohorts from a **logical** post-drop view: **simulate** those removals in **deterministic** order (**descending `dropGpxIndex`**) **without** mutating the real array until **`resolution-apply`**, so **`duplicate-reorder`** payloads never reference **`dropGpxIndex`** rows and stay valid **after** drops run first in the duplicate batch (**§ `resolution-apply`**). (3) **`resolution-apply`** applies **`adjacent-exact-drop`** **before** **`duplicate-reorder`**; multiple drops: **descending `dropGpxIndex`** — **versioned**.
-
-**Competition keys** for same-instant **different** coords: **`(timeMs, competitionSegmentId)`** (or equivalent), **not** `timeMs` alone — see **§ Monotonic capability and duplicate competition scoping**. Classify contiguous **`belowAnchor`** runs, **monotonic capability**, **segment** boundaries (versioned), and **outside-tethered** duplicate sub-runs before forming kinematic groups. Include **`adjacentDuplicate`** chain members **only** within the **same** segment and subject to **tether** rules.
-
-**Exact duplicate groups — non-adjacent (MVP):** For **≥2** points sharing **identical** `timeMs` + lat + lon + ele (per **ADR-0004**) where **no** **`adjacent-exact-drop`** applies on **this** snapshot (they are **not** stream-adjacent pairs / runs), emit **`duplicate.exact_group_unresolved`**, **flag + mask**, **`kind: 'exact-group-flag-only'`**; **no** kinematic competition, **no** winner. **Segmentation** still applies to **which** indices are grouped for **exact-group** detection where the profile distinguishes **disjoint** exact slabs (avoid one spurious mega-group across segments).
-
-**Same `timeMs`, different coordinates:** Emit **`duplicate-reorder`** **proposal**(s) **per competition segment** with **kinematic** evaluation logged when **this module’s** rules yield an applyable candidate; **`overlap-detection`** / **`coupling-detection`** decide if each may run. **Kinematic** rules: comparative + lenient ceiling; tie / all hot → **`kinematic.no_safe_move`**, **local** flags. **Winner** chosen at **apply** time → non-winners flagged for **`excludedFromTrust`** at export.
-
----
-
-#### [NEW] `packages/correction/pipeline/coupling-detection.js`
-
-**Read-only.** Inputs: **`correction.proposals[]`**, **`flags`**, **`workingOrderedPoints`**, **`correction.spineIntervals`** (if used), and any overlap output needed for **edge** policy.
-
-**Duty:** Build **referential** **`coupledRegions`** and **`independentProposalIds`** across **all proposal kinds** (**`block-finding`**, **singleton**, **duplicate**, **`adjacent-exact-drop`**). **Not** temporal overlap as the **definition** of an edge; **not** an edge for one `gpxIndex` with two labels (multi-label **flags** on that index).
-
-**Output:** **`correction.coupling`**: **`independentProposalIds[]`**, **`coupledRegions[]`** (each: `proposalIds[]`, `gpxIndexes[]`, `reason`).
-
----
-
-#### [NEW] `packages/correction/pipeline/resolution-apply.js`
-
-**Mutates** `workingOrderedPoints`.
-
-**Duty:** **`block-reorder`:** For each **`block-finding`** **`id`** with **`overlapBlockResolution.status === 'socket-ok'`**, **`id`** **not** in **`overlapVetoedProposalIds`**, and **`id`** **coupling-safe**, apply **`blockReorderPayload`** from **`overlapBlockResolution`**; log **`rearrangements`** **`kind: 'block-reorder'`**. **Other kinds:** Let **`applyable`** = **`independentProposalIds`** ∩ **not** **`overlapVetoedProposalIds`**. Apply in order: **`singleton-insert`** → **`adjacent-exact-drop`** (**descending `dropGpxIndex`**) → **`duplicate-reorder`**. **`exact-group-flag-only`:** **flag-only** via **`flags`** / **`masks`**. **Coupled** or **overlap-vetoed** → **`coupled.*`** / **`overlap.*`** + **mask**; **no** partial apply where forbidden.
-
-**After this step:** Recompute **`noCorrectionTemporalAnomalies`** → short-circuit to **correction-export** if **true** (product rule).
-
----
-
-#### [NEW] `packages/correction/pipeline/correction-export.js`
-
-Assembles **`correction`** profile, **`canonicalTrustedPoints`**, and **`correction.fullOrderedPoints`** / **`correction.excludedFromTrust`** (see **§ Handoff: pre-split lists**). **`flags[].type`** values follow **MVP flag taxonomy** (above); keep stable strings for downstream study.
-
-**Export step:** From final **`workingOrderedPoints`**, build **`fullOrderedPoints`** (same order), compute **`excludedFromTrust`** from **correction** policy only (**flags** / **masks** / same-time losers / unresolved overlap regions, etc. — **not** audit ingestion rejects or audit temporal missing/unparsable duplication), then **`canonicalTrustedPoints` = filter** of `fullOrderedPoints` excluding that set. **`drops`** already removed from both ordered lists. Downstream **joins `audit` + participation** for gap and eligibility semantics.
-
-**Output shape (MVP):**
 ```js
 {
   correction: {
@@ -531,295 +857,308 @@ Assembles **`correction`** profile, **`canonicalTrustedPoints`**, and **`correct
       profileId: string,
       algorithmVersion: string,
       parameters: {
-        minTimestampPairCoverageRatio: 0.8,
-        localWindowSize: 5,
-        lenientMaxImpliedSpeedKph: 80,  // example default; versioned
-        // ...
+        minTimestampPairCoverageRatio: 0.8,   // global coverage gate
+        lenientMaxImpliedSpeedKph: 80,        // kinematic guard ceiling (per-speed, not score)
+        multipassMaxIterations: 500,          // per-segment safety net
+        timezoneShiftTolerance: 0.1           // fraction-of-hour tolerance for DST detection
       }
     },
     participation: {
       mode: 'geometry-only' | 'timestamp-sparse' | 'full',
       coverageRatio: number,
-      reasons: string[], // MVP: no qualityLevel; numeric coverage for internal study
-      noCorrectionTemporalAnomalies: boolean
+      reasons: string[]
     },
+    segmentProfiles: [
+      {
+        trkSegIndex: number,
+        mode: string,
+        coverageRatio: number,
+        hasAnomalies: boolean,
+        isFullyReversed: boolean,
+        spineEnvelope: { minTimeMs, maxTimeMs },
+        correctionIdle: boolean,
+        iterationsRun: number,
+        exitReason: 'idle'           // all applied + verification pass empty
+                  | 'stalemate'      // proposals exist but all gated
+                  | 'no-proposals'   // no proposals emitted this pass
+                  | 'correction-idle'// correctionIdle predicate true after apply
+                  | 'max-iterations' // safety cap hit (defect signal)
+                  | null             // segment not yet terminal (should not appear at export)
+      }
+    ],
     spineIntervals: [
-      { fromGpxIndex: number, toGpxIndex: number /* versioned: optional kind, reason */ }
+      { trkSegIndex: number, fromGpxIndex: number, toGpxIndex: number }
     ],
     multipass: {
       maxIterations: number,
-      iterationsRun: number,
-      exitReason?: 'idle' | 'stalemate' | 'no-proposals' | 'max-iterations',
-      // optional — § Multipass diagnostics
-      passLog?: Array<{
-        passIndex: number,
-        proposalIds: string[],
-        applyableIds: string[],
-        appliedProposalIds?: string[],
-        overlapVetoedCount?: number,
-        couplingBlockedCount?: number,
-      }>,
+      perSegment: { [trkSegIndex]: { iterationsRun, exitReason, passLog? } }
     },
     proposals: [
-      { id: string, kind: 'block-finding' | 'singleton-insert' | 'adjacent-exact-drop' | 'duplicate-reorder' | 'exact-group-flag-only',
-        gpxIndexes?: number[], internalMonotonicity?: boolean, keepGpxIndex?: number, dropGpxIndex?: number, /* payload per kind — ADR */ }
+      // block-finding: emitted by block-proposal.js
+      { id, kind: 'block-finding',
+        trkSegIndex: number,
+        isEdgeProposal?: boolean,
+        applied: boolean,
+        skipReason?: 'kinematic_guard_failed' | 'overlap_vetoed' | 'coupling_blocked' | 'edge_unresolved',
+        // blockReorderPayload, internalMonotonicity, bracketGpxIndexes, etc.
+      },
+      // insert: unified kind (replaces singleton-insert, duplicate-reorder, exact-group-flag-only)
+      { id, kind: 'insert',
+        trkSegIndex: number,
+        isEdgeProposal?: boolean,
+        isExactGroup: boolean,         // geometry-identical → no kinematic check; MVP = flag-only
+        targetTimeMs: number,
+        candidates: [                  // length=1: single-subject; length≥2: competition
+          { gpxIndex, lat, lon, tPrev?, tNext?, bracketGpxIndexes?, kinematics? }
+        ],
+        winner?: { gpxIndex, ... },    // set if applied=true
+        applied: boolean,
+        skipReason?: 'kinematic_guard_failed' | 'overlap_vetoed' | 'coupling_blocked' | 'edge_unresolved',
+      },
+      // adjacent-exact-drop: emitted by duplicate-proposal.js
+      { id, kind: 'adjacent-exact-drop',
+        trkSegIndex: number,
+        dropGpxIndex: number,
+        survivorGpxIndex: number,
+        applied: boolean,
+      }
     ],
     overlapApplication: {
-      vetoedProposalIds?: string[],
-      overlapBlockResolution?: Array<{
-        findingId: string,
-        status: 'socket-ok' | 'overlap' | 'no-bracket' | 'skipped-non-monotonic',
-        tPrev?: number, tNext?: number, bMin?: number, bMax?: number,
-        prevGpxIndex?: number, nextGpxIndex?: number,
-        blockReorderPayload?: object /* versioned */
-      }>,
+      // vetoedProposalIds is internal runner state; encoded in proposal.skipReason at export
+      overlapBlockResolution: [
+        { findingId, status, tPrev?, tNext?, bMin?, bMax?,
+          prevGpxIndex?, nextGpxIndex?, blockReorderPayload? }
+      ]
     },
     coupling: {
-      independentProposalIds: string[],
-      coupledRegions: [ { proposalIds: string[], gpxIndexes: number[], reason: string } ]
+      // independentProposalIds / couplingBlockedProposalIds are internal runner state;
+      // encoded in proposal.skipReason at export
+      coupledRegions: [
+        { proposalIds, gpxIndexes, edges: [
+            { blockedProposalId, disturbanceSourceId, disturbedGpxIndex, side }
+          ], reason }
+      ]
     },
-    kinematicChecks: [
-      { stage, gpxIndexes?, candidates?, metrics, passed, reason, parametersSnapshot }
+    rearrangements: [
+      // includes: full-reversal, segment-reversal, segment-chunk-reorder,
+      //          block-reorder, insert (singleton or competition winner),
+      //          adjacent-exact-drop
+      { kind, passIndex, trkSegIndex, gpxIndexes, stage, ... }
     ],
-    rearrangements: [ /* resolution-apply (+ early reversal); kinds e.g. block-reorder (from block-finding+overlap) | singleton-insert | adjacent-exact-drop | duplicate-reorder | full-reversal; ... */ ],
-    drops: [ { gpxIndex, reason } ],
-    masks: [ { fromGpxIndex, toGpxIndex, reason } ],
-    flags: [ { type, gpxIndex?, gpxIndexes?, reason, action, stage?, relatedTimeMs?, details? } ],  // type from § MVP flag taxonomy
-    overlapDiagnostics: [
-      // one entry per overlap-flagged block (or merge into flags[].details — ADR)
-      { gpxIndexes: number[], closedSocketWouldFit?: boolean, intervalViolation?: boolean,
-        equalityConflictWithSpine?: boolean, duplicateTimeSignal?: boolean,
-        bracketMissing?: boolean, partialOverlap?: boolean, tPrev?: number, tNext?: number, bMin?: number, bMax?: number }
+    drops: [
+      { gpxIndex, reason: DropReason, stage }
     ],
-    fullOrderedPoints: [ /* ... same objects as working snapshot, drops removed */ ],
-    excludedFromTrust: [ { gpxIndex, reasons: string[], /* link to flag ids if useful */ } ]
+    excludedFromTrust: [
+      { gpxIndex, reasons: ExcludedReason[], details? }
+    ],
+    annotations: [
+      { scope: 'session' | 'segment' | 'proposal',
+        scopeRef: { trkSegIndex?, proposalId? },
+        kind: AnnotationKind,
+        details? }
+    ],
+    diagnostics: {
+      residualTemporalAnomalies: [
+        { trkSegIndex?, fromTrkSegIndex?, toTrkSegIndex?,
+          gpxIndexes, kind: 'intra-segment-below-prev' | 'intra-segment-below-anchor'
+                          | 'cross-segment-below-prev' | 'cross-segment-below-anchor' }
+      ]
+    },
+    fullOrderedPoints: [ /* same objects as final working snapshot, drops removed */ ],
+    excludedFromTrustResolved: [ /* gpxIndex set, mirroring excludedFromTrust for fast lookup */ ]
   },
-  canonicalTrustedPoints: [ /* subset of fullOrderedPoints — default handoff to kinematic / smoothing */ ]
+  canonicalTrustedPoints: [ /* fullOrderedPoints \ excludedFromTrust */ ]
 }
 ```
 
 ---
 
-#### [NEW] `packages/correction/correction-runner.js`
+## Handoff: pre-split lists (dumb downstream)
 
-**API:** `correctionRunner({ points, auditResult })` → `{ correction, canonicalTrustedPoints }`  
-(`correction` embeds **`fullOrderedPoints`**, **`excludedFromTrust`**, etc.)  
-Called **inline from the audit pass** after audit assembly (same as before).
+Correction-export does the partition once:
 
-**Orchestration:**
+| Field | Role |
+|---|---|
+| `canonicalTrustedPoints` | Default input for kinematic correction, smoothing, metrics. Consecutive entries are polyline vertices for "trusted" work. Time-conditioned eligibility joins `audit` + per-segment participation. |
+| `correction.fullOrderedPoints` | Full traversal after correction (drops removed), including untrusted rows. UX: single ordered trace, grey segments, tooltips. |
+| `correction.excludedFromTrust` | Correction-layer outcomes only (point-scope exclusions). Does **not** duplicate audit ingestion rejections or audit temporal missing/unparsable. |
+| `correction.drops` | Indices removed from both lists. |
+| `correction.annotations` | Session/segment/proposal-scope annotations (renamed from `sessionFlags`). |
+| `audit.ingestion.rejections` | Never in pipeline arrays; UI joins for rejected-row provenance. |
 
-1. **participation-check** — compute **mode** / **`coverageRatio`** first, then **`noCorrectionTemporalAnomalies`** (**correction-idle**); if **correction-idle** and product rules allow **full skip** → emit profile + trusted/full/excluded as in **skip** path (see participation-check) → **return**.
-2. Else set **`workingOrderedPoints` = copy(`points`)**, initialize **`correction.proposals[]`**, read **`multipassMaxIterations`** from profile (default **5**), **`multipass.iterationsRun = 0`**.
-3. **objective-adjacent-dedupe** — mutate; recompute **`noCorrectionTemporalAnomalies`**; short-circuit to **correction-export** if **true**.
-4. **reversal-check** (if applicable) — **full reversal** when candidacy holds (**§ `reversal-check`**); **keep** reorder only if **`noCorrectionTemporalAnomalies`** on reversed snapshot; recompute on **final** order; short-circuit if **true**.
-5. **`spine-intervals`** — set **`correction.spineIntervals`** (**first** spine build).
-6. **Multipass loop** (see **§ Multipass correction and spine**):
-   - If **`multipass.iterationsRun ≥ multipassMaxIterations`** → **break**; **`multipass.exitReason = 'max-iterations'`**.
-   - **`block-proposal` → `singleton-proposal` → `duplicate-proposal`** — replace **`correction.proposals[]`** for this pass.
-   - If **`proposals`** is **empty** → **break**; **`multipass.exitReason = 'no-proposals'`**.
-   - **overlap-detection** → **coupling-detection**.
-   - If **`applyable`** (overlap-safe ∩ coupling-safe) is **empty** while **`proposals`** is **non-empty** → increment **`multipass.iterationsRun`**; **break**; **`multipass.exitReason = 'stalemate'`** (fixed point: **no** mutation).
-   - **`resolution-apply`** — apply **`applyable`** in deterministic order; append **`rearrangements`** (include **`passIndex`** / **`iteration`** in log if useful).
-   - Increment **`multipass.iterationsRun`**. **Recompute** **`spine-intervals`** after **mutating** apply. **Recompute** **`noCorrectionTemporalAnomalies`**; if **true** → **break**; **`multipass.exitReason = 'idle'`**. Else **continue** loop.
-7. **correction-export** — **always**: split **`workingOrderedPoints`** → **`fullOrderedPoints`**, **`excludedFromTrust`**, **`canonicalTrustedPoints`**.
+**Partition sanity (accepted ingest only):** for every `gpxIndex` in `points` at correction input, exactly one of:
+- `gpxIndex ∈ correction.drops` (absent from `fullOrderedPoints`), or
+- `gpxIndex ∈ canonicalTrustedPoints` (in `fullOrderedPoints`, not in `excludedFromTrust`), or
+- `gpxIndex ∈ excludedFromTrust` (in `fullOrderedPoints`, not in `canonicalTrustedPoints`).
 
-**Note:** **Overlap-detection** and **coupling-detection** are **recomputed** every pass on **fresh** **`proposals`** and **current** geometry. **`resolution-apply`** enforces the **AND** gate each pass and merges **`block-finding`** with **`overlapBlockResolution`** for **`block-reorder`**.
-
-**Internal state:** **`workingOrderedPoints`** mutates only in **early stages** and **`resolution-apply`**. **Export** emits the **pre-split** handoff.
-
-**Recomputing `noCorrectionTemporalAnomalies`:** Use the same **correction-idle** definition as **participation-check** on the current snapshot. Implementation choice: **re-run** `auditTimestamps` + sampling time slice on **`workingOrderedPoints`** (read-only, second pass), or an equivalent pure function on the snapshot. Must respect **ADR-0013** adjacency. Original `auditResult` remains the immutable first-pass record on the upload.
+Ingestion-rejected indices are not in `points`; they appear only in audit + UI merge.
 
 ---
 
-### Module reference (MVP): duty, I/O, early exit
+## Waypoints and routes (C4)
 
-**Short-circuit summary**
-
-| After step | Condition | Next step |
-|------------|-----------|-----------|
-| **participation-check** | Product **full skip** + **`noCorrectionTemporalAnomalies`** (**correction-idle**) | **return** (minimal `correction`; trusted/full = copy(`points`); **`excludedFromTrust` = []**; **`proposals`/`coupling`** empty or omitted per schema) |
-| **objective-adjacent-dedupe** | `noCorrectionTemporalAnomalies === true` | **correction-export** only — **skip** spine + **multipass** |
-| **reversal-check** | `noCorrectionTemporalAnomalies === true` | same as above |
-| **Inside multipass** | `noCorrectionTemporalAnomalies === true` after **apply** | **exit** loop → **correction-export** |
-| **Never** | — | Do **not** skip **correction-export** on the main path — it **always** runs after dedupe/reversal (short-circuit) or after **resolution-apply**, except **participation** early **return** which still emits a valid handoff **without** running dedupe. |
+`audit.waypoints[]` and `audit.routes[]` are forwarded **directly** from audit to the rendering layers, bypassing correction. Correction does not mutate them. Each entry carries a per-element validity flag set by ingestion. Renderers decide whether to draw based on the flag. They never receive `gpxIndex`; correction's `gpxIndex`-keyed structures (`workingOrderedPoints`, `spineIntervals`, proposals, `drops`, `excludedFromTrust`) operate exclusively on the trkpt `points[]` array.
 
 ---
 
-### `participation-check.js`
+## Audit module table (post-segmentation reference)
 
-| | |
-|--|--|
-| **Duty** | Read **audit**; set **`coverageRatio`** and **mode** (**geometry-only** / **full** / **timestamp-sparse**) using **`minTimestampPairCoverageRatio` (default 0.8)** first; then **`noCorrectionTemporalAnomalies`** (**correction-idle** — reorder/backtrack/duplicate-time scope only; **not** global gap-free). |
-| **Mutates** | **No** `workingOrderedPoints` (not run yet). |
-| **Inputs** | `points`, `auditResult` (temporal, sampling, motion/distance summary for denominators — see section body). |
-| **Outputs** | `participation` slice of `correction`; may set runner-internal **`skipHeavyCorrection`** per product rules. |
-| **Early exit** | If **full skip** path: emit **`canonicalTrustedPoints` = fullOrdered = copy(`points`)**, **`excludedFromTrust` = []** (correction-only list; **do not** mirror **audit** gaps here), minimal **`correction`**, **`return`**. **Do not** run dedupe → export. |
-| **Otherwise** | Continue to initialize **`workingOrderedPoints` = copy(`points`)**, **`correction.proposals = []`**. |
+Canonical implementations under `packages/audit/pipeline/`. Per-segment slices added to each module's output.
 
----
+| Module | File | Per-segment additions |
+|---|---|---|
+| **Ingestion** | `gpx-ingestion-module.js` | `audit.ingestion.segmentSummaries[]` (with boundary coords); `audit.ingestion.segmentBoundaries[]` (raw observations only — no classification). |
+| **Temporal** | `timestamp-audit.js` | `audit.temporal.perSegment[trkSegIndex]` with point-level tag counts (`belowAnchor`, `belowPrevValid`, `adjacentDuplicate`, `nonAdjacentRepeat`, `missing`, `unparsable`). Tags are segment-scoped (e.g. `belowAnchor` = below the rolling anchor within the segment). No global belowAnchor / belowPrevValid arrays. |
+| **Sampling** | `sampling-audit.js` | `audit.sampling.perSegment[trkSegIndex]` with per-segment `consecutiveTimestampPairsCount`, `positiveTimeDeltaCount`, Δt clustering metadata. Distance: same. |
+| **Motion** | `motion-audit.js` | `audit.motion.perSegment[trkSegIndex]` with pair-level tag counts. |
+| **Elevation** | `elevation-audit.js` | `audit.elevation.perSegment[trkSegIndex]` with point-level tag counts. |
+| **Audit export** | `audit-export-module.js` | Assembles per-segment slices into the audit payload. |
 
-### `objective-adjacent-dedupe.js`
-
-| | |
-|--|--|
-| **Duty** | Stream-adjacent only: **drop** exact quadruplet or **ele**-resolved duplicates per **§ `objective-adjacent-dedupe`** table; **flag** conflicting dual usable **ele**; **flag** partial match; **no** non-adjacent drops (MVP). |
-| **Mutates** | **Yes** — removes dropped indices from **`workingOrderedPoints`**; may set survivor **`ele`** to **`null`** (OOB pair case). |
-| **Early exit** | Recompute **`noCorrectionTemporalAnomalies`**. If **true** → **correction-export** (steps **5–8** **skipped** — proposals through **resolution-apply**); ensure **`proposals`**, **`coupling`**, **`overlapApplication`** are **empty** / default. |
+**Removed from audit:** `export-fault-detection.js` no longer classifies. Its segment-summary work is folded into ingestion. Its boundary observations become `audit.ingestion.segmentBoundaries[]`. The classification logic moves to the correction layer's `deterministic-export-fix.js`.
 
 ---
 
-### `reversal-check.js`
+## Multipass diagnostics (recommended)
 
-| | |
-|--|--|
-| **Duty** | If candidacy holds (**no** positive Δt on ingest audit **or** **endpoint envelope** on current `workingOrderedPoints`), apply **full reversal** **hypothesis**; **accept** iff reversed snapshot has **`noCorrectionTemporalAnomalies`**; else **revert** + **`reversal-unconfirmed`**. |
-| **Mutates** | **Yes** — reorder **`workingOrderedPoints`** only when hypothesis **accepted**; otherwise unchanged. |
-| **Entry** | **Skip** if geometry-only, all-identical pre-check, or **<2** usable **`timeMs`**. |
-| **Early exit** | Recompute **`noCorrectionTemporalAnomalies`**. If **true** → **correction-export**; steps **5–8** skipped; empty proposals/coupling/overlap outputs. |
+Per segment, log per iteration:
 
----
+- `passIndex`, `proposalIds`, `applyableIds`, `appliedProposalIds`, `overlapVetoedCount`, `couplingBlockedCount`.
+- Per-segment `iterationsRun` and `exitReason`.
 
-### `overlap-detection.js`
+Phase 1 verification-pass entries logged with `verificationOnly: true` and `appliedProposalIds: []`.
 
-| | |
-|--|--|
-| **Duty** | Consume **`correction.proposals[]`** + context; for **`block-finding`**: **brackets**, **socket**, **`overlapBlockResolution[]`**, **`blockReorderPayload`**. Emit **temporal-overlap** vetoes / **`overlapDiagnostics`** / masks (**versioned**). **Not** owner of **duplicate** kinematic clustering. |
-| **Mutates** | **No**. |
-| **Early exit** | **None** required — always completes (may emit zero flags). |
+This is not an invariant that proposal cardinality must shrink monotonically — it is a safety net for non-determinism hunts and regression debugging.
 
 ---
 
-### `block-proposal.js`
+## Performance and architecture (expectations)
 
-| | |
-|--|--|
-| **Duty** | Emit **`block-finding`** for each **maximal** contiguous **`belowAnchor`** run + **`internalMonotonicity`**. **No** bracket/socket/`block-reorder` (**§ Block overlap**). **No** kinematic (MVP). |
-| **Mutates** | **No**. |
-| **Skipped** | If runner short-circuited after dedupe/reversal (**never reached**). |
+- **Upload latency:** Each stage is O(n) or O(n × small window) on point count. Per-segment multipass is O(segments × max-iterations × per-segment-work). With `multipassMaxIterations = 500` as a safety net (real exits at idle/stalemate happen in 1–10 passes), overhead is acceptable for MVP. Optimize only if profiling shows a problem.
+- **Architecture:** Explicit pipeline with three phases. Pre-split export keeps downstream simple.
+- **ES modules:** D2 — transition from CommonJS to ES modules is low-cost (mechanical: `function foo` → `export function foo`, `require` → `import`, `"type": "module"` in package.json, jest/vitest config tweak). Defer until convenient; not a one-way door, not blocking MVP.
 
 ---
 
-### `singleton-proposal.js`
+## Documentation
 
-| | |
-|--|--|
-| **Duty** | **Non-duplicate** backtrack: sampling vs **`gpxIndex`** window; **lenient kinematic** → **`singleton-insert`** proposal **or** **local** **`sampling.*` / `kinematic.*`** flags. **No** exact-duplicate groups. |
-| **Mutates** | **No**. |
+### Correction ADRs (split by scope)
 
----
+- **Cross-cutting branch scope:** `docs/adr/general/0005-post-audit-correction-branch-scope.md` — audit vs correction boundary, observation-only audit (now strengthened by classification moving out of audit), versioned correction.
+- **Correction-layer decisions (MVP):** `docs/adr/correction/README.md` — indexed ADRs. Required updates / additions:
+  - **0006** (bracket/socket/pierce-check/block-reorder kinematic guard) — **revised 2026-04-23**: kinematic guard added for block-reorder; prior "no kinematic for block path" revoked. See ADR-correction-0015.
+  - **0009** (cross-proposal footprint) — segment-bounded.
+  - **0010** (coupling kinematic reference stability) — **revised 2026-04-23**: asymmetric blocking exception revoked; block-finding now coupling-blockable via its bracket anchor references. Symmetric blocking model adopted.
+  - **0011** — three-phase pipeline; per-segment terminal solve; edge reconciliation; residual diagnostic sweep.
+  - **0012** — schema cleanup: drops, excludedFromTrust, annotations; unified `insert` proposal kind; `applied`/`skipReason` on proposals; deprecation of `flags[]`, `masks[]`, `sessionFlags[]`.
+  - **0013** — boundary classification ownership (deterministic export fix in correction; audit emits raw `segmentBoundaries[]` only).
+  - **0014** — traversal-adjacent vs stream-adjacent dedupe primitive; traversal-adjacent is canonical.
+  - **0015** — kinematic guard disposition: gating for single-subject (block-reorder, insert length=1); advisory-with-fallback for multi-candidate competition (insert length≥2); sum-of-squares score metric; 80 kph lenient ceiling.
 
-### `duplicate-proposal.js`
+### Audit pipeline module docs
 
-| | |
-|--|--|
-| **Per pass** | **`adjacent-exact-drop`** scan + **`duplicate-reorder`** + **`exact-group-flag-only`** (**§ `duplicate-proposal`** body). |
-| **Exact group** (non-adjacent on snapshot) | **`duplicate.exact_group_unresolved`**, **`exact-group-flag-only`**; **no** kinematic competition. |
-| **Different coords, same instant** | **`duplicate-reorder`** per **competition segment**; **`overlap-detection`** / **`coupling-detection`** gate apply. |
-| **Mutates** | **No**. |
+- `docs/project/pipeline/gpx-ingestion-module.md` — update for `segmentBoundaries[]` (raw observations); remove classification language.
+- `docs/project/pipeline/export-fault-detection.md` — **deprecate** as audit module doc; replace with `docs/project/pipeline/deterministic-export-fix.md` under correction.
+- All audit module docs: add per-segment slice schemas.
 
----
-
-### `coupling-detection.js`
-
-| | |
-|--|--|
-| **Duty** | From **`proposals`** (all kinds), **`flags`**, **`workingOrderedPoints`**: compute **`independentProposalIds`**, **`coupledRegions`** (**referential** edges only — **§ MVP architecture**). |
-| **Mutates** | **No**. |
-| **Empty input** | If **`proposals`** empty: **`independentProposalIds = []`**, **`coupledRegions = []`**. |
+`implementation_plan.md` (this file) is the operational spec. ADRs record decisions, rejected alternatives, and rationale.
 
 ---
 
-### `resolution-apply.js`
+## Verification plan
 
-| | |
-|--|--|
-| **Duty** | **`block-reorder`** from **`block-finding`** + **`overlapBlockResolution`** (`socket-ok` + AND gate). Then **singleton → `adjacent-exact-drop` → `duplicate-reorder`** among **`applyable`**; **`exact-group-flag-only`** → flags/masks. **Vetoed** / **coupled** → flags + masks; **no** partial apply where forbidden. Append **`rearrangements`**. |
-| **Mutates** | **Yes** — **only** stage besides **early** steps that **reorders** / **insert-shuffles** `workingOrderedPoints` for **block/singleton/duplicate**. |
-| **Early exit** | After apply, **`noCorrectionTemporalAnomalies`** recomputed; if **true** → **exit** multipass → **correction-export**. |
-| **No independents** | **No-op** on array for that pass; may **stalemate** multipass; still run **export**. |
+### Adversarial fixtures (rewrite from scratch per D4)
+
+Existing audit tests are weak and miss edge cases. The verification suite is rewritten with synthetic GPX fixtures that exercise the per-segment + edge-reconciliation pipeline end-to-end.
+
+#### Audit-layer fixtures (per-segment emission)
+
+- Multi-segment fixture with mixed `belowAnchor` / `belowPrevValid` distribution → verify per-segment tag aggregates match expected counts; no global tag arrays.
+- Boundary-only fixtures → verify `audit.ingestion.segmentBoundaries[]` emits one entry per boundary with correct `gapMs`, `impliedDistanceM`, `impliedSpeedKph` (Haversine); no classification fields.
+
+#### Pre-segment phase
+
+- Correction-idle at participation (per-segment all-clear) → skip correction.
+- Adjacent dupes 100% identical → one drop logged with `stage: 'objective-adjacent-dedupe'`.
+- All-identical timestamps → no false reversal; geometry-only path.
+- Envelope-candidacy reversal accept / revert based on per-segment correction-idle on reversed snapshot.
+- Per-segment `isFullyReversed` accept / revert with neighbour consistency check.
+
+#### Deterministic export fix
+
+- `chunk_ordering` boundary → segments reordered; logged with `kind: 'segment-chunk-reorder'`.
+- `duplicate_chunk` boundary, 100% identical overlap → overlap region dropped from later segment; rest of later segment retained.
+- `duplicate_chunk` boundary, non-identical overlap → entire later segment excluded (drops + annotation `duplicate_chunk_excluded`).
+- `segment_boundary_gap` → flagged on every forward gap regardless of size; impliedDistance/Speed populated.
+- `timestamp_discontinuity` (round-hour backward) → flagged with `suspectedTimezoneOffsetHours`; no auto-correction.
+
+#### Phase 1 (per-segment terminal solve)
+
+- Block-finding internal monotonicity true / false paths.
+- Block socket-ok in middle of segment → `block-reorder` applied.
+- Block at segment edge → staged as edge proposal, not applied in Phase 1.
+- Singleton mid-segment → applied subject to overlap + coupling gates.
+- Singleton at segment edge → staged as edge proposal.
+- Block + singleton overlap (singleton inside `[B_min, B_max]`) → both vetoed; both excludedFromTrust.
+- Two singletons with overlapping corridors → both vetoed.
+- Spine pierce-check: numeric socket passes but spine point sits in corridor → block status `overlap`; annotation `overlap_spine_pierce_detected`.
+- Block socket-ok kinematic guard: speedPrev or speedNext exceeds 80 kph → block not applied; annotation `block_reorder_kinematic_guard_failed`; block members → excludedFromTrust.
+- Insert length=1 kinematic guard fail → not applied; annotation `insert_kinematic_guard_failed`; candidate → excludedFromTrust.
+- Insert length≥2 competition → winner selected by lowest sum-of-squares score; annotation `insert_competition_resolved` or `insert_competition_kinematic_guard_failed`; losers → excludedFromTrust `insert_competition_loser`.
+- Coupling: insert's kinematic neighbour is a block's leaving-side disturbance point → insert coupling-blocked. Block's bracket anchor is a singleton's disturbance point → block coupling-blocked (symmetric).
+- Adjacent-exact-drop has no disturbance zone → does not couple.
+- Stalemate exit when proposals exist but all gated.
+- Idle exit when full proposal set applied + verification pass empty.
+- Multipass cap hit → exit `max-iterations`; annotation `multipass_cap_hit` (segment-scope).
+- Correction-idle short-circuit at any per-segment recomputation point.
+
+#### Phase 2 (edge reconciliation)
+
+- S[i].lastEdge stable, S[i+1] has staged singleton edge → singleton resolves against S[i].lastTime.
+- S[i] has staged edge, S[i+1].firstEdge stable → symmetric.
+- Both edges staged → `edge_coupling_unstable`; both staged proposals discarded; affected points excludedFromTrust with reason `edge_unresolved`.
+- Cross-segment adjacent dedupe: S[i].lastPoint == S[i+1].firstPoint, both spine-stable → drop one in Phase 2.
+- Phase 2 mutation creates new interior anomaly → does NOT re-trigger Phase 1; surfaces in Phase 3.
+
+#### Phase 3 (residual diagnostic sweep)
+
+- `4 5 6 1 | 2 3 7 8 9` cross-segment block → Phase 1 + Phase 2 do nothing; Phase 3 logs cross-segment-below-anchor entries.
+- Intra-segment residual after a Phase 2 mutation → Phase 3 logs intra-segment entry.
+
+#### Schema
+
+- `drops`, `excludedFromTrust`, `annotations` are the only output collections; no `flags[]`, `masks[]`, or `sessionFlags[]` produced.
+- Partition sanity: every accepted gpxIndex appears in exactly one of drops / canonicalTrustedPoints / excludedFromTrust.
+- Every `insert` proposal has `isExactGroup` and `candidates[]` populated; `kind` is never `singleton-insert`, `duplicate-reorder`, or `exact-group-flag-only`.
+- Kinematic guard annotation `details.kinematics` is present for every `block_reorder_kinematic_guard_failed`, `insert_kinematic_guard_failed`, `insert_competition_resolved`, `insert_competition_kinematic_guard_failed` annotation.
+- No proposal with `applied: true` has a `skipReason`.
+- No proposal with `skipReason: 'kinematic_guard_failed'` has `applied: true`.
+
+### Regression check
+
+Existing audit adversarial suite is **not** preserved as-is — it tested the global-tag model. Rewrite the audit suite to test per-segment emission. Correction is additive and does not mutate the first-pass audit payload.
 
 ---
 
-### `correction-export.js`
+## Open items / explicit deferrals
 
-| | |
-|--|--|
-| **Duty** | Build **`fullOrderedPoints`**, **`excludedFromTrust`**, **`canonicalTrustedPoints`**; finalize **`correction`** profile. |
-| **Mutates** | **No** `workingOrderedPoints` (read final snapshot). |
-| **Early exit** | **Never skip** when runner reached export path from dedupe/reversal short-circuit or full pipeline. |
-
----
-
-### Documentation
-
-#### [DONE] Correction ADRs (split by scope)
-
-- **Cross-cutting branch scope:** [`docs/adr/general/0005-post-audit-correction-branch-scope.md`](docs/adr/general/0005-post-audit-correction-branch-scope.md) — audit vs correction boundary, observation-only audit, versioned correction.
-- **Correction-layer decisions (MVP):** [`docs/adr/correction/README.md`](docs/adr/correction/README.md) — indexed ADRs **0001–0008** (see **0001** / **0008** for **proposal-fed** overlap + coupling + **AND** apply).
-
-**implementation_plan.md** remains the detailed operational spec (terminology, module table, flag taxonomy, overlap diagnostics, etc.); ADRs record **decisions, rejected alternatives, and rationale** only.
-
-#### [MODIFY] `docs/project/product-roadmap.md`
-
-Add section-level timestamp detection and post-MVP partial-overlap kinematic salvage under backlog if not already present.
+- **`rawTime` capture** — deferred. Re-extend audit if post-MVP DST analysis becomes worthwhile.
+- **Cross-segment block reorder** (e.g. `4 5 6 1 | 2 3 7 8 9` patterns) — MVP does nothing; Phase 3 surfaces residuals; design decision deferred until telemetry confirms real-world prevalence.
+- **Block splitting algorithm** — deferred per A2; MVP is flag-only.
+- **Cadence-similarity gap annotation** — belongs to downstream smoothing layer, not the spine layer in correction.
+- **ES modules transition** — deferred per D2; not blocking.
+- **Lenient kinematic ceiling default** — versioned parameter (`lenientMaxImpliedSpeedKph`, MVP default 80 km/h); refine after telemetry.
+- **Quality levels (UX-facing `qualityLevel`)** — MVP emits numeric `coverageRatio` only.
 
 ---
 
 ## Post-MVP exploration (backlog)
 
-- Richer **proposal graph** / **correction.analysis** (beyond **`coupling.coupledRegions`**).
-- **Overlap footprint map** across all proposal kinds (detect-only for advanced contention) — see **`docs/handoffs/`** handoff notes if present.
-- **Non-adjacent 100% duplicate** collapse / spine-aware dedupe (only safe with multi-pass or explicit spine policy — **not** MVP **`objective-adjacent-dedupe`**).
-- **Block overlap resolution:** **internal time ordering** of sub-block; **split** block using **outside** timestamps / duplicate instants as cut points; try **smaller chunk insertions** before irreducible overlap; **cap** splits — **versioned profile**, not silent repair.
-- **Partial overlap kinematic salvage** (paired with split strategy above).
-- Offline **A/B** on **`coupling-detection`** sensitivity + **`kinematicChecks`** + **`flags`**.
-- **Kinematic smoothing ADR:** Formal **segment** / **allowed-adjacency** graph from **`gpxIndex` gaps** (ingestion + drops) + **`excludedFromTrust`** + kinematic-correction output; default polyline = **`canonicalTrustedPoints`** — **not** “scan `fullOrderedPoints` for masks on every frame.”
-
----
-
-## Open Questions
-
-> [!NOTE]
-> **Runner call site — resolved:** inline from audit with `{ points, auditResult }`.
-
-> [!NOTE]
-> **Quality levels — deferred:** MVP emits **`coverageRatio`** only; no UX-facing `qualityLevel` until calibration data exists.
-
-Remaining tunables: exact **lenient speed** default; **bracket** predicate edge cases (start/end of file); whether **geometry-only** tracks call runner at all or return empty `correction`.
-
----
-
-## Verification Plan
-
-### Adversarial fixtures (existing + new)
-
-- **Correction-idle** at participation (after **0.8** coverage gate + **correction-scoped** `noCorrectionTemporalAnomalies`) → **skip correction** / early **return**; **audit gaps** may still exist — downstream joins **audit + participation**
-- Adjacent dupes **100% identical** (time+lat+lon+ele) → one drop logged
-- Adjacent: same time+coords, **one usable ele**, other missing/unparsable/OOB → **one drop**, keeper has in-band **ele**
-- Adjacent: same time+coords, **both** lack usable **ele** → **one drop**
-- Adjacent: same time+coords, **both** OOB → **one drop**, survivor **`ele = null`**
-- Adjacent: same time+coords, **both** usable **ele**, **unequal** → **`adjacent-duplicate-ele-mismatch`**, **both flagged**, no drop
-- All-identical timestamps → no false reversal; geometry-only / flagged path
-- **Envelope** candidacy: first usable = global max **`timeMs`**, last usable = global min, interior messy → reversal **accepted** only if **`noCorrectionTemporalAnomalies`** after reverse; else **revert** + **`reversal-unconfirmed`**
-- **`hasAnyPositiveTimeDelta === false`** path → same **accept** = **`noCorrectionTemporalAnomalies`**, not strict pointwise monotonicity on reversed array
-- Successful reversal → **`rearrangements`** logged; runner may short-circuit if **correction-idle**
-- Chunk: **intra-block** time retreat (true internal `belowPrevValid` vs predecessor **in** block) → **no** MVP reorder
-- Chunk: puzzle slab `5→1,2,3,4` style — first point `belowPrevValid` vs bracket only → **eligible** for monotonicity check + socket test
-- Chunk: **`block-finding`** + **`overlapBlockResolution`** **`socket-ok`** + coupling-safe → **`block-reorder`** in **`resolution-apply`**; **no** kinematic on block (MVP)
-- Overlap + **partial** / **mixed** (interval + equality + duplicate-time) → **`overlap.block`** + **`overlapDiagnostics`** components; **flag + mask**, no reorder
-- Same-time different-coords: **decoupling** defers competition when refs overlap flagged regions → `coupled.same_time_deferred`
-- Same-time: both / all candidates above lenient speed → **`kinematic.no_safe_move`**, logged
-- Same instant in a **chain** (`5,5,6,5,5,5`): **full `timeMs` group**, not only `nonAdjacentRepeat` row
-- Non-block backtrack: **insert** only when decoupled; **sampling** baseline from **`gpxIndex`** window — else flag (`sampling.below_neighbour_baseline` or related)
-- Same-time **winner** chosen → **non-winners** flagged + **`excludedFromTrust`**; absent from **`canonicalTrustedPoints`**; present in **`fullOrderedPoints`**
-- Recompute `noCorrectionTemporalAnomalies` after **early mutations** and after **`resolution-apply`** → short-circuit to export when **true**
-- **Referential coupling:** e.g. neighbouring **singleton** + **duplicate** proposals → **`coupling.coupledRegions`**; **no** partial **`resolution-apply`** on that blob when policy forbids
-- **Overlap veto:** proposal **`id`** in **`overlapVetoedProposalIds`** (or equivalent) → **not** in **`applyable`** even if **independent** in coupling; **`block-finding`** without **`socket-ok`** does **not** get **`block-reorder`**
-- **Non-adjacent exact duplicate group** → **`duplicate.exact_group_unresolved`**, **not** singleton
-
-- **Downstream contract:** Fixture with **ingestion hole** + **masked/flagged** index — **`canonicalTrustedPoints`** omits excluded rows; **pairwise dynamics** still consult **`audit`/`drops`** for **`gpxIndex` gaps** between consecutive trusted rows
-- **Pre-split:** Assert **`excludedFromTrust`** ∪ trusted **`gpxIndex`** ∪ **`drops`** partitions **`points`** input (accepted ingest)
-
-### Regression check
-
-Audit adversarial suite unchanged; correction is additive and does not mutate first-pass audit payload.
+- Cross-segment block reorder design (driven by Phase 3 residual telemetry).
+- Block overlap resolution (split, smaller chunk insertions, partial overlap kinematic salvage).
+- Non-adjacent 100% duplicate spine-aware collapse.
+- `rawTime`-aware DST/timezone classification with deterministic correction.
+- Cross-kind cross-segment overlap resolution (only after the simpler per-segment + edge-reconciliation MVP collects telemetry).
+- Section-level (intra-segment) participation modes for stitched GPX with mixed regions.
+- Migration of correction package (and audit) to ES modules.
+- Kinematic smoothing ADR: formal segment / allowed-adjacency graph from `gpxIndex` gaps + `excludedFromTrust` + downstream kinematic-correction output.
+- Offline A/B on coupling-detection sensitivity, kinematic checks, and annotation taxonomy (kinds and score thresholds).
