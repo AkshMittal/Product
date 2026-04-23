@@ -303,6 +303,33 @@ function parseGPX(gpxString) {
 
   const trkSegmentCount = trkSegIndexCounter; // total <trkseg> elements across all tracks
 
+  // ── Step 5: Build segmentBoundaries[] from accepted points
+  // One entry per trkSegIndex that has at least one accepted point.
+  // ADR-correction-0013: raw boundaries; correction layer classifies them.
+  // Shape: { trkSegIndex, firstGpxIndex, lastGpxIndex, firstTimeMs, lastTimeMs }
+  const segBoundaryMap = new Map();
+  for (var i = 0; i < points.length; i++) {
+    var pt = points[i];
+    var seg = pt.trkSegIndex;
+    if (!segBoundaryMap.has(seg)) {
+      segBoundaryMap.set(seg, {
+        trkSegIndex:   seg,
+        firstGpxIndex: pt.gpxIndex,
+        lastGpxIndex:  pt.gpxIndex,
+        firstTimeMs:   pt.timeMs,
+        lastTimeMs:    pt.timeMs
+      });
+    } else {
+      var entry = segBoundaryMap.get(seg);
+      entry.lastGpxIndex = pt.gpxIndex;
+      entry.lastTimeMs   = pt.timeMs;
+    }
+  }
+  // Emit in trkSegIndex order
+  const segmentBoundaries = Array.from(segBoundaryMap.values()).sort(function(a, b) {
+    return a.trkSegIndex - b.trkSegIndex;
+  });
+
   return {
     points,
     audit: {
@@ -324,7 +351,8 @@ function parseGPX(gpxString) {
         rejections: {
           events: rejectionEvents
         },
-        segmentSummaries: exportFaultResult.segmentSummaries
+        segmentSummaries:  exportFaultResult.segmentSummaries,
+        segmentBoundaries: segmentBoundaries
       },
       exportFaults: exportFaultResult.faults,
       waypoints:    waypointCollection,

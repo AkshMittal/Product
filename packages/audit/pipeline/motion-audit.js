@@ -197,6 +197,49 @@ function auditMotion(points, params) {
     }
   }
 
+  // ── Per-segment summary ────────────────────────────────────────────────────
+  // ADR-correction-0013: raw per-segment payloads; correction layer classifies.
+  // Build gpxIndex → trkSegIndex lookup from points array
+  var motionGpxToSeg = new Map();
+  for (var mpi = 0; mpi < points.length; mpi++) {
+    motionGpxToSeg.set(points[mpi].gpxIndex, points[mpi].trkSegIndex);
+  }
+  // Per-segment tag counts (keyed by trkSegIndex)
+  var motionSegMap = new Map();
+  for (var msi = 0; msi < points.length; msi++) {
+    var mSeg = points[msi].trkSegIndex;
+    if (!motionSegMap.has(mSeg)) {
+      motionSegMap.set(mSeg, {
+        trkSegIndex: mSeg,
+        consecutivePairCount: 0,
+        tagCounts: { backwardTime: 0, zeroTimeDelta: 0, timeUnresolvable: 0, nonFiniteDistance: 0, eleUnresolvable: 0 }
+      });
+    }
+  }
+  // Count consecutive pairs per segment
+  for (var mci = 1; mci < points.length; mci++) {
+    var mprev = points[mci - 1];
+    var mcurr = points[mci];
+    if (!gpxStreamAdjacentPair(mprev, mcurr)) continue;
+    var mcSeg = motionGpxToSeg.get(mcurr.gpxIndex);
+    if (mcSeg !== undefined && motionSegMap.has(mcSeg)) {
+      motionSegMap.get(mcSeg).consecutivePairCount++;
+    }
+  }
+  // Count tag annotations per segment
+  for (var mai = 0; mai < pairAnnotations.length; mai++) {
+    var ann2 = pairAnnotations[mai];
+    var annSeg = motionGpxToSeg.get(ann2.fromGpxIndex);
+    if (annSeg === undefined || !motionSegMap.has(annSeg)) continue;
+    var segEntry = motionSegMap.get(annSeg);
+    if (ann2.backwardTime)      segEntry.tagCounts.backwardTime++;
+    if (ann2.zeroTimeDelta)     segEntry.tagCounts.zeroTimeDelta++;
+    if (ann2.timeUnresolvable)  segEntry.tagCounts.timeUnresolvable++;
+    if (ann2.nonFiniteDistance) segEntry.tagCounts.nonFiniteDistance++;
+    if (ann2.eleUnresolvable)   segEntry.tagCounts.eleUnresolvable++;
+  }
+  var motionPerSegment = Array.from(motionSegMap.values()).sort(function(a, b) { return a.trkSegIndex - b.trkSegIndex; });
+
   return {
     audit: {
       motion: {
@@ -209,7 +252,8 @@ function auditMotion(points, params) {
         },
         tagCounts: tagCounts,
         tagIndex: tagIndex,
-        pairAnnotations: pairAnnotations
+        pairAnnotations: pairAnnotations,
+        perSegment: motionPerSegment
       }
     }
   };

@@ -172,6 +172,47 @@ function auditTimestamps(points) {
     ? (lastValidTimestampMs - firstValidTimestampMs) / 1000
     : null;
 
+  // ── Per-segment summary ────────────────────────────────────────────────────
+  // Group accepted points by trkSegIndex and compute per-segment temporal stats.
+  // ADR-correction-0013: raw per-segment payloads; no classification.
+  // Shape: { trkSegIndex, tagCounts, monotonicity: { hasViolation, violationCount } }
+  const segMap = new Map();
+  for (let i = 0; i < points.length; i++) {
+    const seg = points[i].trkSegIndex;
+    if (!segMap.has(seg)) {
+      segMap.set(seg, {
+        trkSegIndex: seg,
+        tagCounts: { missing: 0, unparsable: 0, adjacentDuplicate: 0, belowAnchor: 0, belowPrevValid: 0, nonAdjacentRepeat: 0 },
+        violationCount: 0
+      });
+    }
+  }
+  for (let i = 0; i < pointAnnotations.length; i++) {
+    const ann = pointAnnotations[i];
+    const pt  = pointByGpxIndex.get(ann.gpxIndex);
+    if (!pt) continue;
+    const entry = segMap.get(pt.trkSegIndex);
+    if (!entry) continue;
+    if (ann.missing)             entry.tagCounts.missing++;
+    if (ann.unparsable)          entry.tagCounts.unparsable++;
+    if (ann.adjacentDuplicate)   entry.tagCounts.adjacentDuplicate++;
+    if (ann.belowAnchor)        { entry.tagCounts.belowAnchor++;  entry.violationCount++; }
+    if (ann.belowPrevValid)      entry.tagCounts.belowPrevValid++;
+    if (ann.nonAdjacentRepeat)   entry.tagCounts.nonAdjacentRepeat++;
+  }
+  const perSegment = Array.from(segMap.values())
+    .sort(function(a, b) { return a.trkSegIndex - b.trkSegIndex; })
+    .map(function(entry) {
+      return {
+        trkSegIndex: entry.trkSegIndex,
+        tagCounts: entry.tagCounts,
+        monotonicity: {
+          hasViolation:   entry.violationCount > 0,
+          violationCount: entry.violationCount
+        }
+      };
+    });
+
   return {
     audit: {
       temporal: {
@@ -189,7 +230,8 @@ function auditTimestamps(points) {
           nonAdjacentRepeat: tagIndex.nonAdjacentRepeat.length
         },
         tagIndex,
-        pointAnnotations
+        pointAnnotations,
+        perSegment
       }
     }
   };

@@ -519,6 +519,67 @@ function auditSampling(points, gpxFilename) {
     };
   }
 
+  // ── Per-segment summary ────────────────────────────────────────────────────
+  // ADR-correction-0013: raw per-segment payloads (gpxIndex window pairs per
+  // ADR-correction-0014 stream-adjacency, since this is the sampling question).
+  // Build gpxIndex → trkSegIndex lookup
+  var gpxToSeg = new Map();
+  for (var psi = 0; psi < points.length; psi++) {
+    gpxToSeg.set(points[psi].gpxIndex, points[psi].trkSegIndex);
+  }
+  // Collect unique trkSegIndexes in order
+  var segIndexSet = [];
+  var seenSegIdx = new Set();
+  for (var pxi = 0; pxi < points.length; pxi++) {
+    var segIdx = points[pxi].trkSegIndex;
+    if (!seenSegIdx.has(segIdx)) { seenSegIdx.add(segIdx); segIndexSet.push(segIdx); }
+  }
+  // Bucket time and distance deltas per segment (both endpoints must be in same segment)
+  var segTimeDeltaMap = new Map();
+  var segDistDeltaMap = new Map();
+  for (var sti = 0; sti < segIndexSet.length; sti++) {
+    segTimeDeltaMap.set(segIndexSet[sti], []);
+    segDistDeltaMap.set(segIndexSet[sti], []);
+  }
+  for (var ti = 0; ti < timeDeltasMs.length; ti++) {
+    var tSeg = gpxToSeg.get(timeDeltasMs[ti].fromIndex);
+    if (tSeg !== undefined && segTimeDeltaMap.has(tSeg)) {
+      segTimeDeltaMap.get(tSeg).push(timeDeltasMs[ti].dtSec);
+    }
+  }
+  for (var di = 0; di < distanceDeltas.length; di++) {
+    var dSeg = gpxToSeg.get(distanceDeltas[di].fromIndex);
+    if (dSeg !== undefined && segDistDeltaMap.has(dSeg)) {
+      segDistDeltaMap.get(dSeg).push(distanceDeltas[di].ddMeters);
+    }
+  }
+  function arrayStats(arr) {
+    if (!arr || arr.length === 0) return { count: 0, minMs: null, maxMs: null, medianMs: null };
+    var sorted = arr.slice().sort(function(a, b) { return a - b; });
+    var mid = Math.floor(sorted.length / 2);
+    var med = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    return { count: sorted.length, min: sorted[0], max: sorted[sorted.length - 1], median: med };
+  }
+  var samplingPerSegment = segIndexSet.map(function(seg) {
+    var tStats = arrayStats(segTimeDeltaMap.get(seg));
+    var dStats = arrayStats(segDistDeltaMap.get(seg));
+    return {
+      trkSegIndex: seg,
+      time: {
+        positiveDeltaCount: tStats.count,
+        minMs: tStats.count ? tStats.min * 1000 : null,
+        maxMs: tStats.count ? tStats.max * 1000 : null,
+        medianMs: tStats.count ? tStats.median * 1000 : null
+      },
+      distance: {
+        deltaCount: dStats.count,
+        minMeters: dStats.count ? dStats.min : null,
+        maxMeters: dStats.count ? dStats.max : null,
+        medianMeters: dStats.count ? dStats.median : null
+      }
+    };
+  });
+
   return {
     audit: {
       sampling: {
@@ -575,7 +636,8 @@ function auditSampling(points, gpxFilename) {
           } : null,
           normalization: distanceNormalizationMeta,
           timeConditionedDeltaCount: timeConditionedDistanceDeltas.length
-        }
+        },
+        perSegment: samplingPerSegment
       }
     }
   };
