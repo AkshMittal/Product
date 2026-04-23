@@ -1,33 +1,50 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T10:34:28.985Z",
+    "generatedAtUtc": "2026-04-23T19:49:41.831Z",
     "source": {
       "fileName": "adv-14-multi-trkseg-backtrack.gpx"
     },
     "summary": {
-      "totalPointCount": 6
+      "totalPointCount": 0
     }
   },
   "audit": {
     "ingestion": {
       "counts": {
-        "totalPointCount": 6,
-        "validPointCount": 6,
-        "rejectedPointCount": 0,
-        "pointTypeCounts": {
-          "wpt": 0,
-          "rtept": 0,
-          "trkpt": 6
-        }
+        "totalTrkptCount": 6,
+        "validTrkptCount": 6,
+        "rejectedTrkptCount": 0,
+        "trkSegmentCount": 2,
+        "waypointCount": 0,
+        "routeCount": 0
       },
       "context": {
-        "hasMultiplePointTypes": false,
-        "hasAnyTimestampValues": true
+        "hasAnyTimestampValues": true,
+        "hasWaypoints": false,
+        "hasRoutes": false,
+        "hasMultipleSegments": true
       },
       "rejections": {
         "events": []
-      }
+      },
+      "segmentSummaries": [],
+      "segmentBoundaries": [
+        {
+          "trkSegIndex": 0,
+          "firstGpxIndex": 0,
+          "lastGpxIndex": 2,
+          "firstTimeMs": 1771027200000,
+          "lastTimeMs": 1771027210000
+        },
+        {
+          "trkSegIndex": 1,
+          "firstGpxIndex": 3,
+          "lastGpxIndex": 5,
+          "firstTimeMs": 1771027204000,
+          "lastTimeMs": 1771027220000
+        }
+      ]
     },
     "temporal": {
       "totalPointsEvaluated": 6,
@@ -63,6 +80,38 @@
           "belowAnchor": true,
           "depthFromAnchorMs": 6000,
           "belowPrevValid": true
+        }
+      ],
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "tagCounts": {
+            "missing": 0,
+            "unparsable": 0,
+            "adjacentDuplicate": 0,
+            "belowAnchor": 0,
+            "belowPrevValid": 0,
+            "nonAdjacentRepeat": 0
+          },
+          "monotonicity": {
+            "hasViolation": false,
+            "violationCount": 0
+          }
+        },
+        {
+          "trkSegIndex": 1,
+          "tagCounts": {
+            "missing": 0,
+            "unparsable": 0,
+            "adjacentDuplicate": 0,
+            "belowAnchor": 1,
+            "belowPrevValid": 1,
+            "nonAdjacentRepeat": 0
+          },
+          "monotonicity": {
+            "hasViolation": true,
+            "violationCount": 1
+          }
         }
       ]
     },
@@ -212,7 +261,39 @@
           "zeroFinalDeviationCount": 1
         },
         "timeConditionedDeltaCount": 4
-      }
+      },
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "time": {
+            "positiveDeltaCount": 2,
+            "minMs": 5000,
+            "maxMs": 5000,
+            "medianMs": 5000
+          },
+          "distance": {
+            "deltaCount": 3,
+            "minMeters": 15.525982331786231,
+            "maxMeters": 15.525988413523885,
+            "medianMeters": 15.525985373203598
+          }
+        },
+        {
+          "trkSegIndex": 1,
+          "time": {
+            "positiveDeltaCount": 2,
+            "minMs": 5000,
+            "maxMs": 11000,
+            "medianMs": 8000
+          },
+          "distance": {
+            "deltaCount": 2,
+            "minMeters": 15.525976252108293,
+            "maxMeters": 15.525979292495805,
+            "medianMeters": 15.52597777230205
+          }
+        }
+      ]
     },
     "motion": {
       "summary": {
@@ -247,6 +328,30 @@
           "toGpxIndex": 3,
           "backwardTime": true,
           "dtSec": -6
+        }
+      ],
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "consecutivePairCount": 2,
+          "tagCounts": {
+            "backwardTime": 1,
+            "zeroTimeDelta": 0,
+            "timeUnresolvable": 0,
+            "nonFiniteDistance": 0,
+            "eleUnresolvable": 0
+          }
+        },
+        {
+          "trkSegIndex": 1,
+          "consecutivePairCount": 3,
+          "tagCounts": {
+            "backwardTime": 0,
+            "zeroTimeDelta": 0,
+            "timeUnresolvable": 0,
+            "nonFiniteDistance": 0,
+            "eleUnresolvable": 0
+          }
         }
       ]
     },
@@ -300,6 +405,30 @@
           "gpxIndex": 5,
           "ele": 100,
           "adjacentDuplicate": true
+        }
+      ],
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "totalPointsEvaluated": 3,
+          "validElevationPointCount": 3,
+          "tagCounts": {
+            "missing": 0,
+            "unparsable": 0,
+            "outOfBounds": 0,
+            "adjacentDuplicate": 2
+          }
+        },
+        {
+          "trkSegIndex": 1,
+          "totalPointsEvaluated": 3,
+          "validElevationPointCount": 3,
+          "tagCounts": {
+            "missing": 0,
+            "unparsable": 0,
+            "outOfBounds": 0,
+            "adjacentDuplicate": 3
+          }
         }
       ]
     }
