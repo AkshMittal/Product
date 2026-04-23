@@ -16,3 +16,5 @@ Decisions for **post-audit correction**: participation, early mutations, proposa
 | [0006](0006-overlap-vs-referential-coupling-block-kinematic.md) | Overlap vs coupling; block reorder without kinematic (MVP) | accepted (revised) | 2026-04-13 |
 | [0007](0007-audit-modules-correction-participation.md) | Audit modules vs correction participation (MVP) | accepted | 2026-04-13 |
 | [0008](0008-early-block-chunk-reorder-before-proposals.md) | Unified proposal feed to overlap + coupling; **AND** apply (**supersedes** early-only chunk) | accepted (revised) | 2026-04-13 |
+| [0009](0009-overlap-detection-cross-proposal-footprint-scope.md) | Overlap-detection scope: cross-proposal footprint mapping | accepted | 2026-04-20 |
+| [0010](0010-coupling-detection-kinematic-reference-stability.md) | Coupling-detection: kinematic reference stability and bilateral disturbance zones | accepted | 2026-04-20 |
