@@ -3,139 +3,231 @@
 /**
  * packages/correction/runner/correction-runner.js
  *
- * Top-level 3-phase correction orchestrator.
+ * Top-level orchestrator for the three-phase correction pipeline.
  *
- * Phase 1: Per-segment terminal solve (multipass loop per trkSegIndex)
- * Phase 2: Edge reconciliation (cross-segment)
- * Phase 3: Residual diagnostic sweep (full canonical traversal, no mutations)
- *
- * @param {Object} auditJson    - full audit payload (from audit-export-module)
- * @param {Object} params       - override params (optional)
- * @returns {Object} correction payload
+ * Signature:
+ *   runCorrection(auditJson, acceptedPoints, params) → correctionPayload
+ *   runCorrection(acceptedPoints)                    → correctionPayload (minimal form)
  */
 
 var workingStateModule  = require('../state/working-state');
-var preSegBoundary      = require('../pre-segment/boundary-classifier');
 var participation       = require('../pre-segment/participation-check');
+var boundaryClassifier  = require('../pre-segment/boundary-classifier');
 var objectiveDedupe     = require('../pre-segment/objective-adjacent-dedupe');
 var reversalCheck       = require('../pre-segment/reversal-check');
 var exportFix           = require('../pre-segment/deterministic-export-fix');
+var duplicateProposalMod = require('../proposals/duplicate-proposal');
 var spineModule         = require('../spine/spine-intervals');
+var idleModule          = require('../state/correction-idle');
 var phase1Loop          = require('./phase1-loop');
 var edgeRecon           = require('../phase2/edge-reconciliation');
 var residualSweep       = require('../phase3/residual-diagnostic-sweep');
 var correctionExport    = require('../export/correction-export');
 
-/**
- * @param {Object} auditJson
- * @param {Object} [params]
- * @returns {Object}
- */
-function runCorrection(auditJson, params) {
-  var ingestion   = (auditJson && auditJson.audit && auditJson.audit.ingestion) || {};
-  var temporal    = (auditJson && auditJson.audit && auditJson.audit.temporal)  || {};
-  var exportFaults = (auditJson && auditJson.audit && auditJson.audit.exportFaults) || [];
-
-  // All accepted points (from ingestion — in practice the caller passes these too)
-  // For now we reconstruct from auditJson if available; full wiring in Phase I.
-  // The correction runner receives the accepted points array as a separate argument.
-  // This stub uses an empty array; runCorrection is called as:
-  //   runCorrection(auditJson, acceptedPoints, params)
-  // We handle the overloaded signature below.
-  var acceptedPoints = [];
-  var resolvedParams = params;
-  if (Array.isArray(params)) {
-    // Called as runCorrection(auditJson, acceptedPoints, paramsObj)
-    acceptedPoints  = params;
-    resolvedParams  = arguments[2] || {};
-  } else if (Array.isArray(auditJson)) {
-    // Called as runCorrection(acceptedPoints) — minimal form
-    acceptedPoints  = auditJson;
-    auditJson       = {};
-    resolvedParams  = params || {};
+function runCorrection(auditJson, acceptedPoints, params) {
+  // Parameter normalisation.
+  var resolvedAudit  = auditJson || {};
+  var resolvedPoints = acceptedPoints;
+  var resolvedParams = params || {};
+  if (Array.isArray(auditJson) && !acceptedPoints) {
+    resolvedPoints = auditJson;
+    resolvedAudit  = {};
+  }
+  if (!Array.isArray(resolvedPoints)) {
+    throw new Error('runCorrection: acceptedPoints[] required');
   }
 
-  // ── Pre-segment phase ──────────────────────────────────────────────────────
-  var segmentBoundaries = ingestion.segmentBoundaries || [];
-  var boundaryClassifications = preSegBoundary.classifySegmentBoundaries(segmentBoundaries);
-  participation.checkParticipation(acceptedPoints);
+  // ── Initial state ──────────────────────────────────────────────────────────
+  var workingState = workingStateModule.createWorkingState(resolvedPoints);
 
-  // Objective adjacent dedupe (stream-adjacent, pre-mutation)
-  var objDrops = objectiveDedupe.findObjectiveAdjacentDuplicates(acceptedPoints);
+  // ── 1) Participation + per-segment profiles ────────────────────────────────
+  var partResult = participation.checkParticipation(resolvedPoints, resolvedAudit, resolvedParams);
+  var segmentProfiles = partResult.segmentParticipationProfiles;
+  var perSegmentView  = partResult.perSegmentView;
+  var perSegmentTags  = perSegmentView.perSegmentTags;
 
-  // Reversal check
-  var reversalFlags = reversalCheck.checkReversals(acceptedPoints, segmentBoundaries);
+  // ── 2) Boundary classifications ───────────────────────────────────────────
+  var interSegBoundaries = deriveInterSegmentBoundaries(resolvedAudit);
+  var boundaryClassifications = boundaryClassifier.classifySegmentBoundaries(
+    interSegBoundaries, resolvedParams
+  );
 
-  // Deterministic export fixes
-  exportFix.applyDeterministicExportFixes(exportFaults, acceptedPoints);
+  // ── 3) Cross-segment duplicate detection ──────────────────────────────────
+  duplicateProposalMod.detectCrossSegmentDuplicates(
+    workingState.workingOrderedPoints, workingState
+  );
 
-  // Create working state from accepted points minus objective drops
-  var droppedGpxIndexes = new Set(objDrops.map(function(d) { return d.dropGpxIndex; }));
-  var initialPoints = acceptedPoints.filter(function(p) { return !droppedGpxIndexes.has(p.gpxIndex); });
-  var workingState = workingStateModule.createWorkingState(initialPoints);
-
-  // Record objective drops
-  for (var od = 0; od < objDrops.length; od++) {
-    workingStateModule.addDrop(workingState, objDrops[od].dropGpxIndex, objDrops[od].reason, 'pre_segment');
+  // ── 4) Objective adjacent dedupe ──────────────────────────────────────────
+  objectiveDedupe.applyObjectiveAdjacentDedupe(workingState, resolvedParams);
+  idleModule.recomputeAllCorrectionIdle(segmentProfiles, perSegmentTags, workingState.workingOrderedPoints);
+  if (allSegmentsIdle(segmentProfiles)) {
+    return buildEarlyExport(workingState, partResult, segmentProfiles, boundaryClassifications, resolvedParams, perSegmentTags);
   }
 
-  // ── Phase 1: Per-segment multipass loop ────────────────────────────────────
-  // Compute unique trkSegIndexes
-  var segIndexes = [];
-  var seenSegs = new Set();
-  for (var pi = 0; pi < acceptedPoints.length; pi++) {
-    var seg = acceptedPoints[pi].trkSegIndex;
-    if (!seenSegs.has(seg)) { seenSegs.add(seg); segIndexes.push(seg); }
+  // ── 5) Reversal check ─────────────────────────────────────────────────────
+  reversalCheck.checkAndApplyReversals(workingState, segmentProfiles, perSegmentTags);
+  idleModule.recomputeAllCorrectionIdle(segmentProfiles, perSegmentTags, workingState.workingOrderedPoints);
+  if (allSegmentsIdle(segmentProfiles)) {
+    return buildEarlyExport(workingState, partResult, segmentProfiles, boundaryClassifications, resolvedParams, perSegmentTags);
   }
-  segIndexes.sort(function(a, b) { return a - b; });
 
-  var allPassLogs = [];
-  var allSpineIntervals = new Map();
+  // ── 6) Deterministic export fixes ─────────────────────────────────────────
+  var ingestion = (resolvedAudit && resolvedAudit.audit && resolvedAudit.audit.ingestion) || {};
+  var segmentSummaries = ingestion.segmentSummaries || [];
+  exportFix.applyDeterministicExportFixes(
+    workingState, boundaryClassifications, segmentSummaries, segmentProfiles
+  );
+  idleModule.recomputeAllCorrectionIdle(segmentProfiles, perSegmentTags, workingState.workingOrderedPoints);
+  if (allSegmentsIdle(segmentProfiles)) {
+    return buildEarlyExport(workingState, partResult, segmentProfiles, boundaryClassifications, resolvedParams, perSegmentTags);
+  }
+
+  // ── 7) Initial spine + envelopes ──────────────────────────────────────────
+  var spineResult = spineModule.computeSpineResult(workingState.workingOrderedPoints);
+  spineModule.attachSpineEnvelopes(segmentProfiles, spineResult.envelopeBySegment);
+
+  // ── Phase 1: per-segment multipass loop ───────────────────────────────────
+  var passLog = [];
   var allCoupledRegions = [];
   var allOverlapBlockResolution = [];
 
-  for (var si = 0; si < segIndexes.length; si++) {
-    var trkSegIndex = segIndexes[si];
+  var sortedProfiles = segmentProfiles.slice().sort(function(a, b) {
+    return a.trkSegIndex - b.trkSegIndex;
+  });
 
-    // Compute spine for this segment
-    var spineMap = spineModule.computeSpineIntervals(workingState.workingOrderedPoints);
-    allSpineIntervals = spineMap; // keep last computed (multi-seg: accumulate)
+  for (var si = 0; si < sortedProfiles.length; si++) {
+    var prof = sortedProfiles[si];
 
-    // Get per-segment temporal audit
-    var segTemporal = temporal;
-    if (temporal.perSegment) {
-      var segTemporalEntry = temporal.perSegment.find(function(s) { return s.trkSegIndex === trkSegIndex; });
-      segTemporal = segTemporalEntry ? { tagIndex: segTemporalEntry.tagCounts, perSegment: temporal.perSegment } : temporal;
+    // Segments that are geometry-only or idle before Phase 1 get a no_proposals entry.
+    var skipReasons = prof.correctionIdle === true ||
+                      (prof.mode === 'geometry-only' && prof.exitReason === 'duplicate-chunk-excluded') ||
+                      prof.mode === 'geometry-only';
+
+    if (skipReasons) {
+      passLog.push({
+        trkSegIndex:   prof.trkSegIndex,
+        exitReason:    'no_proposals',
+        iterationsRun: 0,
+        passes:        []
+      });
+      continue;
     }
 
-    var loopResult = phase1Loop.runPhase1Loop(workingState, segTemporal, trkSegIndex, resolvedParams);
-    allPassLogs.push({
-      trkSegIndex: trkSegIndex,
-      exitReason:  loopResult.exitReason,
-      passes:      loopResult.passLog
-    });
-  }
+    var segTags = perSegmentTags.get(prof.trkSegIndex) || {};
+    var auditCtx = { tagIndex: { belowAnchor: segTags.belowAnchor || [] } };
 
-  // Recompute final spine intervals after Phase 1
-  allSpineIntervals = spineModule.computeSpineIntervals(workingState.workingOrderedPoints);
+    var loopResult = phase1Loop.runPhase1Loop(
+      workingState, auditCtx, prof.trkSegIndex, resolvedParams
+    );
+
+    passLog.push({
+      trkSegIndex:   prof.trkSegIndex,
+      exitReason:    loopResult.exitReason,
+      iterationsRun: loopResult.iterationsRun,
+      passes:        loopResult.passLog
+    });
+
+    // Update profile from loop result.
+    prof.exitReason    = loopResult.exitReason;
+    prof.iterationsRun = loopResult.iterationsRun;
+
+    // Recompute correction-idle after each segment's Phase 1.
+    idleModule.recomputeAllCorrectionIdle(
+      segmentProfiles, perSegmentTags, workingState.workingOrderedPoints
+    );
+  }
 
   // ── Phase 2: Edge reconciliation ──────────────────────────────────────────
-  edgeRecon.runEdgeReconciliation(workingState, allSpineIntervals, segmentBoundaries);
+  var spineForP2 = spineModule.computeSpineResult(workingState.workingOrderedPoints);
+  var phase2Result = edgeRecon.runEdgeReconciliation(
+    workingState, spineForP2, boundaryClassifications
+  );
 
   // ── Phase 3: Residual diagnostic sweep ────────────────────────────────────
-  var residualAnnotations = residualSweep.runResidualDiagnosticSweep(workingState, allSpineIntervals);
-  for (var ra = 0; ra < residualAnnotations.length; ra++) {
-    workingStateModule.addAnnotation(workingState, residualAnnotations[ra]);
-  }
-
-  // ── Export ─────────────────────────────────────────────────────────────────
-  return correctionExport.buildCorrectionExport(
-    workingState,
-    allSpineIntervals,
-    allCoupledRegions,
-    allOverlapBlockResolution,
-    allPassLogs
+  var spineForP3 = spineModule.computeSpineResult(workingState.workingOrderedPoints);
+  var diagnostics = residualSweep.runResidualDiagnosticSweep(
+    workingState, spineForP3, segmentProfiles
   );
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  return correctionExport.buildCorrectionExport({
+    workingState:            workingState,
+    participation:           partResult.participation,
+    segmentProfiles:         segmentProfiles,
+    boundaryClassifications: boundaryClassifications,
+    spineResult:             spineForP3,
+    passLog:                 passLog,
+    coupledRegions:          allCoupledRegions,
+    overlapBlockResolution:  allOverlapBlockResolution,
+    phase2Result:            phase2Result,
+    diagnostics:             diagnostics,
+    paramsSnapshot:          resolvedParams,
+    auditPerSegmentTags:     perSegmentTags
+  });
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Derives inter-segment boundary objects directly from audit.ingestion.segmentBoundaries[].
+ * Each boundary now carries minTimeMs/maxTimeMs from gpx-ingestion-module (Phase B).
+ */
+function deriveInterSegmentBoundaries(auditJson) {
+  var ingestion = (auditJson && auditJson.audit && auditJson.audit.ingestion) || {};
+  var segBoundaries = (ingestion.segmentBoundaries || []).slice().sort(function(a, b) {
+    return a.trkSegIndex - b.trkSegIndex;
+  });
+  var boundaries = [];
+  for (var i = 0; i < segBoundaries.length - 1; i++) {
+    var curr = segBoundaries[i];
+    var next = segBoundaries[i + 1];
+    var gap = (curr.lastTimeMs !== null && curr.lastTimeMs !== undefined &&
+               next.firstTimeMs !== null && next.firstTimeMs !== undefined)
+      ? next.firstTimeMs - curr.lastTimeMs : null;
+    boundaries.push({
+      fromTrkSegIndex:  curr.trkSegIndex,
+      toTrkSegIndex:    next.trkSegIndex,
+      trackIndex:       null,
+      gapMs:            gap,
+      impliedDistanceM: null,
+      impliedSpeedKph:  null,
+      currFirstTimeMs:  curr.firstTimeMs,
+      currLastTimeMs:   curr.lastTimeMs,
+      currMinTimeMs:    curr.minTimeMs !== undefined ? curr.minTimeMs : null,
+      currMaxTimeMs:    curr.maxTimeMs !== undefined ? curr.maxTimeMs : null,
+      nextFirstTimeMs:  next.firstTimeMs,
+      nextLastTimeMs:   next.lastTimeMs,
+      nextMinTimeMs:    next.minTimeMs !== undefined ? next.minTimeMs : null,
+      nextMaxTimeMs:    next.maxTimeMs !== undefined ? next.maxTimeMs : null
+    });
+  }
+  return boundaries;
+}
+
+function allSegmentsIdle(segmentProfiles) {
+  for (var i = 0; i < segmentProfiles.length; i++) {
+    if (!segmentProfiles[i].correctionIdle) return false;
+  }
+  return true;
+}
+
+function buildEarlyExport(workingState, partResult, segmentProfiles, boundaryClassifications, resolvedParams, perSegmentTags) {
+  var spineResult = spineModule.computeSpineResult(workingState.workingOrderedPoints);
+  var diagnostics = residualSweep.runResidualDiagnosticSweep(workingState, spineResult, segmentProfiles);
+  return correctionExport.buildCorrectionExport({
+    workingState:            workingState,
+    participation:           partResult.participation,
+    segmentProfiles:         segmentProfiles,
+    boundaryClassifications: boundaryClassifications,
+    spineResult:             spineResult,
+    passLog:                 [],
+    coupledRegions:          [],
+    overlapBlockResolution:  [],
+    phase2Result:            null,
+    diagnostics:             diagnostics,
+    paramsSnapshot:          resolvedParams,
+    auditPerSegmentTags:     perSegmentTags
+  });
 }
 
 module.exports = { runCorrection };
