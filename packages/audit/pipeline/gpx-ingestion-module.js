@@ -317,12 +317,18 @@ function parseGPX(gpxString) {
         firstGpxIndex: pt.gpxIndex,
         lastGpxIndex:  pt.gpxIndex,
         firstTimeMs:   pt.timeMs,
-        lastTimeMs:    pt.timeMs
+        lastTimeMs:    pt.timeMs,
+        minTimeMs:     pt.timeMs,
+        maxTimeMs:     pt.timeMs
       });
     } else {
       var entry = segBoundaryMap.get(seg);
       entry.lastGpxIndex = pt.gpxIndex;
       entry.lastTimeMs   = pt.timeMs;
+      if (pt.timeMs !== null && pt.timeMs !== undefined) {
+        if (entry.minTimeMs === null || entry.minTimeMs === undefined || pt.timeMs < entry.minTimeMs) entry.minTimeMs = pt.timeMs;
+        if (entry.maxTimeMs === null || entry.maxTimeMs === undefined || pt.timeMs > entry.maxTimeMs) entry.maxTimeMs = pt.timeMs;
+      }
     }
   }
   // Emit in trkSegIndex order
