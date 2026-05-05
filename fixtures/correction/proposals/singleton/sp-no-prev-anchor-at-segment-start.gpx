@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>sp-no-prev-anchor-at-segment-start</name>
+    <trkseg>
+      <!-- Stream: T+60(belowAnchor), T+120, T+180.
+           The singleton (T+60) is the FIRST point in the segment.
+           Walking left finds no point with usable timeMs in same segment → prevAnchor=null.
+           nextAnchor: T+120 point.
+           Expected: insert proposal with tPrev=null, tNext=T+120, bracketGpxIndexes=[1].
+           isEdgeProposal=true (no spine envelope yet, or targetTimeMs at envelope edge).
+           This tests the "no left bracket" case. -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

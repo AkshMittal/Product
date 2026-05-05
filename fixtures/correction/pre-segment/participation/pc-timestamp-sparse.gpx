@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>pc-timestamp-sparse</name>
+    <trkseg>
+      <!-- 6 consecutive timestamp pairs, 4 positive, 2 backwards (Δt < 0).
+           coverageRatio = 4 / 6 = 0.6667 < minRatio (0.8).
+           NOT fully-reversed (not ALL pairs are decreasing).
+           Expected: mode = 'timestamp-sparse', reason = 'insufficient-pair-coverage'.
+           Times: T+0, T+60, T+120, T+80 (backward), T+100 (backward vs anchor=120), T+180, T+240
+           Wait, needs careful counting:
+           Seq: 100, 200, 300, 250, 150, 400, 500 (seconds-offset)
+           Consecutive pairs: (100,200)+, (200,300)+, (300,250)-, (250,150)-, (150,400)+, (400,500)+
+           positiveTimeDeltaCount = 4, consecutiveTimestampPairsCount = 6 → 4/6 = 0.667 < 0.8 -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:01:40Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:03:20Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:04:10Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:02:30Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:06:40Z</time></trkpt>
+      <trkpt lat="47.0060" lon="8.0000"><ele>506</ele><time>2024-01-01T10:08:20Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

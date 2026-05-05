@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>sp-no-usable-time-skipped</name>
+    <trkseg>
+      <!-- A point is tagged as belowAnchor but has NO valid timeMs (time element missing).
+           The guard: if (typeof pt.timeMs !== 'number' || ...) continue.
+           Expected: no insert proposal for the timeless belowAnchor point.
+           The timeless point cannot be repositioned temporally. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <!-- This point would be belowAnchor if it had a time < 10:02:00, but has NO time → skipped. -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

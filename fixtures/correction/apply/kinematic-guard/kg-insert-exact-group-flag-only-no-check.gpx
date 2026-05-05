@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>kg-insert-exact-group-flag-only-no-check</name>
+    <trkseg>
+      <!-- Insert proposal with isExactGroup=true: MVP flag-only.
+           NO kinematic check is performed. All candidates → excludedFromTrust 'exact_group_unresolved'.
+           proposal.applied=false, skipReason='exact_group_flag_only'.
+           Two points at same time+lat+lon+ele, non-adjacent in stream (not adj-exact-drop).
+           Expected: proposal skips kinematic guard entirely, both points excluded. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- Point A: T+60, specific position -->
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- Middle spine point -->
+      <trkpt lat="47.0005" lon="8.0005"><ele>500</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <!-- Point B: same time+lat+lon+ele as point A (gpxIndex 1) — forms exact group -->
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0020"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

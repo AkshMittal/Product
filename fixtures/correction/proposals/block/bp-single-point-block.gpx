@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bp-single-point-block</name>
+    <trkseg>
+      <!-- Spine points (not belowAnchor): T+0, T+120, T+180. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- Point gpxIndex=1: belowAnchor. T+60, which is < anchor T+120.
+           Runs: only this one point → one block of size 1.
+           It is NOT the first or last; block min=T+60, max=T+60.
+           spineEnvelope.minTimeMs = T+0, maxTimeMs = T+180.
+           isEdgeProposal: blockMin(T+60) > envelMin(T+0) AND blockMax(T+60) < envelMax(T+180) → false.
+           Expected: one block-finding proposal, gpxIndexes=[1], isEdgeProposal=false,
+           hasInternalMonotonicityViolation=false (single point). -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>dp-competition-two-candidates</name>
+    <trkseg>
+      <!-- Two points share the same timeMs but have DIFFERENT lat/lon (same segment).
+           They are not adj-exact-drops (lat/lon differ). They form a same-time group of size 2.
+           Not allExact (lat/lon mismatch). isExactGroup=false → competition insert.
+           Expected: one insert proposal with candidateGpxIndexes=[1,2], isExactGroup=false.
+           Winner determined by kinematic guard at apply time. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- Two competing points at T+60 with different positions -->
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0050"><ele>502</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0060" lon="8.0060"><ele>503</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

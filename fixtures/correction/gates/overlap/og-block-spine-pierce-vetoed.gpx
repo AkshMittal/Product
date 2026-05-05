@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>og-block-spine-pierce-vetoed</name>
+    <trkseg>
+      <!-- Block: T+60, T+120 (belowAnchor, internally monotonic).
+           Spine points: T+0, T+90(spine-NOT-in-block), T+300.
+           tPrev=T+0, tNext=T+300. socketOk ✓.
+           Corridor pierce check: T+90 is in (T+0, T+300) AND not in block → PIERCE detected.
+           Expected: overlapStatus='overlap', annotation 'overlap_spine_pierce_detected'. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- Spine point T+90 between bracket anchors — will pierce block corridor -->
+      <trkpt lat="47.0015" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:30Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <!-- Block members: belowAnchor T+60 and T+120 -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0060" lon="8.0000"><ele>506</ele><time>2024-01-01T10:06:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

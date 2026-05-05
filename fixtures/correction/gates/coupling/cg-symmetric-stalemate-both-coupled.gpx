@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>cg-symmetric-stalemate-both-coupled</name>
+    <trkseg>
+      <!-- Two proposals P1 and P2 where each one's kinematic references fall in the
+           other's disturbance zone — mutual coupling → both blocked → stalemate.
+           Layout: the bracket of P1 is the same point as the traversal-neighbor of P2's candidate,
+           and vice versa. This creates a mutual coupling that the loop cannot resolve.
+           Both proposals are in couplingBlockedProposalIds.
+           With nothing else to apply, phase1 exits with 'stalemate'.
+           Expected: couplingBlockedProposalIds contains both proposal IDs. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <!-- P1 candidate (belowAnchor): shares the bracket point with P2's neighbor -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- P2 candidate (belowAnchor): shares the bracket point with P1's neighbor -->
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

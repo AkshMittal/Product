@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>e2e-all-correction-phases-combined</name>
+    <trkseg>
+      <!-- Segment 0 (trkSegIndex=0): Stream-later but time-earlier chunk (chunk_ordering).
+           Gets reordered to position 0 by deterministic-export-fix.
+           minTimeMs = 10:00, maxTimeMs = 10:05. Clean forward sequence. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T14:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T14:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T14:02:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1 (trkSegIndex=1): Earlier in time, after reorder becomes first.
+           Contains a belowAnchor singleton that phase 1 must fix.
+           Times: T10:00, T10:04(anchor), T10:02(belowAnchor singleton), T10:06. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>600</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- anchor: T+240s -->
+      <trkpt lat="47.1040" lon="8.1000"><ele>604</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <!-- belowAnchor singleton: T+120s, 222m from prev (30kph ✓) -->
+      <trkpt lat="47.1020" lon="8.1000"><ele>602</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.1050" lon="8.1000"><ele>605</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 2 (trkSegIndex=2): Last point of this segment equals first point of seg 3.
+           Phase 2 cross-segment adjacent-exact-drop should handle it. -->
+      <trkpt lat="47.2000" lon="8.2000"><ele>700</ele><time>2024-01-01T11:00:00Z</time></trkpt>
+      <trkpt lat="47.2010" lon="8.2000"><ele>701</ele><time>2024-01-01T11:01:00Z</time></trkpt>
+      <!-- Boundary point: exact duplicate with seg 3 first point -->
+      <trkpt lat="47.2020" lon="8.2000"><ele>702</ele><time>2024-01-01T11:02:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 3 (trkSegIndex=3): First point is exact duplicate of seg 2's last.
+           Phase 2 drops this first point. -->
+      <trkpt lat="47.2020" lon="8.2000"><ele>702</ele><time>2024-01-01T11:02:00Z</time></trkpt>
+      <trkpt lat="47.2030" lon="8.2000"><ele>703</ele><time>2024-01-01T11:03:00Z</time></trkpt>
+      <trkpt lat="47.2040" lon="8.2000"><ele>704</ele><time>2024-01-01T11:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

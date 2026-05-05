@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>rc-global-reversal-accepted</name>
+    <trkseg>
+      <!-- The entire segment is strictly time-decreasing. Reversing the full array
+           produces a strictly time-increasing sequence with no anomaly tags.
+           Global hypothesis: reversed snapshot → all segments correctionIdle → accept.
+           Expected: globalAccepted=true, rearrangement kind='full-array-reversal' emitted.
+           After: workingOrderedPoints ordered 10:00,10:01,10:02,10:03,10:04,10:05. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

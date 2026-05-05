@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>od-adjacent-exact-prev-has-ele-curr-absent</name>
+    <trkseg>
+      <!-- Point 0 (prev): has usable ele=500.
+           Point 1 (curr): same time+lat+lon, NO ele element (eleAbsent=true).
+           Elevation table: prev=usable, curr=absent → drop the one WITHOUT usable ele → drop curr (point 1).
+           Expected: point 1 dropped, point 0 (with ele=500) survives. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0000" lon="8.0000"><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

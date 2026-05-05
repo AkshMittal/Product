@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>p1-stalemate-all-gated</name>
+    <trkseg>
+      <!-- Singleton insert fails kinematic guard (speed > 80 kph) and no adj-exact-drops.
+           Pass 1: proposal built, overlap gates pass, coupling gate passes,
+           apply: kinematic guard GATING → fail → applied=false.
+           applied.length=0, inScope.length=1 → stalemate.
+           Expected: exitReason='stalemate', iterationsRun=1.
+           1 km away, 30 seconds → 120 kph > 80 kph → guard fails. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0095" lon="8.0000"><ele>509</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- singleton: ~1 km at T+30s → 120 kph → FAIL → stalemate -->
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:01:30Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>rc-per-segment-rejected-seam-fail-next</name>
+    <trkseg>
+      <!-- Segment 0: clean. ends at 09:00. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T08:50:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T09:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: isFullyReversed=true. Times: 10:30, 10:20, 10:10, 10:00 (all decreasing).
+           Reversed: 10:00, 10:10, 10:20, 10:30. revMax = 10:30.
+           Next seg (seg 2) minTimeMs = 10:15.
+           Seam check: revMax(10:30) <= nextSeg.minTimeMs(10:15)? → 10:30 > 10:15 → SEAM FAIL.
+           Expected: perSegmentRejected=[1], annotation 'segment_reversal_unconfirmed' with seamOk=false. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>600</ele><time>2024-01-01T10:30:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>601</ele><time>2024-01-01T10:20:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>602</ele><time>2024-01-01T10:10:00Z</time></trkpt>
+      <trkpt lat="47.1030" lon="8.1000"><ele>603</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 2: starts at 10:15. Its minTimeMs creates the seam conflict above. -->
+      <trkpt lat="47.2000" lon="8.2000"><ele>700</ele><time>2024-01-01T10:15:00Z</time></trkpt>
+      <trkpt lat="47.2010" lon="8.2000"><ele>701</ele><time>2024-01-01T10:25:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

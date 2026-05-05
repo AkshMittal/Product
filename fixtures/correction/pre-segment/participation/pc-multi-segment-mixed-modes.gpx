@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>pc-multi-segment-mixed-modes</name>
+    <trkseg>
+      <!-- Segment 0 (trkSegIndex=0): full participation — all pairs positive -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1 (trkSegIndex=1): geometry-only — no timestamps -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>600</ele></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>601</ele></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>602</ele></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 2 (trkSegIndex=2): fully-reversed — all pairs strictly decreasing -->
+      <trkpt lat="47.2000" lon="8.2000"><ele>700</ele><time>2024-01-01T12:03:00Z</time></trkpt>
+      <trkpt lat="47.2010" lon="8.2000"><ele>701</ele><time>2024-01-01T12:02:00Z</time></trkpt>
+      <trkpt lat="47.2020" lon="8.2000"><ele>702</ele><time>2024-01-01T12:01:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 3 (trkSegIndex=3): timestamp-sparse — 1/4 pairs positive (0.25 < 0.8) -->
+      <trkpt lat="47.3000" lon="8.3000"><ele>800</ele><time>2024-01-01T14:00:00Z</time></trkpt>
+      <trkpt lat="47.3010" lon="8.3000"><ele>801</ele><time>2024-01-01T13:50:00Z</time></trkpt>
+      <trkpt lat="47.3020" lon="8.3000"><ele>802</ele><time>2024-01-01T13:40:00Z</time></trkpt>
+      <trkpt lat="47.3030" lon="8.3000"><ele>803</ele><time>2024-01-01T13:30:00Z</time></trkpt>
+      <trkpt lat="47.3040" lon="8.3000"><ele>804</ele><time>2024-01-01T14:30:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>og-block-socket-ok</name>
+    <trkseg>
+      <!-- Clean block-finding scenario: block fits neatly within [tPrev, tNext] window.
+           Spine: T+0, T+300 (no other spine points between them).
+           Block: T+60, T+120, T+180 (all belowAnchor, consecutive, internally monotonic).
+           bMin=T+60, bMax=T+180. tPrev=T+0, tNext=T+300.
+           Socket check: bMin(60) >= tPrev(0) ✓ AND bMax(180) <= tNext(300) ✓.
+           Corridor pierce check: any spine pt with timeMs in (0, 300) NOT in block? No → no pierce.
+           Expected: overlapStatus='socket-ok'. Proposal enters resolution-apply. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0060" lon="8.0000"><ele>506</ele><time>2024-01-01T10:06:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bc-null-timestamps-no-classification</name>
+    <trkseg>
+      <!-- Segment 0: has timestamps. lastTimeMs = 10:05. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: NO timestamps. firstTimeMs = null.
+           Condition: lastT !== null but firstT === null → gapMs = null → classification = null.
+           Expected: classification = null (cannot classify without both timestamps).
+           Edge case: tests the null-timestamp branch in classifySegmentBoundaries. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

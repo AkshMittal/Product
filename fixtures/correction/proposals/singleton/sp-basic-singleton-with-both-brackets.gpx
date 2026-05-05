@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>sp-basic-singleton-with-both-brackets</name>
+    <trkseg>
+      <!-- Stream: T+0, T+120, T+60(belowAnchor, NOT in block), T+180.
+           T+60 is belowAnchor (below anchor T+120), NOT in any block run (isolated).
+           prevAnchor: T+0 point (nearest same-segment point left with usable time).
+           nextAnchor: T+120 point (nearest same-segment point right with usable time).
+           Expected: one insert proposal for gpxIndex=2:
+             tPrev = T+0, tNext = T+120, bracketGpxIndexes=[0,1],
+             targetTimeMs = T+60, isExactGroup=false.
+           isEdgeProposal: targetTimeMs(T+60) > envelMin AND < envelMax → false. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>rc-per-segment-accepted-first-segment</name>
+    <trkseg>
+      <!-- Segment 0: fully reversed (all pairs strictly decreasing → isFullyReversed=true).
+           This is the FIRST segment, so no prevSeg neighbour. seamOk check: pos=0 → no prev check.
+           Next segment (seg 1) starts at 11:00, which is > reversed seg0.maxTimeMs(10:05).
+           reversed seg0: [10:00,10:01,10:02,10:03,10:04,10:05] → maxTimeMs=10:05 ≤ seg1.minTimeMs=11:00. seamOk.
+           Expected: perSegmentAccepted=[0], rearrangement 'segment-reversal', annotation 'is_fully_reversed'. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: forward, clean. minTimeMs = 11:00 > reversed seg0.maxTimeMs(10:05). -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>600</ele><time>2024-01-01T11:00:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>601</ele><time>2024-01-01T11:01:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>602</ele><time>2024-01-01T11:02:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

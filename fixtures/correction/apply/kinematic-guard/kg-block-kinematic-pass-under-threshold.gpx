@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>kg-block-kinematic-pass-under-threshold</name>
+    <trkseg>
+      <!-- Block scenario where kinematic guard PASSES (speed < 80 kph).
+           Spine: prevAnchor at (47.0000, 8.0000) T+0s,
+                  nextAnchor at (47.0090, 8.0000) T+100s.
+           Block: (47.0045, 8.0000) T+60s (one point).
+           After reorder, block goes after prevAnchor:
+             prevAnchor → block (dist≈500m, dt=60s → ~30 kph ✓) → nextAnchor (dist≈500m, dt=40s → ~45 kph ✓).
+           Both speeds well below 80 kph.
+           Expected: kinematic guard passes, block reordered after prevAnchor. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- nextAnchor: ~1 km north (0.009° ≈ 1 km), T+100s -->
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:01:40Z</time></trkpt>
+      <!-- Block: ~500m north of prev, T+60s (belowAnchor of nextAnchor) -->
+      <trkpt lat="47.0045" lon="8.0000"><ele>504</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

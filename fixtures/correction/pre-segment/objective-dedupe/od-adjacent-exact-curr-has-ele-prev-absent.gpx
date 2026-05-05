@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>od-adjacent-exact-curr-has-ele-prev-absent</name>
+    <trkseg>
+      <!-- Point 0 (prev): NO ele element (eleAbsent=true).
+           Point 1 (curr): same time+lat+lon, usable ele=500.
+           Elevation table: prev=absent, curr=usable → drop the one WITHOUT usable ele → drop PREV (point 0).
+           Expected: point 0 dropped, point 1 (with ele=500) survives.
+           Adversarial: PREV is the drop target, not curr. Tests asymmetry. -->
+      <trkpt lat="47.0000" lon="8.0000"><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

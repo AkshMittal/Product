@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>p2-cross-segment-dup-unstable-not-dropped</name>
+    <trkseg>
+      <!-- Segment 0: last point same as seg 1 first point, BUT it is NOT spine-stable
+           because it shares its timeMs with another point in the segment (duplicate time = excluded from spine).
+           Both points have time 10:02:00, making them a duplicate-time cluster → both unstable.
+           Phase 2 finds the cross-segment duplicate but !bothStable → emit annotation, NO drop.
+           Expected: crossSegmentDrops=[], annotation 'edge_coupling_unstable' on seg1. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- Two points sharing T=10:02:00 → duplicate-time cluster → both excluded from spine -->
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0025" lon="8.0000"><ele>503</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Seg 1 first point matches seg 0's "last" point (lat/lon/ele/time).
+           The seg0 version is spine-unstable (duplicate time). → bothStable=false → no drop. -->
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

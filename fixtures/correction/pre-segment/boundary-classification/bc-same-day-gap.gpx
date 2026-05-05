@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bc-same-day-gap</name>
+    <trkseg>
+      <!-- Segment 0: ends at 10:05 -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: starts at 10:30, same UTC day as segment 0.
+           gapMs = 10:30 - 10:05 = 25 minutes > 0 → forward gap.
+           Both timestamps on 2024-01-01 UTC → same day.
+           Expected: classification = 'same_day', isBoundaryGap = true. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T10:30:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>511</ele><time>2024-01-01T10:33:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele><time>2024-01-01T10:36:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

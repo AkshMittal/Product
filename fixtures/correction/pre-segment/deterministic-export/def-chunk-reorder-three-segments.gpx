@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>def-chunk-reorder-three-segments</name>
+    <trkseg>
+      <!-- Segment 0: minTimeMs=14:00. Stream position 0, chronological position 3 (LAST). -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T14:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T14:10:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: minTimeMs=10:00. Stream position 1, chronological position 1 (FIRST).
+           Boundary 0→1: 14:10 → 10:00, backward ~4.17h → chunk_ordering. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>511</ele><time>2024-01-01T10:10:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 2: minTimeMs=12:00. Stream position 2, chronological position 2 (MIDDLE).
+           Boundary 1→2: 10:10 → 12:00, forward same-day → not chunk_ordering.
+           But 12:00 IS affected if it's linked to a chunk_ordering pair.
+           Actually: only boundaries that ARE 'chunk_ordering' contribute segments to reorder.
+           Boundary 0→1 is chunk_ordering → both seg0 and seg1 are in chunkOrderingSegs.
+           Boundary 1→2 is same_day → seg1 and seg2 NOT linked via chunk_ordering.
+           So only seg0+seg1 get reordered. seg2 stays in place.
+           BUT this fixture has 3 segments all linked by chunk_ordering if 2→0 also backward.
+           Let me restructure: stream order is [seg0:14:00, seg1:10:00, seg2:12:00].
+           Boundaries: 0→1: backward~4h → chunk_ordering; 1→2: 10:10→12:00 forward → same_day.
+           Only chunk_ordering: segs {0,1}. Reordered by minTimeMs: seg1(10), seg0(14).
+           seg2 stays at position 2. Result: [seg1, seg0, seg2].
+           Expected: only segs 0 and 1 swapped; seg2 unchanged. -->
+      <trkpt lat="47.2000" lon="8.2000"><ele>520</ele><time>2024-01-01T12:00:00Z</time></trkpt>
+      <trkpt lat="47.2010" lon="8.2000"><ele>521</ele><time>2024-01-01T12:10:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

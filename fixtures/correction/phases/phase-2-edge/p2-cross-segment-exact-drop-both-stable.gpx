@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>p2-cross-segment-exact-drop-both-stable</name>
+    <trkseg>
+      <!-- Segment 0: last point is an exact duplicate of segment 1's first point.
+           Both points are spine-stable (monotonic, unique time in their segment).
+           Phase 2 cross-segment adjacent-exact-drop:
+             lastPt(seg0) == firstPt(seg1) AND both spine-stable → drop firstPt(seg1).
+           Expected: crossSegmentDrops has one entry, firstPt of seg1 in drops[].
+           rearrangement 'cross-segment-adjacent-drop'. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- Segment 0 last point: T=10:02:00, (47.0020, 8.0000, ele=502) -->
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1 first point: EXACT same time+lat+lon+ele as segment 0's last point. -->
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

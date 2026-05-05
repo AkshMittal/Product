@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>kg-insert-length1-gating-pass</name>
+    <trkseg>
+      <!-- Singleton insert scenario: kinematic guard GATING → PASS → applied.
+           prevAnchor: (47.0000, 8.0000) T+0.
+           candidate singleton: (47.0045, 8.0000) T+60s (belowAnchor).
+           nextAnchor: (47.0090, 8.0000) T+100s.
+           speedPrev: 500m / 60s ≈ 30 kph < 80 kph ✓.
+           speedNext: 500m / 40s ≈ 45 kph < 80 kph ✓.
+           Expected: proposal.applied=true, winner=candidate gpxIndex.
+           Point reordered after prevAnchor. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:01:40Z</time></trkpt>
+      <!-- singleton belowAnchor at T+60s -->
+      <trkpt lat="47.0045" lon="8.0000"><ele>504</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:02:10Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

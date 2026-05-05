@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bp-two-runs-split-by-normal-point</name>
+    <trkseg>
+      <!-- Stream: T+0, T+120, T+30, T+60, T+150, T+50, T+80, T+200.
+           belowAnchor points: T+30, T+60 (below anchor 120), T+50, T+80 (below anchor 150).
+           A non-belowAnchor point (T+150) interrupts between the two runs.
+           Expected: TWO block-finding proposals:
+             block1 = [gpxIndex 2,3] with times [T+30, T+60]
+             block2 = [gpxIndex 5,6] with times [T+50, T+80] -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0005" lon="8.0000"><ele>501</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>502</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0025" lon="8.0000"><ele>503</ele><time>2024-01-01T10:02:30Z</time></trkpt>
+      <trkpt lat="47.0008" lon="8.0000"><ele>501</ele><time>2024-01-01T10:00:50Z</time></trkpt>
+      <trkpt lat="47.0013" lon="8.0000"><ele>502</ele><time>2024-01-01T10:01:20Z</time></trkpt>
+      <trkpt lat="47.0033" lon="8.0000"><ele>504</ele><time>2024-01-01T10:03:20Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
