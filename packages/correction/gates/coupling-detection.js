@@ -3,142 +3,160 @@
 /**
  * packages/correction/gates/coupling-detection.js
  *
- * Computes kinematic reference instability (coupling) between proposals.
- * Independent of overlap-detection (ADR-correction-0010): both read snapshot state only.
+ * Bilateral disturbance / kinematic coupling per ADR-correction-0010 (revised
+ * 2026-04-23) / plan §Reference stability and coupling.
  *
- * Symmetric blocking (ADR-correction-0010 revised 2026-04-23):
- *   - 'insert' proposals (singleton + competition): kinematic references = bracketGpxIndexes
- *   - 'block-finding' (socket-ok): kinematic references = [prevGpxIndex, nextGpxIndex]
- *   Both are coupling-blocked if their reference points fall in another proposal's disturbance zone.
+ * **Strictly intra-segment** in Phase 1: disturbance zones, kinematic
+ * traversal neighbours, and edges never cross trkSegIndex. Cross-segment
+ * interactions are deferred to Phase 2 (edge reconciliation).
  *
- * Bilateral disturbance zones (ADR-correction-0010 §3):
- *   - insert: leaving = traversal neighbours of candidate's current position;
- *             arriving = bracketGpxIndexes
- *   - block-finding: leaving = traversal neighbours of block first/last;
- *                    arriving = [prevGpxIndex, nextGpxIndex]
- *   - adjacent-exact-drop: NO disturbance zone (geometry unchanged)
+ * For every proposal:
+ *   - Disturbance zone (set of "disturbed" gpxIndexes), built from leaving +
+ *     arriving sides:
+ *       * insert: leaving = traversal-adjacent neighbours (same segment) of each
+ *         candidate; arriving = each candidate's bracketGpxIndexes.
+ *       * block-finding: leaving = traversal-adjacent neighbours (same segment)
+ *         of the block's first/last members; arriving = [prevGpxIndex, nextGpxIndex].
+ *       * adjacent-exact-drop: empty zone.
+ *   - Kinematic reference set (whose stability the proposal depends on):
+ *       * insert: union of every candidate's bracketGpxIndexes.
+ *       * block-finding: [prevGpxIndex, nextGpxIndex].
+ *       * adjacent-exact-drop: empty.
  *
- * Emits:
- *   couplingBlockedProposalIds[]  — ids of proposals with ≥1 coupling edge
- *   independentProposalIds[]      — ids with no coupling edges
- *   coupledRegions[]              — connected components with full edge diagnostics
+ * Edge rule: P↔Q if any of P's kinematic references falls in Q's disturbance
+ * zone AND both proposals share trkSegIndex. Block-finding now blocks
+ * symmetrically (revised 2026-04-23).
  *
- * @param {Array<Object>} proposals - all proposals (post-overlap-detection)
- * @param {Array<Object>} workingOrderedPoints - current traversal snapshot
- * @returns {{ couplingBlockedProposalIds: string[], independentProposalIds: string[], coupledRegions: Array }}
+ * Side derivation:
+ *   - 'arriving' if the disturbed gpxIndex is in P's kinematic reference set
+ *     (it always will be, since that's the predicate); refine by checking
+ *     whether the disturbance came from Q's arriving side (vs leaving).
+ *   For diagnostic readability, we just record whether the gpxIndex belongs to
+ *   P's "leaving" neighbour set (`leaving`) or arriving bracket set (`arriving`).
+ *
+ * @returns {{
+ *   couplingBlockedProposalIds: string[],
+ *   independentProposalIds:     string[],
+ *   coupledRegions:             Array
+ * }}
  */
 function detectCoupling(proposals, workingOrderedPoints) {
-  // Build gpxIndex → traversal position lookup
-  var traversalPos = new Map();
+  // Build position lookup + segment-aware traversal-neighbour helper.
+  var posByGpx = new Map();
   for (var i = 0; i < workingOrderedPoints.length; i++) {
-    traversalPos.set(workingOrderedPoints[i].gpxIndex, i);
+    posByGpx.set(workingOrderedPoints[i].gpxIndex, i);
   }
-
-  /**
-   * Get traversal neighbours of a gpxIndex in the current snapshot.
-   * Returns { prev: gpxIndex|null, next: gpxIndex|null }
-   */
-  function traversalNeighbours(gpxIndex) {
-    var pos = traversalPos.get(gpxIndex);
+  function neighboursSameSeg(gpxIndex, trkSegIndex) {
+    var pos = posByGpx.get(gpxIndex);
     if (pos === undefined) return { prev: null, next: null };
-    var prev = pos > 0 ? workingOrderedPoints[pos - 1].gpxIndex : null;
-    var next = pos < workingOrderedPoints.length - 1 ? workingOrderedPoints[pos + 1].gpxIndex : null;
-    return { prev, next };
+    var prev = null, next = null;
+    if (pos > 0) {
+      var pp = workingOrderedPoints[pos - 1];
+      if (pp.trkSegIndex === trkSegIndex) prev = pp.gpxIndex;
+    }
+    if (pos < workingOrderedPoints.length - 1) {
+      var np = workingOrderedPoints[pos + 1];
+      if (np.trkSegIndex === trkSegIndex) next = np.gpxIndex;
+    }
+    return { prev: prev, next: next };
   }
 
-  // Build disturbance zones per proposal
-  // Each zone is a Set<number> of gpxIndexes that are "disturbed" by this proposal
-  var disturbanceZones = new Map(); // proposalId → Set<number>
+  // Per-proposal disturbance zones, kinematic refs, leaving/arriving sets.
+  var zones      = new Map(); // id → Set<gpxIndex>
+  var leavingSet = new Map(); // id → Set<gpxIndex>
+  var arrivingSet= new Map(); // id → Set<gpxIndex>
+  var kineRefs   = new Map(); // id → Set<gpxIndex>
 
   for (var p = 0; p < proposals.length; p++) {
     var prop = proposals[p];
-    var zone = new Set();
+    var leave = new Set();
+    var arrive = new Set();
+    var refs   = new Set();
 
     if (prop.kind === 'adjacent-exact-drop') {
-      // No disturbance zone (ADR-correction-0010 §3)
+      // empty
     } else if (prop.kind === 'insert') {
-      // Leaving side: traversal neighbours of each candidate's current position
-      for (var ci = 0; ci < prop.candidateGpxIndexes.length; ci++) {
-        var nb = traversalNeighbours(prop.candidateGpxIndexes[ci]);
-        if (nb.prev !== null) zone.add(nb.prev);
-        if (nb.next !== null) zone.add(nb.next);
+      var candGis = prop.candidateGpxIndexes || [];
+      for (var c = 0; c < candGis.length; c++) {
+        // leaving — current traversal neighbours within same segment
+        var nb = neighboursSameSeg(candGis[c], prop.trkSegIndex);
+        if (nb.prev !== null) leave.add(nb.prev);
+        if (nb.next !== null) leave.add(nb.next);
       }
-      // Arriving side: bracketGpxIndexes
-      for (var bi = 0; bi < prop.bracketGpxIndexes.length; bi++) {
-        zone.add(prop.bracketGpxIndexes[bi]);
+      // arriving — shared bracketGpxIndexes
+      var br = prop.bracketGpxIndexes || [];
+      for (var bi = 0; bi < br.length; bi++) {
+        arrive.add(br[bi]);
+        refs.add(br[bi]);
       }
     } else if (prop.kind === 'block-finding') {
-      // Leaving side: traversal neighbours of block first/last
-      if (prop.gpxIndexes.length > 0) {
-        var firstNb = traversalNeighbours(prop.gpxIndexes[0]);
-        var lastNb  = traversalNeighbours(prop.gpxIndexes[prop.gpxIndexes.length - 1]);
-        if (firstNb.prev !== null) zone.add(firstNb.prev);
-        if (firstNb.next !== null) zone.add(firstNb.next);
-        if (lastNb.prev !== null) zone.add(lastNb.prev);
-        if (lastNb.next !== null) zone.add(lastNb.next);
+      var gi = prop.gpxIndexes || [];
+      if (gi.length > 0) {
+        var firstNb = neighboursSameSeg(gi[0], prop.trkSegIndex);
+        var lastNb  = neighboursSameSeg(gi[gi.length - 1], prop.trkSegIndex);
+        if (firstNb.prev !== null && !setHasGi(gi, firstNb.prev)) leave.add(firstNb.prev);
+        if (lastNb.next  !== null && !setHasGi(gi, lastNb.next))  leave.add(lastNb.next);
       }
-      // Arriving side: bracket anchors (prevGpxIndex, nextGpxIndex)
-      if (prop.prevGpxIndex !== null) zone.add(prop.prevGpxIndex);
-      if (prop.nextGpxIndex !== null) zone.add(prop.nextGpxIndex);
+      if (prop.prevGpxIndex !== null && prop.prevGpxIndex !== undefined) {
+        arrive.add(prop.prevGpxIndex);
+        refs.add(prop.prevGpxIndex);
+      }
+      if (prop.nextGpxIndex !== null && prop.nextGpxIndex !== undefined) {
+        arrive.add(prop.nextGpxIndex);
+        refs.add(prop.nextGpxIndex);
+      }
     }
 
-    disturbanceZones.set(prop.id, zone);
+    var distZone = new Set();
+    leave.forEach(function(g)  { distZone.add(g); });
+    arrive.forEach(function(g) { distZone.add(g); });
+    zones.set(prop.id, distZone);
+    leavingSet.set(prop.id, leave);
+    arrivingSet.set(prop.id, arrive);
+    kineRefs.set(prop.id, refs);
   }
 
-  // Build kinematic reference points per proposal (what each proposal's check depends on)
-  function kineRefIndexes(prop) {
-    if (prop.kind === 'insert') return prop.bracketGpxIndexes;
-    if (prop.kind === 'block-finding') {
-      var refs = [];
-      if (prop.prevGpxIndex !== null) refs.push(prop.prevGpxIndex);
-      if (prop.nextGpxIndex !== null) refs.push(prop.nextGpxIndex);
-      return refs;
-    }
-    return []; // adjacent-exact-drop: no kinematic references
-  }
+  function setHasGi(arr, gi) { for (var i=0;i<arr.length;i++) if (arr[i]===gi) return true; return false; }
 
-  // Kinematically sensitive proposal kinds
-  function isKineSensitive(prop) {
-    return prop.kind === 'insert' || prop.kind === 'block-finding';
-  }
-
-  // Build coupling edges: for each sensitive proposal P, for each other proposal Q,
-  // if any of P's kinematic ref indexes fall in Q's disturbance zone → edge P↔Q
-  var edges = []; // { blockedProposalId, disturbanceSourceId, disturbedGpxIndex, side }
-  var adjacency = new Map(); // proposalId → Set<proposalId> (neighbours in coupling graph)
-
-  proposals.forEach(function(prop) {
-    adjacency.set(prop.id, new Set());
-  });
+  // Build edges + adjacency. Strictly intra-segment.
+  var edges = [];
+  var adjacency = new Map();
+  proposals.forEach(function(p) { adjacency.set(p.id, new Set()); });
 
   for (var pi = 0; pi < proposals.length; pi++) {
     var P = proposals[pi];
-    if (!isKineSensitive(P)) continue;
-    var Prefs = kineRefIndexes(P);
+    var Prefs = kineRefs.get(P.id);
+    if (!Prefs || Prefs.size === 0) continue;
+    var Pleave = leavingSet.get(P.id);
+    var Parrive = arrivingSet.get(P.id);
 
     for (var qi = 0; qi < proposals.length; qi++) {
+      if (pi === qi) continue;
       var Q = proposals[qi];
-      if (P.id === Q.id) continue;
-      var Qzone = disturbanceZones.get(Q.id);
-      if (!Qzone) continue;
+      if (Q.trkSegIndex !== P.trkSegIndex) continue;
+      var Qzone = zones.get(Q.id);
+      if (!Qzone || Qzone.size === 0) continue;
 
-      for (var ri = 0; ri < Prefs.length; ri++) {
-        if (Qzone.has(Prefs[ri])) {
-          edges.push({
-            blockedProposalId:    P.id,
-            disturbanceSourceId:  Q.id,
-            disturbedGpxIndex:    Prefs[ri],
-            side: P.bracketGpxIndexes && P.bracketGpxIndexes.includes(Prefs[ri]) ? 'arriving' : 'leaving'
-          });
-          adjacency.get(P.id).add(Q.id);
-          adjacency.get(Q.id).add(P.id);
-          break; // one edge per (P, Q) pair is enough
-        }
+      var hit = null;
+      Prefs.forEach(function(gi) {
+        if (hit === null && Qzone.has(gi)) hit = gi;
+      });
+      if (hit !== null) {
+        var side = Parrive.has(hit) ? 'arriving' : (Pleave.has(hit) ? 'leaving' : 'arriving');
+        edges.push({
+          blockedProposalId:    P.id,
+          disturbanceSourceId:  Q.id,
+          disturbedGpxIndex:    hit,
+          side:                 side,
+          trkSegIndex:          P.trkSegIndex
+        });
+        adjacency.get(P.id).add(Q.id);
+        adjacency.get(Q.id).add(P.id);
       }
     }
   }
 
-  // Connected components (union-find)
+  // Connected components (union-find).
   var parent = new Map();
   proposals.forEach(function(p) { parent.set(p.id, p.id); });
   function find(id) {
@@ -149,10 +167,8 @@ function detectCoupling(proposals, workingOrderedPoints) {
     var ra = find(a), rb = find(b);
     if (ra !== rb) parent.set(ra, rb);
   }
-
   edges.forEach(function(e) { union(e.blockedProposalId, e.disturbanceSourceId); });
 
-  // Group proposals into regions
   var regionMap = new Map();
   proposals.forEach(function(p) {
     var root = find(p.id);
@@ -161,15 +177,18 @@ function detectCoupling(proposals, workingOrderedPoints) {
   });
 
   var coupledRegions = [];
-  regionMap.forEach(function(ids, root) {
-    // Only non-trivial regions (size > 1 or has edges)
-    var regionEdges = edges.filter(function(e) { return ids.includes(e.blockedProposalId); });
+  regionMap.forEach(function(ids) {
+    var regionEdges = edges.filter(function(e) { return ids.indexOf(e.blockedProposalId) >= 0; });
     if (ids.length > 1 || regionEdges.length > 0) {
       var zoneUnion = new Set();
-      ids.forEach(function(id) {
-        disturbanceZones.get(id).forEach(function(gi) { zoneUnion.add(gi); });
-      });
+      ids.forEach(function(id) { (zones.get(id) || new Set()).forEach(function(gi) { zoneUnion.add(gi); }); });
+      // Trk seg index is the same across the region by construction (intra-segment).
+      var trkSeg = null;
+      for (var i = 0; i < proposals.length; i++) {
+        if (ids.indexOf(proposals[i].id) >= 0) { trkSeg = proposals[i].trkSegIndex; break; }
+      }
       coupledRegions.push({
+        trkSegIndex: trkSeg,
         proposalIds: ids,
         disturbanceZoneGpxIndexes: Array.from(zoneUnion),
         edges: regionEdges
@@ -177,18 +196,21 @@ function detectCoupling(proposals, workingOrderedPoints) {
     }
   });
 
-  // Coupling-blocked = kinematically sensitive proposals with ≥1 coupling edge
   var blockedSet = new Set();
   edges.forEach(function(e) { blockedSet.add(e.blockedProposalId); });
   var couplingBlockedProposalIds = proposals
-    .filter(function(p) { return isKineSensitive(p) && blockedSet.has(p.id); })
+    .filter(function(p) { return blockedSet.has(p.id); })
     .map(function(p) { return p.id; });
 
   var independentProposalIds = proposals
     .filter(function(p) { return !blockedSet.has(p.id); })
     .map(function(p) { return p.id; });
 
-  return { couplingBlockedProposalIds, independentProposalIds, coupledRegions };
+  return {
+    couplingBlockedProposalIds: couplingBlockedProposalIds,
+    independentProposalIds:     independentProposalIds,
+    coupledRegions:             coupledRegions
+  };
 }
 
 module.exports = { detectCoupling };

@@ -3,285 +3,342 @@
 /**
  * packages/correction/apply/resolution-apply.js
  *
- * Applies AND-gated proposals to the working state.
- * Gate: !overlapVetoed && !couplingBlocked (ADR-correction-0010 §8).
+ * Applies the AND-gated proposal set to workingState (mutations included).
+ * Plan §resolution-apply, ADR-correction-0015.
  *
- * Per-kind disposition (ADR-correction-0015):
+ * Gate: applyable = proposals \ overlapVetoed \ couplingBlocked.
  *
- *   block-finding (socket-ok):
- *     → kinematic guard GATING.
- *     Pass → apply block reorder. Fail → excludedFromTrust + annotation, applied=false.
+ * Per-kind disposition:
  *
- *   insert (length=1, isExactGroup=false):
- *     → kinematic guard GATING.
- *     Pass → move candidate to target position. Fail → excludedFromTrust + annotation, applied=false.
+ *   adjacent-exact-drop: unconditional drop.
  *
- *   insert (length≥2, isExactGroup=false):
- *     → kinematic guard ADVISORY with all-fail fallback.
- *     Winner = passer with lowest score; if all fail, winner = lowest score overall.
- *     Non-winners → excludedFromTrust reason 'insert_competition_loser'.
+ *   block-finding (overlapStatus='socket-ok'):
+ *     Kinematic check on block first↔prev and last↔next anchors (GATING).
+ *     PASS → reorder; FAIL → excludedFromTrust + skipReason.
  *
- *   insert (isExactGroup=true):
- *     → no kinematic check. Drop all but lowest gpxIndex. applied=true.
+ *   insert (length=1, isExactGroup=false): GATING.
+ *     Kinematic check computed at apply time from workingState coords.
  *
- *   adjacent-exact-drop:
- *     → always apply. No gate (ADR-correction-0010).
+ *   insert (length≥2, isExactGroup=false): ADVISORY with all-fail fallback.
+ *     Winner = lowest-score passer; if all fail, lowest-score overall.
  *
- * After applying: removes dropped/moved points from workingOrderedPoints as needed.
- * Sets applied + skipReason on every proposal.
+ *   insert (isExactGroup=true): MVP flag-only.
  */
 
-var guard   = require('./kinematic-guard');
-var state   = require('../state/working-state');
+var guard    = require('./kinematic-guard');
+var ws       = require('../state/working-state');
 var defaults = require('../params/defaults');
 
-/**
- * @param {Array<Object>}  proposals
- * @param {string[]}       overlapVetoedProposalIds
- * @param {string[]}       couplingBlockedProposalIds
- * @param {Array<Object>}  overlapBlockResolution - socket-ok block details (from overlap-detection)
- * @param {Object}         workingState
- * @param {number}         thresholdKph
- * @param {string}         passLabel - e.g. 'phase1_pass_1'
- */
-function applyProposals(
-  proposals,
-  overlapVetoedProposalIds,
-  couplingBlockedProposalIds,
-  overlapBlockResolution,
-  workingState,
-  thresholdKph,
-  passLabel
-) {
-  if (thresholdKph === undefined) thresholdKph = defaults.lenientMaxImpliedSpeedKph;
+function applyProposals(proposals, overlapVetoedProposalIds, couplingBlockedProposalIds,
+                        overlapBlockResolution, workingState, params, passLabel, passIndex) {
+  var thresholdKph = (params && typeof params.lenientMaxImpliedSpeedKph === 'number')
+    ? params.lenientMaxImpliedSpeedKph
+    : (typeof params === 'number' ? params : defaults.lenientMaxImpliedSpeedKph);
 
-  var vetoedSet  = new Set(overlapVetoedProposalIds);
-  var blockedSet = new Set(couplingBlockedProposalIds);
+  var vetoedSet  = new Set(overlapVetoedProposalIds || []);
+  var blockedSet = new Set(couplingBlockedProposalIds || []);
 
-  // Build block resolution lookup by proposalId
   var blockResMap = new Map();
-  for (var bi = 0; bi < overlapBlockResolution.length; bi++) {
+  for (var bi = 0; bi < (overlapBlockResolution || []).length; bi++) {
     blockResMap.set(overlapBlockResolution[bi].proposalId, overlapBlockResolution[bi]);
   }
 
-  // Build point lookup for kinematic guard calls
-  var ptMap = new Map();
-  for (var pi = 0; pi < workingState.workingOrderedPoints.length; pi++) {
-    var pt = workingState.workingOrderedPoints[pi];
-    ptMap.set(pt.gpxIndex, pt);
+  function ptOf(gpxIndex) {
+    var pts = workingState.workingOrderedPoints;
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i].gpxIndex === gpxIndex) return pts[i];
+    }
+    return null;
   }
 
   for (var i = 0; i < proposals.length; i++) {
     var proposal = proposals[i];
 
-    // ── Gate check ──────────────────────────────────────────────────────────
     if (vetoedSet.has(proposal.id)) {
       proposal.applied    = false;
       proposal.skipReason = 'overlap_vetoed';
+      workingState.proposals.push(proposal);
       continue;
     }
     if (blockedSet.has(proposal.id)) {
       proposal.applied    = false;
       proposal.skipReason = 'coupling_blocked';
+      workingState.proposals.push(proposal);
       continue;
     }
 
-    // ── Per-kind apply logic ─────────────────────────────────────────────────
     if (proposal.kind === 'adjacent-exact-drop') {
-      applyAdjacentExactDrop(proposal, workingState, passLabel);
-
+      applyAdjacentExactDrop(proposal, workingState, passLabel, passIndex);
     } else if (proposal.kind === 'block-finding') {
-      applyBlockFinding(proposal, blockResMap, ptMap, workingState, thresholdKph, passLabel);
-
+      applyBlockFinding(proposal, blockResMap, ptOf, workingState, thresholdKph, passLabel, passIndex);
     } else if (proposal.kind === 'insert') {
-      applyInsert(proposal, ptMap, workingState, thresholdKph, passLabel);
-
+      applyInsert(proposal, ptOf, workingState, thresholdKph, passLabel, passIndex);
     } else {
       proposal.applied    = false;
-      proposal.skipReason = 'unknown_kind';
+      proposal.skipReason = 'overlap_vetoed';
     }
+    workingState.proposals.push(proposal);
   }
 }
 
 // ── adjacent-exact-drop ────────────────────────────────────────────────────
-
-function applyAdjacentExactDrop(proposal, workingState, passLabel) {
-  state.addDrop(workingState, proposal.dropGpxIndex, 'adjacent_exact_duplicate', passLabel);
-  removeFromWorking(workingState, proposal.dropGpxIndex);
+function applyAdjacentExactDrop(proposal, workingState, passLabel, passIndex) {
+  ws.addDrop(workingState, proposal.dropGpxIndex, 'adjacent-exact-duplicate', passLabel);
+  ws.removeFromWorking(workingState, proposal.dropGpxIndex);
+  ws.addRearrangement(workingState, {
+    kind:        'adjacent-exact-drop',
+    passIndex:   (passIndex == null ? 0 : passIndex),
+    trkSegIndex: proposal.trkSegIndex,
+    stage:       passLabel,
+    gpxIndexes:  [proposal.dropGpxIndex]
+  });
   proposal.applied = true;
+  proposal.skipReason = null;
 }
 
-// ── block-finding (socket-ok) ──────────────────────────────────────────────
-
-function applyBlockFinding(proposal, blockResMap, ptMap, workingState, thresholdKph, passLabel) {
+// ── block-finding ──────────────────────────────────────────────────────────
+function applyBlockFinding(proposal, blockResMap, ptOf, workingState, thresholdKph, passLabel, passIndex) {
+  if (proposal.overlapStatus !== 'socket-ok') {
+    proposal.applied    = false;
+    proposal.skipReason = 'overlap_vetoed';
+    return;
+  }
   var res = blockResMap.get(proposal.id);
   if (!res) {
-    // No socket-ok resolution — shouldn't reach here if gates work, but safe fallback
     proposal.applied    = false;
-    proposal.skipReason = 'no_socket_ok_resolution';
+    proposal.skipReason = 'overlap_vetoed';
+    return;
+  }
+  var firstPt = ptOf(proposal.gpxIndexes[0]);
+  var lastPt  = ptOf(proposal.gpxIndexes[proposal.gpxIndexes.length - 1]);
+  if (!firstPt || !lastPt) {
+    proposal.applied    = false;
+    proposal.skipReason = 'overlap_vetoed';
     return;
   }
 
-  // Kinematic guard: block first/last vs bracket anchors
-  var firstPt = ptMap.get(proposal.gpxIndexes[0]);
-  var lastPt  = ptMap.get(proposal.gpxIndexes[proposal.gpxIndexes.length - 1]);
-  var prevAnc = res.prevAnchorPoint;
-  var nextAnc = res.nextAnchorPoint;
+  var prevCheck = res.prevAnchorPoint
+    ? guard.computeKinematicCheck(res.prevAnchorPoint, firstPt, null, thresholdKph)
+    : null;
+  var nextCheck = res.nextAnchorPoint
+    ? guard.computeKinematicCheck(null, lastPt, res.nextAnchorPoint, thresholdKph)
+    : null;
 
-  var checkPrev = firstPt ? guard.computeKinematicCheck(prevAnc, firstPt, null, thresholdKph) : null;
-  var checkNext = lastPt  ? guard.computeKinematicCheck(null, lastPt, nextAnc, thresholdKph)  : null;
-
-  var guardPassed = (
-    (!checkPrev || checkPrev.passed) &&
-    (!checkNext || checkNext.passed)
-  );
-
+  var sp = prevCheck ? prevCheck.speedPrevKph : null;
+  var sn = nextCheck ? nextCheck.speedNextKph : null;
+  var prevExceed = (sp !== null && sp > thresholdKph);
+  var nextExceed = (sn !== null && sn > thresholdKph);
+  var passed = !prevExceed && !nextExceed && (sp !== null || sn !== null);
+  var failReason = null;
+  if (!passed) {
+    if (sp === null && sn === null) failReason = 'no_bracket';
+    else if (prevExceed && nextExceed) failReason = 'both_exceeded';
+    else if (prevExceed)               failReason = 'speed_prev_exceeded';
+    else if (nextExceed)               failReason = 'speed_next_exceeded';
+  }
+  var score = null;
+  if (sp !== null && sn !== null) score = sp*sp + sn*sn;
+  else if (sp !== null) score = sp*sp;
+  else if (sn !== null) score = sn*sn;
   var kinematics = {
-    speedPrevKph: checkPrev ? checkPrev.speedPrevKph : null,
-    speedNextKph: checkNext ? checkNext.speedNextKph : null,
-    score:        (checkPrev && checkNext) ? (
-      (checkPrev.speedPrevKph || 0) * (checkPrev.speedPrevKph || 0) +
-      (checkNext.speedNextKph || 0) * (checkNext.speedNextKph || 0)
-    ) : null,
-    thresholdKph: thresholdKph,
-    passed:       guardPassed
+    speedPrevKph: sp, speedNextKph: sn, score: score,
+    thresholdKph: thresholdKph, passed: passed
   };
+  if (failReason) kinematics.failReason = failReason;
 
-  if (!guardPassed) {
-    // Gating: do not apply
+  if (!passed) {
     for (var gi = 0; gi < proposal.gpxIndexes.length; gi++) {
-      state.addExcludedFromTrust(workingState, proposal.gpxIndexes[gi], 'block_kinematic_guard_failed', passLabel);
+      ws.addExcludedFromTrust(workingState, proposal.gpxIndexes[gi],
+        'block_kinematic_guard_failed', { proposalId: proposal.id, kinematics: kinematics });
     }
-    state.addAnnotation(workingState, {
-      kind:       'block_reorder_kinematic_guard_failed',
-      scope:      'proposal',
-      proposalId: proposal.id,
-      gpxIndexes: proposal.gpxIndexes,
-      details:    { kinematics, parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph } }
+    ws.addAnnotation(workingState, {
+      scope:    'proposal',
+      scopeRef: { proposalId: proposal.id, trkSegIndex: proposal.trkSegIndex },
+      kind:     'block_reorder_kinematic_guard_failed',
+      details:  { kinematics: kinematics,
+                  parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph } }
     });
     proposal.applied    = false;
     proposal.skipReason = 'kinematic_guard_failed';
     return;
   }
 
-  // Apply: reorder block members to the target socket position
-  // TODO: implement actual reorder in workingOrderedPoints
-  // Placeholder: mark as applied (full reorder logic in Phase H implementation)
-  state.addAnnotation(workingState, {
-    kind:       'block_reorder_applied',
-    scope:      'proposal',
-    proposalId: proposal.id,
-    gpxIndexes: proposal.gpxIndexes,
-    details:    { kinematics, parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph } }
+  var afterGi = (res.prevGpxIndex !== null && res.prevGpxIndex !== undefined) ? res.prevGpxIndex : null;
+  ws.relocateRunAfter(workingState, proposal.gpxIndexes, afterGi);
+
+  // Mark all block members as resolved so subsequent passes don't re-propose them.
+  for (var ri = 0; ri < proposal.gpxIndexes.length; ri++) {
+    ws.markAnomalyResolved(workingState, proposal.gpxIndexes[ri]);
+  }
+
+  ws.addAnnotation(workingState, {
+    scope:    'proposal',
+    scopeRef: { proposalId: proposal.id, trkSegIndex: proposal.trkSegIndex },
+    kind:     'block_reorder_applied',
+    details:  { gpxIndexes: proposal.gpxIndexes, afterGpxIndex: afterGi, kinematics: kinematics }
+  });
+  ws.addRearrangement(workingState, {
+    kind:         'block-reorder',
+    passIndex:    (passIndex == null ? 0 : passIndex),
+    trkSegIndex:  proposal.trkSegIndex,
+    stage:        passLabel,
+    gpxIndexes:   proposal.gpxIndexes,
+    afterGpxIndex: afterGi,
+    prevGpxIndex:  res.prevGpxIndex,
+    nextGpxIndex:  res.nextGpxIndex,
+    kinematics:    kinematics
   });
   proposal.applied = true;
+  proposal.skipReason = null;
+  proposal.kinematics = kinematics;
 }
 
 // ── insert ─────────────────────────────────────────────────────────────────
+function applyInsert(proposal, ptOf, workingState, thresholdKph, passLabel, passIndex) {
+  var candidateGpxIndexes = proposal.candidateGpxIndexes || [];
 
-function applyInsert(proposal, ptMap, workingState, thresholdKph, passLabel) {
-  // isExactGroup: no kinematic check — drop all but lowest gpxIndex
+  // isExactGroup: MVP flag-only — no mutation, members → excludedFromTrust.
   if (proposal.isExactGroup) {
-    var sorted = proposal.candidateGpxIndexes.slice().sort(function(a, b) { return a - b; });
-    for (var ei = 1; ei < sorted.length; ei++) {
-      state.addDrop(workingState, sorted[ei], 'exact_group_non_winner', passLabel);
-      removeFromWorking(workingState, sorted[ei]);
+    for (var ei = 0; ei < candidateGpxIndexes.length; ei++) {
+      ws.addExcludedFromTrust(workingState, candidateGpxIndexes[ei],
+        'exact_group_unresolved', { proposalId: proposal.id });
     }
-    proposal.applied = true;
+    proposal.applied    = false;
+    proposal.skipReason = 'exact_group_flag_only';
+    proposal.winner     = null;
     return;
   }
 
-  var prevAnchor = null, nextAnchor = null;
-  if (proposal.bracketGpxIndexes && proposal.bracketGpxIndexes.length > 0) {
-    prevAnchor = ptMap.get(proposal.bracketGpxIndexes[0]) || null;
-    nextAnchor = ptMap.get(proposal.bracketGpxIndexes[1]) || null;
+  // Resolve bracket anchor points from workingState.
+  var prevAnchorPt = null, nextAnchorPt = null;
+  var bracketGis   = proposal.bracketGpxIndexes || [];
+  if (bracketGis.length >= 1) {
+    if (proposal.tPrev !== null && proposal.tPrev !== undefined) {
+      prevAnchorPt = ptOf(bracketGis[0]);
+    } else if (bracketGis.length === 1) {
+      // lone bracket is next anchor
+      nextAnchorPt = ptOf(bracketGis[0]);
+    }
   }
-  // Use tPrev/tNext as tiebreaker if anchor lookup fails
-  if (!prevAnchor && proposal.tPrev !== null) {
-    prevAnchor = { lat: 0, lon: 0, timeMs: proposal.tPrev }; // position unknown — skip speed check
-  }
-  if (!nextAnchor && proposal.tNext !== null) {
-    nextAnchor = { lat: 0, lon: 0, timeMs: proposal.tNext };
+  if (bracketGis.length >= 2) {
+    nextAnchorPt = ptOf(bracketGis[bracketGis.length - 1]);
   }
 
-  // length=1: gating
-  if (proposal.candidateGpxIndexes.length === 1) {
-    var candidate = ptMap.get(proposal.candidateGpxIndexes[0]);
-    if (!candidate) { proposal.applied = false; proposal.skipReason = 'candidate_not_found'; return; }
-
-    var check = guard.computeKinematicCheck(prevAnchor, candidate, nextAnchor, thresholdKph);
-    if (!check.passed) {
-      state.addExcludedFromTrust(workingState, candidate.gpxIndex, 'insert_kinematic_guard_failed', passLabel);
-      state.addAnnotation(workingState, {
-        kind:       'insert_kinematic_guard_failed',
-        scope:      'proposal',
-        proposalId: proposal.id,
-        gpxIndexes: [candidate.gpxIndex],
-        details:    { kinematics: check, parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph } }
+  // length=1 — gating
+  if (candidateGpxIndexes.length === 1) {
+    var candPt = ptOf(candidateGpxIndexes[0]);
+    if (!candPt) {
+      proposal.applied    = false;
+      proposal.skipReason = 'kinematic_guard_failed';
+      proposal.winner     = null;
+      return;
+    }
+    var k = guard.computeKinematicCheck(prevAnchorPt, candPt, nextAnchorPt, thresholdKph);
+    if (!k || !k.passed) {
+      ws.addExcludedFromTrust(workingState, candidateGpxIndexes[0],
+        'insert_kinematic_guard_failed',
+        { proposalId: proposal.id, kinematics: k });
+      ws.addAnnotation(workingState, {
+        scope:    'proposal',
+        scopeRef: { proposalId: proposal.id, trkSegIndex: proposal.trkSegIndex },
+        kind:     'insert_kinematic_guard_failed',
+        details:  { kinematics: k,
+                    parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph } }
       });
       proposal.applied    = false;
       proposal.skipReason = 'kinematic_guard_failed';
-    } else {
-      // TODO: apply the actual insertion reorder in workingOrderedPoints
-      state.addAnnotation(workingState, {
-        kind: 'insert_applied', scope: 'proposal', proposalId: proposal.id,
-        gpxIndexes: [candidate.gpxIndex],
-        details: { kinematics: check, parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph } }
-      });
-      proposal.applied = true;
+      proposal.winner     = null;
+      return;
     }
+    moveCandidateToTarget(workingState, candidateGpxIndexes[0], proposal, passLabel, passIndex);
+    ws.markAnomalyResolved(workingState, candidateGpxIndexes[0]);
+    ws.addAnnotation(workingState, {
+      scope:    'proposal',
+      scopeRef: { proposalId: proposal.id, trkSegIndex: proposal.trkSegIndex },
+      kind:     'insert_applied',
+      details:  { gpxIndex: candidateGpxIndexes[0] }
+    });
+    proposal.winner  = candidateGpxIndexes[0];
+    proposal.applied = true;
+    proposal.skipReason = null;
     return;
   }
 
-  // length≥2: advisory with all-fail fallback
-  var checks = proposal.candidateGpxIndexes.map(function(gpxIdx) {
-    var cand = ptMap.get(gpxIdx);
-    if (!cand) return { gpxIndex: gpxIdx, check: null };
-    return { gpxIndex: gpxIdx, check: guard.computeKinematicCheck(prevAnchor, cand, nextAnchor, thresholdKph) };
+  // length ≥ 2 — competition with all-fail fallback.
+  var enriched = candidateGpxIndexes.map(function(gi) {
+    var pt = ptOf(gi);
+    var kc = pt ? guard.computeKinematicCheck(prevAnchorPt, pt, nextAnchorPt, thresholdKph) : null;
+    return { gi: gi, kinematics: kc };
   });
-
-  var passers = checks.filter(function(c) { return c.check && c.check.passed; });
-  var pool    = passers.length > 0 ? passers : checks;
-
-  // Select winner: lowest score, tiebreak by lowest gpxIndex
+  var passers = enriched.filter(function(e) { return e.kinematics && e.kinematics.passed; });
+  var pool    = passers.length > 0 ? passers : enriched;
   pool.sort(function(a, b) {
-    var sa = a.check ? (a.check.score || Infinity) : Infinity;
-    var sb = b.check ? (b.check.score || Infinity) : Infinity;
+    var sa = (a.kinematics && a.kinematics.score !== null) ? a.kinematics.score : Infinity;
+    var sb = (b.kinematics && b.kinematics.score !== null) ? b.kinematics.score : Infinity;
     if (sa !== sb) return sa - sb;
-    return a.gpxIndex - b.gpxIndex;
+    return a.gi - b.gi;
   });
-
-  var winner = pool[0];
-  var allFailed = passers.length === 0;
+  var winnerEntry = pool[0];
+  var allFailed = (passers.length === 0);
   var annKind = allFailed ? 'insert_competition_kinematic_guard_failed' : 'insert_competition_resolved';
 
-  state.addAnnotation(workingState, {
-    kind: annKind, scope: 'proposal', proposalId: proposal.id,
-    gpxIndexes: proposal.candidateGpxIndexes,
-    details: {
-      winnerGpxIndex: winner.gpxIndex,
-      allFailed: allFailed,
-      candidates: checks.map(function(c) { return { gpxIndex: c.gpxIndex, kinematics: c.check }; }),
+  ws.addAnnotation(workingState, {
+    scope:    'proposal',
+    scopeRef: { proposalId: proposal.id, trkSegIndex: proposal.trkSegIndex },
+    kind:     annKind,
+    details:  {
+      winnerGpxIndex: winnerEntry.gi,
+      allFailed:      allFailed,
+      candidates:     enriched.map(function(e) {
+        return { gpxIndex: e.gi, kinematics: e.kinematics };
+      }),
       parametersSnapshot: { lenientMaxImpliedSpeedKph: thresholdKph }
     }
   });
 
-  for (var li = 0; li < checks.length; li++) {
-    if (checks[li].gpxIndex !== winner.gpxIndex) {
-      state.addExcludedFromTrust(workingState, checks[li].gpxIndex, 'insert_competition_loser', passLabel);
-      removeFromWorking(workingState, checks[li].gpxIndex);
-    }
+  for (var li = 0; li < enriched.length; li++) {
+    var e = enriched[li];
+    if (e.gi === winnerEntry.gi) continue;
+    ws.addExcludedFromTrust(workingState, e.gi, 'insert_competition_loser',
+      { proposalId: proposal.id, kinematics: e.kinematics });
   }
+  moveCandidateToTarget(workingState, winnerEntry.gi, proposal, passLabel, passIndex);
+  ws.markAnomalyResolved(workingState, winnerEntry.gi);
 
-  // TODO: apply the actual reorder for winner into correct traversal position
+  proposal.winner  = winnerEntry.gi;
   proposal.applied = true;
+  proposal.skipReason = null;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function removeFromWorking(workingState, gpxIndex) {
-  workingState.workingOrderedPoints = workingState.workingOrderedPoints.filter(function(p) {
-    return p.gpxIndex !== gpxIndex;
+/**
+ * Move a point so it sits after bracketGis[0] (prev anchor) within its segment.
+ */
+function moveCandidateToTarget(workingState, gpxIndex, proposal, passLabel, passIndex) {
+  var afterGi     = null;
+  var bracketGis  = proposal.bracketGpxIndexes || [];
+  if (bracketGis.length >= 1) {
+    if (proposal.tPrev !== null && proposal.tPrev !== undefined) {
+      afterGi = bracketGis[0];
+    }
+    // lone bracket is next anchor → place at start
+    if (bracketGis.length === 1 && (proposal.tPrev === null || proposal.tPrev === undefined)) {
+      afterGi = null;
+    }
+  }
+  try {
+    ws.relocatePointAfter(workingState, gpxIndex, afterGi);
+  } catch (e) {
+    // fallback: skip mutation
+  }
+  ws.addRearrangement(workingState, {
+    kind:          'insert-move',
+    passIndex:     (passIndex == null ? 0 : passIndex),
+    trkSegIndex:   proposal.trkSegIndex,
+    stage:         passLabel,
+    gpxIndexes:    [gpxIndex],
+    afterGpxIndex: afterGi,
+    targetTimeMs:  proposal.targetTimeMs,
+    proposalId:    proposal.id
   });
 }
 

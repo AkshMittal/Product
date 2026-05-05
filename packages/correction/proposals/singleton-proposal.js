@@ -3,96 +3,105 @@
 /**
  * packages/correction/proposals/singleton-proposal.js
  *
- * Emits 'insert' proposals for singleton backtrack candidates.
+ * Emits unified `insert` proposals (kind = 'insert') for singleton backtrack
+ * candidates per plan §singleton-proposal / ADR-correction-0010.
  *
- * A singleton (ADR-correction-0010, implementation_plan.md):
- *   A single point that is belowAnchor but is NOT part of a block-finding run.
- *   It has a timeMs that, when placed in the correct chronological position,
- *   produces a valid forward-monotonic insertion.
+ * Singleton candidate (this module):
+ *   - belowAnchor === true (per-segment audit tag)
+ *   - NOT a member of a block-finding run
+ *   - has a usable timeMs (>0, finite)
  *
- * This module:
- *   1. Identifies singleton candidates (belowAnchor, not in any block run, length=1 in
- *      their "run").
- *   2. Finds the traversal-adjacent bracket (tPrev, tNext) — the nearest points in
- *      workingOrderedPoints with usable timeMs on each side of the candidate's
- *      correct insertion position. ADR-correction-0010: traversal-adjacent, NOT
- *      gpxIndex-adjacent.
- *   3. Emits an 'insert' proposal with bracketGpxIndexes for coupling-detection.
+ * For each candidate, walk traversal-adjacent neighbours within the SAME
+ * trkSegIndex to find tPrev, tNext (the nearest points with usable timeMs on
+ * each side of the candidate's apply position). The apply position is "where
+ * the candidate's timeMs slots in chronologically" — but for the bracket we
+ * use the candidate's CURRENT traversal-adjacent neighbours with usable times,
+ * which is what coupling-detection consumes.
  *
- * TODO: Implement full singleton identification and bracket derivation.
+ * Output insert proposal carries:
+ *   - targetTimeMs                = candidate.timeMs
+ *   - isExactGroup                = false
+ *   - candidates: [{ gpxIndex, lat, lon, tPrev, tNext, bracketGpxIndexes,
+ *                    kinematics: KinematicCheck }]
+ *   - isEdgeProposal              = true iff targetTimeMs lands at/past the
+ *                                   segment's spine envelope edge.
  *
- * @param {Array<Object>} workingOrderedPoints - current traversal snapshot (one segment)
- * @param {Set<number>}   belowAnchorGpxIndexes
- * @param {Set<number>}   blockMemberGpxIndexes - gpxIndexes already assigned to blocks
+ * @param {Array<Object>} workingOrderedPoints
+ * @param {Set<number>|Array<number>} belowAnchorGpxIndexes - per-segment audit tag
+ * @param {Set<number>}   blockMemberGpxIndexes
  * @param {number}        trkSegIndex
- * @returns {Array<Object>} array of 'insert' proposal objects
+ * @param {{minTimeMs:number|null, maxTimeMs:number|null}|null} spineEnvelope
+ * @param {{lenientMaxImpliedSpeedKph?:number}} [params]
+ * @returns {Array<Object>} insert proposals
  */
+var schema   = require('../state/proposal-schema');
+var defaults = require('../params/defaults');
 
-var schema = require('../state/proposal-schema');
+function buildSingletonProposals(workingOrderedPoints, belowAnchorGpxIndexes,
+                                  blockMemberGpxIndexes, trkSegIndex,
+                                  spineEnvelope, params, excludedSet) {
+  if (!belowAnchorGpxIndexes) return [];
+  var anchorSet = (belowAnchorGpxIndexes instanceof Set)
+    ? belowAnchorGpxIndexes
+    : new Set(belowAnchorGpxIndexes);
+  var blockSet = blockMemberGpxIndexes instanceof Set
+    ? blockMemberGpxIndexes
+    : new Set(blockMemberGpxIndexes || []);
+  var excluded = (excludedSet instanceof Set) ? excludedSet : new Set(excludedSet || []);
 
-function buildSingletonProposals(workingOrderedPoints, belowAnchorGpxIndexes, blockMemberGpxIndexes, trkSegIndex) {
   var proposals = [];
 
-  // Candidates: belowAnchor points that are not block members
-  var candidates = [];
   for (var i = 0; i < workingOrderedPoints.length; i++) {
     var pt = workingOrderedPoints[i];
     if (pt.trkSegIndex !== trkSegIndex) continue;
-    if (belowAnchorGpxIndexes.has(pt.gpxIndex) && !blockMemberGpxIndexes.has(pt.gpxIndex)) {
-      candidates.push(pt);
-    }
-  }
+    if (!anchorSet.has(pt.gpxIndex)) continue;
+    if (blockSet.has(pt.gpxIndex)) continue;
+    if (excluded.has(pt.gpxIndex)) continue;
+    if (typeof pt.timeMs !== 'number' || !isFinite(pt.timeMs) || pt.timeMs <= 0) continue;
 
-  // For each candidate: find traversal-adjacent bracket points with usable timeMs
-  for (var c = 0; c < candidates.length; c++) {
-    var candidate = candidates[c];
-    var candidateMs = candidate.timeMs;
-    if (typeof candidateMs !== 'number' || !isFinite(candidateMs)) continue;
-
-    // Find traversal position of candidate in workingOrderedPoints (current position)
-    var idx = -1;
-    for (var j = 0; j < workingOrderedPoints.length; j++) {
-      if (workingOrderedPoints[j].gpxIndex === candidate.gpxIndex) { idx = j; break; }
-    }
-    if (idx < 0) continue;
-
-    // Walk left for tPrev: nearest point with finite timeMs in the same segment
-    var tPrev = null;
-    var prevGpxIndex = null;
-    for (var l = idx - 1; l >= 0; l--) {
-      var lpt = workingOrderedPoints[l];
-      if (lpt.trkSegIndex !== trkSegIndex) break;
-      if (typeof lpt.timeMs === 'number' && isFinite(lpt.timeMs)) {
-        tPrev = lpt.timeMs;
-        prevGpxIndex = lpt.gpxIndex;
+    // Walk left (within same segment) for tPrev anchor.
+    var prevAnchor = null;
+    for (var l = i - 1; l >= 0; l--) {
+      var lp = workingOrderedPoints[l];
+      if (lp.trkSegIndex !== trkSegIndex) break;
+      if (typeof lp.timeMs === 'number' && isFinite(lp.timeMs) && lp.timeMs > 0) {
+        prevAnchor = lp;
         break;
       }
     }
-
-    // Walk right for tNext: nearest point with finite timeMs in the same segment
-    var tNext = null;
-    var nextGpxIndex = null;
-    for (var r = idx + 1; r < workingOrderedPoints.length; r++) {
-      var rpt = workingOrderedPoints[r];
-      if (rpt.trkSegIndex !== trkSegIndex) break;
-      if (typeof rpt.timeMs === 'number' && isFinite(rpt.timeMs)) {
-        tNext = rpt.timeMs;
-        nextGpxIndex = rpt.gpxIndex;
+    // Walk right (within same segment) for tNext anchor.
+    var nextAnchor = null;
+    for (var r = i + 1; r < workingOrderedPoints.length; r++) {
+      var rp = workingOrderedPoints[r];
+      if (rp.trkSegIndex !== trkSegIndex) break;
+      if (typeof rp.timeMs === 'number' && isFinite(rp.timeMs) && rp.timeMs > 0) {
+        nextAnchor = rp;
         break;
       }
     }
 
     var bracketGpxIndexes = [];
-    if (prevGpxIndex !== null) bracketGpxIndexes.push(prevGpxIndex);
-    if (nextGpxIndex !== null) bracketGpxIndexes.push(nextGpxIndex);
+    if (prevAnchor) bracketGpxIndexes.push(prevAnchor.gpxIndex);
+    if (nextAnchor) bracketGpxIndexes.push(nextAnchor.gpxIndex);
+
+    // Edge classification.
+    var isEdgeProposal;
+    if (!spineEnvelope || spineEnvelope.minTimeMs === null || spineEnvelope.maxTimeMs === null) {
+      isEdgeProposal = true;
+    } else {
+      isEdgeProposal = (pt.timeMs <= spineEnvelope.minTimeMs) ||
+                       (pt.timeMs >= spineEnvelope.maxTimeMs);
+    }
 
     proposals.push(schema.makeInsertProposal({
-      trkSegIndex: trkSegIndex,
-      candidateGpxIndexes: [candidate.gpxIndex],
-      isExactGroup: false,
-      tPrev: tPrev,
-      tNext: tNext,
-      bracketGpxIndexes: bracketGpxIndexes
+      trkSegIndex:         trkSegIndex,
+      candidateGpxIndexes: [pt.gpxIndex],
+      isExactGroup:        false,
+      isEdgeProposal:      isEdgeProposal,
+      tPrev:               prevAnchor ? prevAnchor.timeMs : null,
+      tNext:               nextAnchor ? nextAnchor.timeMs : null,
+      bracketGpxIndexes:   bracketGpxIndexes,
+      targetTimeMs:        pt.timeMs
     }));
   }
 

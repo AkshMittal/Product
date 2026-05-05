@@ -3,140 +3,264 @@
 /**
  * packages/correction/gates/overlap-detection.js
  *
- * Computes temporal overlap and socket status for block-finding proposals.
- * Independent of coupling-detection — both read snapshot state only (ADR-correction-0010).
+ * Cross-proposal footprint mapping per ADR-correction-0009 / plan
+ * §Cross-proposal footprint mapping. Reads snapshot + proposals only;
+ * independent of coupling-detection.
  *
- * For each block-finding proposal:
- *   1. Compute B_min and B_max (min/max timeMs of block members).
- *   2. Find bracket anchors (t_prev, t_next): traversal-adjacent spine-trusted points
- *      outside the block in each direction (implementation_plan.md § Bracket vs socket).
- *   3. Numeric closed-socket test: B_min >= t_prev AND B_max <= t_next.
- *   4. Corridor pierce-check: any spine-trusted point with timeMs ∈ (t_prev, t_next)
- *      and gpxIndex NOT in block → overlap (ADR-correction-0006 §5 / structural guard).
- *   5. Emit status: 'socket-ok' | 'overlap' | 'no-bracket'.
- *   6. For socket-ok blocks: populate overlapBlockResolution entry with anchor points.
+ * Block-finding path (per proposal):
+ *   1. Compute B_min, B_max from member timeMs values.
+ *   2. internalMonotonicity == false → status 'overlap'; emit annotation
+ *      `block_internal_monotonicity_fail` (proposal-scope).
+ *   3. Find bracket anchors (prevAnchor, nextAnchor) — segment spine points
+ *      outside the block, immediately on each side of [B_min, B_max].
+ *   4. If both anchors missing → status 'no-bracket'; annotation
+ *      `overlap_bracket_missing`.
+ *   5. Numeric socket: B_min >= tPrev AND B_max <= tNext.
+ *   6. Corridor pierce-check: any spine point with timeMs in (tPrev,tNext)
+ *      and gpxIndex not in block → status 'overlap'; annotation
+ *      `overlap_spine_pierce_detected`.
+ *   7. !socketOk → status 'overlap'; annotation `overlap_block`.
+ *   8. socket-ok and not pierced → status 'socket-ok'.
  *
- * Emits:
- *   overlapVetoedProposalIds[]  — block ids with status 'overlap'
- *   overlapBlockResolution[]    — for socket-ok blocks: bracket + anchor details
+ * Cross-proposal collisions (segment-scoped):
+ *   A. Insert inside block envelope:
+ *      For each insert proposal P, if P.targetTimeMs ∈ [B_min, B_max] of any
+ *      block-finding B in the same segment → veto BOTH P and B; annotation
+ *      `overlap_singleton_block_conflict` on each.
+ *   B. Two inserts with overlapping corridors:
+ *      For each pair (P1, P2) of insert proposals in the same segment with
+ *      overlapping bracket corridors (max(p1.tPrev, p2.tPrev) < min(p1.tNext, p2.tNext))
+ *      → veto BOTH; annotation `overlap_singleton_singleton_conflict` on each.
+ *      Exception: if one corridor strictly contains the other AND the contained
+ *      corridor's targetTimeMs falls inside the container's, MVP still vetoes
+ *      both (versioned edge policy — left simple in MVP).
  *
- * TODO: Implement full bracket/socket/pierce logic per implementation_plan.md.
+ * adjacent-exact-drop has no temporal footprint and never participates in collisions.
  *
- * @param {Array<Object>} proposals - all proposals for this pass
- * @param {Array<Object>} workingOrderedPoints - current traversal snapshot
- * @param {Map<number, Array<Object>>} spineIntervals - trkSegIndex → spine points
- * @returns {{ overlapVetoedProposalIds: string[], overlapBlockResolution: Array }}
+ * @param {Array<Object>} proposals             - all proposals for this pass
+ * @param {Array<Object>} workingOrderedPoints  - current snapshot
+ * @param {Map<number, Array<Object>>} spinePointsBySegment - per-segment spine points
+ * @returns {{
+ *   overlapVetoedProposalIds: string[],
+ *   overlapBlockResolution: Array,
+ *   annotations: Array
+ * }}
  */
-function detectOverlap(proposals, workingOrderedPoints, spineIntervals) {
-  var overlapVetoedProposalIds = [];
-  var overlapBlockResolution = [];
+function detectOverlap(proposals, workingOrderedPoints, spinePointsBySegment) {
+  var vetoed = new Set();
+  var resolutions = [];
+  var annotations = [];
 
-  for (var i = 0; i < proposals.length; i++) {
-    var proposal = proposals[i];
-    if (proposal.kind !== 'block-finding') continue;
+  // Index points for O(1) lookup.
+  var pointByGpx = new Map();
+  for (var i = 0; i < workingOrderedPoints.length; i++) {
+    pointByGpx.set(workingOrderedPoints[i].gpxIndex, workingOrderedPoints[i]);
+  }
 
-    var segSpine = spineIntervals.get(proposal.trkSegIndex) || [];
-    var blockSet = new Set(proposal.gpxIndexes);
+  // ── Block-finding pass ─────────────────────────────────────────────────────
+  for (var b = 0; b < proposals.length; b++) {
+    var bp = proposals[b];
+    if (bp.kind !== 'block-finding') continue;
 
-    // Step 1: B_min, B_max
+    if (bp.hasInternalMonotonicityViolation === true) {
+      bp.overlapStatus = 'overlap';
+      vetoed.add(bp.id);
+      annotations.push({
+        scope: 'proposal',
+        scopeRef: { proposalId: bp.id, trkSegIndex: bp.trkSegIndex },
+        kind:  'block_internal_monotonicity_fail',
+        details: { gpxIndexes: bp.gpxIndexes }
+      });
+      continue;
+    }
+
+    var blockSet = new Set(bp.gpxIndexes);
     var bMin = Infinity, bMax = -Infinity;
-    for (var j = 0; j < proposal.gpxIndexes.length; j++) {
-      var pt = findPoint(workingOrderedPoints, proposal.gpxIndexes[j]);
+    for (var m = 0; m < bp.gpxIndexes.length; m++) {
+      var pt = pointByGpx.get(bp.gpxIndexes[m]);
       if (!pt) continue;
-      if (typeof pt.timeMs === 'number' && isFinite(pt.timeMs)) {
+      if (typeof pt.timeMs === 'number' && isFinite(pt.timeMs) && pt.timeMs > 0) {
         if (pt.timeMs < bMin) bMin = pt.timeMs;
         if (pt.timeMs > bMax) bMax = pt.timeMs;
       }
     }
     if (!isFinite(bMin) || !isFinite(bMax)) {
-      // Block has no usable timestamps — veto
-      overlapVetoedProposalIds.push(proposal.id);
-      proposal.overlapStatus = 'overlap';
+      bp.overlapStatus = 'overlap';
+      bp.bMin = null; bp.bMax = null;
+      vetoed.add(bp.id);
+      annotations.push({
+        scope: 'proposal',
+        scopeRef: { proposalId: bp.id, trkSegIndex: bp.trkSegIndex },
+        kind:  'overlap_block',
+        details: { reason: 'no-usable-block-times' }
+      });
       continue;
     }
+    bp.bMin = bMin;
+    bp.bMax = bMax;
 
-    // Step 2: Find bracket anchors from spine outside block
+    var segSpine = spinePointsBySegment.get(bp.trkSegIndex) || [];
     var prevAnchor = null, nextAnchor = null;
-    // Spine points are ordered by timeMs; find last spine point < bMin not in block
     for (var sp = 0; sp < segSpine.length; sp++) {
-      if (!blockSet.has(segSpine[sp].gpxIndex) && segSpine[sp].timeMs < bMin) {
-        prevAnchor = segSpine[sp];
-      }
-    }
-    // First spine point > bMax not in block
-    for (var sn = 0; sn < segSpine.length; sn++) {
-      if (!blockSet.has(segSpine[sn].gpxIndex) && segSpine[sn].timeMs > bMax) {
-        nextAnchor = segSpine[sn];
-        break;
-      }
+      var spt = segSpine[sp];
+      if (blockSet.has(spt.gpxIndex)) continue;
+      if (spt.timeMs < bMin) prevAnchor = spt;     // last one wins (sorted)
+      else if (spt.timeMs > bMax) { nextAnchor = spt; break; }
     }
 
     if (!prevAnchor && !nextAnchor) {
-      // No bracket available — no-bracket status; not socket-ok
-      proposal.overlapStatus = 'no-bracket';
-      overlapVetoedProposalIds.push(proposal.id);
+      bp.overlapStatus = 'no-bracket';
+      vetoed.add(bp.id);
+      annotations.push({
+        scope: 'proposal',
+        scopeRef: { proposalId: bp.id, trkSegIndex: bp.trkSegIndex },
+        kind:  'overlap_bracket_missing',
+        details: { bMin: bMin, bMax: bMax }
+      });
       continue;
     }
 
-    var tPrev = prevAnchor ? prevAnchor.timeMs : -Infinity;
-    var tNext = nextAnchor ? nextAnchor.timeMs : Infinity;
+    var tPrev = prevAnchor ? prevAnchor.timeMs : null;
+    var tNext = nextAnchor ? nextAnchor.timeMs : null;
+    bp.prevGpxIndex = prevAnchor ? prevAnchor.gpxIndex : null;
+    bp.nextGpxIndex = nextAnchor ? nextAnchor.gpxIndex : null;
+    bp.tPrev = tPrev;
+    bp.tNext = tNext;
 
-    // Step 3: Numeric closed-socket test
-    var socketOk = (bMin >= tPrev) && (bMax <= tNext);
-
-    // Step 4: Corridor pierce-check
+    var socketOk = (tPrev === null || bMin >= tPrev) &&
+                   (tNext === null || bMax <= tNext);
     var pierced = false;
-    if (socketOk) {
+    if (socketOk && tPrev !== null && tNext !== null) {
       for (var pc = 0; pc < segSpine.length; pc++) {
-        var spt = segSpine[pc];
-        if (blockSet.has(spt.gpxIndex)) continue;
-        if (spt.timeMs > tPrev && spt.timeMs < tNext) {
-          pierced = true;
-          break;
-        }
+        var sp2 = segSpine[pc];
+        if (blockSet.has(sp2.gpxIndex)) continue;
+        if (sp2.timeMs > tPrev && sp2.timeMs < tNext) { pierced = true; break; }
       }
     }
 
-    if (!socketOk || pierced) {
-      proposal.overlapStatus = 'overlap';
-      overlapVetoedProposalIds.push(proposal.id);
+    if (!socketOk) {
+      bp.overlapStatus = 'overlap';
+      vetoed.add(bp.id);
+      annotations.push({
+        scope: 'proposal',
+        scopeRef: { proposalId: bp.id, trkSegIndex: bp.trkSegIndex },
+        kind:  'overlap_block',
+        details: { bMin: bMin, bMax: bMax, tPrev: tPrev, tNext: tNext }
+      });
+    } else if (pierced) {
+      bp.overlapStatus = 'overlap';
+      vetoed.add(bp.id);
+      annotations.push({
+        scope: 'proposal',
+        scopeRef: { proposalId: bp.id, trkSegIndex: bp.trkSegIndex },
+        kind:  'overlap_spine_pierce_detected',
+        details: { bMin: bMin, bMax: bMax, tPrev: tPrev, tNext: tNext }
+      });
     } else {
-      proposal.overlapStatus = 'socket-ok';
-      proposal.prevGpxIndex = prevAnchor ? prevAnchor.gpxIndex : null;
-      proposal.nextGpxIndex = nextAnchor ? nextAnchor.gpxIndex : null;
-      proposal.tPrev = tPrev;
-      proposal.tNext = tNext;
-
-      overlapBlockResolution.push({
-        proposalId: proposal.id,
-        trkSegIndex: proposal.trkSegIndex,
-        gpxIndexes: proposal.gpxIndexes,
-        bMin: bMin,
-        bMax: bMax,
-        tPrev: tPrev,
-        tNext: tNext,
-        prevGpxIndex: proposal.prevGpxIndex,
-        nextGpxIndex: proposal.nextGpxIndex,
-        prevAnchorPoint: prevAnchor,
-        nextAnchorPoint: nextAnchor,
+      bp.overlapStatus = 'socket-ok';
+      resolutions.push({
+        proposalId:        bp.id,
+        trkSegIndex:       bp.trkSegIndex,
+        gpxIndexes:        bp.gpxIndexes,
+        bMin:              bMin,
+        bMax:              bMax,
+        tPrev:             tPrev,
+        tNext:             tNext,
+        prevGpxIndex:      bp.prevGpxIndex,
+        nextGpxIndex:      bp.nextGpxIndex,
+        prevAnchorPoint:   prevAnchor,
+        nextAnchorPoint:   nextAnchor,
         spinePointPierceDetected: false
       });
     }
   }
 
-  return { overlapVetoedProposalIds, overlapBlockResolution };
-}
-
-/**
- * @param {Array<Object>} points
- * @param {number} gpxIndex
- * @returns {Object|null}
- */
-function findPoint(points, gpxIndex) {
-  for (var i = 0; i < points.length; i++) {
-    if (points[i].gpxIndex === gpxIndex) return points[i];
+  // ── Cross-kind: insert vs block envelope ───────────────────────────────────
+  for (var i2 = 0; i2 < proposals.length; i2++) {
+    var ip = proposals[i2];
+    if (ip.kind !== 'insert') continue;
+    if (ip.isExactGroup) continue; // exact-group is flag-only, no apply-gating
+    if (typeof ip.targetTimeMs !== 'number') continue;
+    for (var j2 = 0; j2 < proposals.length; j2++) {
+      var bp2 = proposals[j2];
+      if (bp2.kind !== 'block-finding') continue;
+      if (bp2.trkSegIndex !== ip.trkSegIndex) continue;
+      if (bp2.bMin === null || bp2.bMax === null) continue;
+      if (ip.targetTimeMs >= bp2.bMin && ip.targetTimeMs <= bp2.bMax) {
+        vetoed.add(ip.id);
+        vetoed.add(bp2.id);
+        annotations.push({
+          scope: 'proposal',
+          scopeRef: { proposalId: ip.id, trkSegIndex: ip.trkSegIndex },
+          kind: 'overlap_singleton_block_conflict',
+          details: { otherProposalId: bp2.id, blockEnvelope: [bp2.bMin, bp2.bMax],
+                     targetTimeMs: ip.targetTimeMs }
+        });
+        annotations.push({
+          scope: 'proposal',
+          scopeRef: { proposalId: bp2.id, trkSegIndex: bp2.trkSegIndex },
+          kind: 'overlap_singleton_block_conflict',
+          details: { otherProposalId: ip.id, blockEnvelope: [bp2.bMin, bp2.bMax],
+                     targetTimeMs: ip.targetTimeMs }
+        });
+      }
+    }
   }
-  return null;
+
+  // ── Cross-kind: insert-insert corridor overlap ─────────────────────────────
+  // Build the list of insert proposals with computable corridors.
+  var inserts = [];
+  for (var k2 = 0; k2 < proposals.length; k2++) {
+    var p = proposals[k2];
+    if (p.kind !== 'insert' || p.isExactGroup) continue;
+    inserts.push({ proposal: p, tPrev: p.tPrev, tNext: p.tNext });
+  }
+  for (var a = 0; a < inserts.length; a++) {
+    for (var b2 = a + 1; b2 < inserts.length; b2++) {
+      var P1 = inserts[a], P2 = inserts[b2];
+      if (P1.proposal.trkSegIndex !== P2.proposal.trkSegIndex) continue;
+      // Need both corridor endpoints — fall back gracefully if open-ended.
+      var lo1 = (P1.tPrev !== null) ? P1.tPrev : -Infinity;
+      var hi1 = (P1.tNext !== null) ? P1.tNext : Infinity;
+      var lo2 = (P2.tPrev !== null) ? P2.tPrev : -Infinity;
+      var hi2 = (P2.tNext !== null) ? P2.tNext : Infinity;
+      var overlapLo = Math.max(lo1, lo2);
+      var overlapHi = Math.min(hi1, hi2);
+      if (overlapLo < overlapHi) {
+        // Check whether the two targetTimeMs values fall inside the overlap
+        // (true conflict) — if both targets lie in the shared corridor, veto.
+        var t1 = P1.proposal.targetTimeMs, t2 = P2.proposal.targetTimeMs;
+        var conflict = (t1 > overlapLo && t1 < overlapHi) ||
+                       (t2 > overlapLo && t2 < overlapHi);
+        if (conflict) {
+          vetoed.add(P1.proposal.id);
+          vetoed.add(P2.proposal.id);
+          annotations.push({
+            scope: 'proposal',
+            scopeRef: { proposalId: P1.proposal.id, trkSegIndex: P1.proposal.trkSegIndex },
+            kind: 'overlap_singleton_singleton_conflict',
+            details: { otherProposalId: P2.proposal.id,
+                       overlapWindow: [overlapLo, overlapHi],
+                       targets: [t1, t2] }
+          });
+          annotations.push({
+            scope: 'proposal',
+            scopeRef: { proposalId: P2.proposal.id, trkSegIndex: P2.proposal.trkSegIndex },
+            kind: 'overlap_singleton_singleton_conflict',
+            details: { otherProposalId: P1.proposal.id,
+                       overlapWindow: [overlapLo, overlapHi],
+                       targets: [t1, t2] }
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    overlapVetoedProposalIds: Array.from(vetoed),
+    overlapBlockResolution:   resolutions,
+    annotations:              annotations
+  };
 }
 
 module.exports = { detectOverlap };
