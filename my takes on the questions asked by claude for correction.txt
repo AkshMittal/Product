@@ -1,0 +1,76 @@
+
+quesiton/discussions
+
+
+
+- clustering/joining of spine within a segment 
+-how are we going to handle cross segment calculations that we are allowing like adjacent dedups adn the block overlap of 100% equality intervals?
+- the export fault detection - doesnt fully belong in the audit module. audit module shud just audit the segments and just emit them. all the intra and inter fault detection isnt audits job ig. happy to reason otherwise. since we are doing segmenting now, isnt it better to edit the audit module according to that? like we do smapling detection and all of that in the audit modules, but segments are definitve proof of a change be it any kind. so a global evaluation of a gpx is okay but there shud be segment wise emmition too right of all the timestamp, motion, elevation tc etc. segmetn wise time clustering etc etc. u get what im saying?
+
+
+
+
+My answers/evaluations:
+A1:for a singleton. targetms is its own timems. agreed. but that doesn't have to be the true segment time borders. if we are calculating the segment borders by just calculating min and max timems in the segment then thats wrong. cause any intersegment bleed will contaminate the boundaries. same thing goes for the "block finding" thing u pointed out. So we cant just do min max on spine alone either because that will naturally exclude the all singletons and block cases that sit on the boundary of a segment or will form the boundary. what cud work is that initially we create the spine and make the temporary segment boundaries using min max on the spine only. after that we evaluate the proposals. if a proposal sits / intends to create new edge of the segment, in that case the only thing we can do to verify if belongs in segment and not a intersegment export/buffer error is verification with the edge of the adjacent segment to where the insertion is trying to happen. for example the A B C D are segemtn in the correct sequence. a singleton in C is trying to occupy the first point spot in C. so what we do is check if Bs last point sequentially allows insertion of it. for that Bs last point ofc needs to be stable and part of spine too. same goes for block. if a block tries to take that spot, we have to see that there is no overlap happening with Bs last points. this is what i have already discussed. cross segment anomalies will be flaggd. here i just cleared up how we actually detect segments. there might be gaps in my theory. feel free to criticize. if this model is what we implement  then recalculation of segment boundaries upon changes at edges will need to happen too. 
+
+A2. for the mvp i think that just flagging the whole block without splitting or anything is the right choice. we are not losing any data, we are just flagging so as to know that okay this can happen too. if that ever happens we can add a correcting algorithm without a problem. so no splitting, just flagging the whole block. 
+
+A3. mostly (a) is correct. one thing to add that time cannot equal 0 either. has to be positive. agree? if not or something to add lmk. 
+
+A4. i haven't decided on it yet. none of the schema has been fixed by me. most of the nomenclature andthe schema u see are generated mostly by composer 2 of agent adn maybe u. it is NOT fixed. any changes to nomenclature for simplification and making the schema more consistent and better is welcome. 
+
+A5. I think that my explaination in A1 explains alot of what to do with edge of segment cases. I think we can find the socket there but have to verify with the prev segment last point if its singleton and overlap if its a block, provided they are all stable and part of spine.all in al yes its segment bounded too but edge cases need to be handled a bit differently
+
+A6.i dont get the question or where its coming from or what its regarding.
+
+A7. about duplicate chunks. if its an export time fault when chunks are being clubbed together for output, then i think they shud be 100% same. for ur time overlapping case, I think that we flag both the segments, just for diagnostics, so i can study the gpxs that roll in through mvp. we cannot know which one is correct, or if both are same. this is the case of time overlap only. if the overlapping segment of 15 to 20 are 100% same in both the segments, in that case dropping any one of the overlapped block is okay since segments are mostly diagnostic for us and wont be shown on user end.
+
+A8. we cannot really detect missing chunks can we? there is no basis to go off of for detecting missing chunks.be it a pause in recording or a legit export time miss. all we can do is directly show segment boundaries interacting on user end. basically joining the last point of A and first point of the next detected chunk which can be C segment. if B is missing or its a legit gap in recording, then it will just come off as a straight line, be it however much a big jump. thats all we can do. 
+
+A9.nocorrecitontemporalanomalies - it needs to be per segment. but heres the thing, since the pipeline runs mostly per segment now. there needs to be exit criterias per segment, when the last segment has been evaluated only then can the global be deamed okay and forwarded with the flags forwarded. 
+
+A10. yes adjacent dedup can happen on boundaries. so 100% same adjacent dedups will already be handled by a global module as we know. the clustering for competition candidates can be made across 2 segments only if the adjacents are present on adjacent boundary of 2 segments. 
+
+
+
+
+about the B questions u asked regarding interface and data shape. I have not decided msot of the object shapes etc. these are all confusing pre generated wiht kinda confusing wording from prev model. we have not locked anything yet regarding the object shape and nomenclature either. so theres no boundation on making changes. we dont have to follow whats written, we rae still forming the plan. 
+
+
+
+
+
+C1. yes it still runs just on a single segment. but the cross segment handling which is done with multi segments will not be done here. so no referencing to outside segments boundaries. 
+
+C2. that segment will be flagged. i need data to diagnose whether to keep those chunks for geometry only or no but for now flag them. 
+
+C3. yes we skip it. 
+
+C4. we are not going to be doing anything regarding wpt or rte. they are going to be directly forwarded from the audit to the last layers of rendering. ofc if they are invlaid then they will not be rendered, a flag might just be forwarded for each. 
+
+c5. how is that even going to be possible? at least edge to edge 3 segment isnt possible. i want you to explain this to me abit
+
+c6. per segment reverseal check is always done after global, be the reversal executed or no. makes sense? 
+c7. i dont really understand that fault yet. ik its an export time thing discussed in the doc i gave u. explain it to me a bit.
+
+c8. refer to the question i posed before i asnwered any of these qustion regarding the scope of export fault detection module u created. that has to be answered first. 
+
+
+D1. since this isnow becoming a multilayered pipeline, i think a global runner should run all the pipelines systematically. once the audit layer is complete and the last object has been created only then then next correction layer fires which is run internally bythe correction runner. 
+
+D2. i dont quite understand the nuance here. the differences?
+
+D3. i dont know how much of a requirement is sanitization first. so i cant tell without u giving me info, on what are the edge cases and how they play. if its just about format, then ofc inlcuding the most broad inclusion is the best
+
+D4.we generate custom gpxs to test general and specific usecases. compare objects outputed by the pipeline at various stages with the expected results we draw for the gpx tests.the current tests are kinda shi even for the audit pipeline itself adn doesnt test much edge cases, so we will make them again too. 
+
+D5.I think i made it clear in the A1 answer i gave regarding handling how we measure timespan of the segments.  
+
+D6. wdym by "with 2 and 3 segments"? other than that yes its ok. everything after duplicate chunk exclusion is evaluated per segment and iterated over all segments before merging. also there is no mention of coupling anywhere. coupling logic also runs intrasegment. about stalemate exit, a stalemate of a single segment isnt a global exit. if stalemate and idle segment that are the only two types of labeling for segment together make up for all segments then theres a global exit to merging. stalemate and idle in of thmeselves are segment level exits only. also theres no mention of duplicates in the proposals or correction for segments loop. 
+
+D7. i dont get where this is coming from. what parameters. there is a lot of shi wording/Ai slop going around in the implementation plan because of a previous weak model, and its kinda confusing too 
+
+
+E1 E2 E3, both will be re-evaluated cause of my discussion regarding the export fault detecitno module at the start of this file. so no confirmations rn. 
+
+E4. actually we have to discuss drops vs masks vs flags. the previous AI model has mixed up so much shi its hilarious. and i think that it can be much more better than this confusing stuff. let me know
