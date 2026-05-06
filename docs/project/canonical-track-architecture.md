@@ -57,7 +57,7 @@ The audit layer is deterministic and non-mutating. It produces `audit.json`. Mod
 3. `sampling-audit.js` — per-segment Δt density and spacing
 4. `motion-audit.js` — per-segment speed stats; haversine (also extracted to `packages/shared/`)
 5. `elevation-audit.js` — per-segment elevation stats
-6. `export-fault-detection.js` — **deprecated** (superseded by correction's `deterministic-export-fix.js`; kept for backwards compat)
+6. `export-fault-detection.js` — **deprecated** (superseded by correction's `deterministic-export-fix.js`; retained for backwards compatibility with existing consumers of `audit.exportFaults[]`)
 7. `audit-export-module.js` — assembles final `audit.json` with nested `perSegment` blocks
 
 Audit does not decide whether a metric should be computed. It only describes what is present and what happened in the stream.

@@ -66,7 +66,9 @@ Action: observation only. Annotation `segment_boundary_gap` (segment-scope) with
 
 ### `export-fault-detection.js` deprecation
 
-`audit/pipeline/export-fault-detection.js` is **deprecated and removed**. Its segment-summary work is folded into `gpx-ingestion-module.js` (which now emits `segmentSummaries[]`). Its boundary observations become `audit.ingestion.segmentBoundaries[]` (raw, unclassified). Its classification logic is reimplemented in `correction/pipeline/deterministic-export-fix.js`.
+`audit/pipeline/export-fault-detection.js` is **deprecated but retained for backwards compatibility**. Its segment-summary work is folded into `gpx-ingestion-module.js` (which now emits `segmentSummaries[]`). Its boundary observations become `audit.ingestion.segmentBoundaries[]` (raw, unclassified). Its classification logic is reimplemented in `correction/pipeline/deterministic-export-fix.js`.
+
+The module remains in the codebase to support existing consumers reading `audit.exportFaults[]`; however, new code should consume `correction.annotations[]` instead. Migration of all callers to the new API is deferred.
 
 `docs/project/pipeline/export-fault-detection.md` is **deprecated**. A new `docs/project/pipeline/deterministic-export-fix.md` is created under correction.
 
