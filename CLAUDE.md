@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important: Before Making Changes
+
+**Do not make any changes until you are 95% sure about what needs to be built.** Ask follow-up questions until you reach that confidence level. Clarify requirements, edge cases, scope, and expected outcomes before writing or modifying code.
+
 ## Commands
 
 ```bash
