@@ -88,6 +88,7 @@ function runEdgeReconciliation(workingState, spineResult, boundaryClassification
   });
 
   // ── (1) Cross-segment adjacent-exact-drop ────────────────────────────────
+  var excludedSet = new Set((workingState.excludedFromTrust || []).map(function(e) { return e.gpxIndex; }));
   var crossSegmentDrops = [];
   for (var s = 0; s < segOrder.length - 1; s++) {
     var prevSeg = segOrder[s];
@@ -121,7 +122,11 @@ function runEdgeReconciliation(workingState, spineResult, boundaryClassification
       continue;
     }
 
-    // Both stable — drop the next-segment first point.
+    // Both stable — drop the next-segment first point, unless it was already
+    // excluded pre-Phase-1 (detectCrossSegmentDuplicates excludes boundary pairs
+    // before the multipass loop runs; dropping an already-excluded point violates
+    // the partition invariant).
+    if (excludedSet.has(firstPt.gpxIndex)) continue;
     ws.addDrop(workingState, firstPt.gpxIndex, 'adjacent-exact-duplicate', 'edge-reconciliation');
     ws.removeFromWorking(workingState, firstPt.gpxIndex);
     ws.addRearrangement(workingState, {
@@ -244,7 +249,9 @@ function unstableEdge(workingState, segIdx, side, proposal, boundary, sink) {
 }
 
 function excludeEdgeMembers(proposal, workingState, reason, details) {
+  var workingSet = new Set(workingState.workingOrderedPoints.map(function(p) { return p.gpxIndex; }));
   function mark(gi) {
+    if (!workingSet.has(gi)) return;
     ws.addExcludedFromTrust(workingState, gi, reason,
       Object.assign({ proposalId: proposal.id }, details || {}));
   }

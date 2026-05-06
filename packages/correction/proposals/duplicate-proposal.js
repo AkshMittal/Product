@@ -163,6 +163,28 @@ function buildDuplicateProposals(workingOrderedPoints, trkSegIndex, spineEnvelop
  * @returns {Array<{timeMs:number, gpxIndexes:number[], trkSegIndexes:number[]}>}
  */
 function detectCrossSegmentDuplicates(workingOrderedPoints, workingState) {
+  // Build segment boundary lookup: segIdx → { firstGi, lastGi, segOrder }
+  var segBoundary = new Map();
+  var segOrder = [];
+  for (var i = 0; i < workingOrderedPoints.length; i++) {
+    var p = workingOrderedPoints[i];
+    if (!segBoundary.has(p.trkSegIndex)) {
+      segBoundary.set(p.trkSegIndex, { firstGi: p.gpxIndex, lastGi: p.gpxIndex });
+      segOrder.push(p.trkSegIndex);
+    } else {
+      segBoundary.get(p.trkSegIndex).lastGi = p.gpxIndex;
+    }
+  }
+  // Build set of (lastGi, firstGi) pairs for consecutive segments — Phase 2 owns these.
+  var adjacentBoundaryPairs = new Set();
+  for (var j = 0; j < segOrder.length - 1; j++) {
+    var fromBnd = segBoundary.get(segOrder[j]);
+    var toBnd   = segBoundary.get(segOrder[j + 1]);
+    if (fromBnd && toBnd) {
+      adjacentBoundaryPairs.add(fromBnd.lastGi + ',' + toBnd.firstGi);
+    }
+  }
+
   var byTime = new Map();
   for (var i = 0; i < workingOrderedPoints.length; i++) {
     var p = workingOrderedPoints[i];
@@ -177,6 +199,14 @@ function detectCrossSegmentDuplicates(workingOrderedPoints, workingState) {
     var segs = new Set();
     for (var g = 0; g < group.length; g++) segs.add(group[g].trkSegIndex);
     if (segs.size < 2) return;
+    // If exactly two points from two consecutive segments forming an adjacent
+    // boundary pair, leave them for Phase 2 cross-segment drop to resolve
+    // deterministically (keep earlier segment's point, drop later).
+    if (group.length === 2) {
+      var key = group[0].gpxIndex + ',' + group[1].gpxIndex;
+      var keyRev = group[1].gpxIndex + ',' + group[0].gpxIndex;
+      if (adjacentBoundaryPairs.has(key) || adjacentBoundaryPairs.has(keyRev)) return;
+    }
     var giArr = group.map(function(g) { return g.gpxIndex; });
     var segArr = Array.from(segs);
     detections.push({ timeMs: t, gpxIndexes: giArr, trkSegIndexes: segArr });
