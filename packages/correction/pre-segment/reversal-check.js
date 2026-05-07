@@ -177,7 +177,7 @@ function checkAndApplyReversals(workingState, segmentParticipationProfiles, perS
       });
       for (var m = 0; m < segPts.length; m++) {
         ws.addExcludedFromTrust(workingState, segPts[m].gpxIndex,
-          'reversal_unconfirmed_member', { trkSegIndex: segIdx });
+          'reversal_unconfirmed_member', 'pre-segment', { trkSegIndex: segIdx });
       }
       result.perSegmentRejected.push(segIdx);
     }

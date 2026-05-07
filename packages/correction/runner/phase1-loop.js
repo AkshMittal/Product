@@ -267,8 +267,8 @@ function classifyEdgeSide(proposal, envelope) {
 
 function markOutOfSegmentScope(proposal, workingState, passLabel) {
   function mark(gi) {
-    ws.addExcludedFromTrust(workingState, gi, 'out_of_segment_scope', {
-      proposalId: proposal.id, stage: passLabel
+    ws.addExcludedFromTrust(workingState, gi, 'out_of_segment_scope', passLabel, {
+      proposalId: proposal.id
     });
   }
   if (proposal.kind === 'insert') {
