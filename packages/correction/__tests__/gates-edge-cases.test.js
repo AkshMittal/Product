@@ -93,14 +93,29 @@ describe('overlap-detection: block status', () => {
   });
 
   test('corridor pierce: spine point inside (t_prev, t_next) but outside block → vetoed', () => {
+    // Stream order reflects a GPX track where the block members have timestamps
+    // that fall in the middle of a forward-moving segment, with a non-block point
+    // interspersed in the same time window.
+    //
+    // Stream:  pt0(T0+0), pt1(T0+100), pt2(T0+110)[block], pt4(T0+150)[intruder],
+    //          pt3(T0+180)[block], pt5(T0+300)
+    //
+    // Spine (forward-monotonic from stream): 0,1,2,4,3→rejected(150<180? no 150<180),
+    // actually 4(150) is after 2(110) in stream, 150>110 → accepted; then 3(180)>150 → accepted.
+    // Spine = [pt0, pt1, pt2, pt4, pt3, pt5] by timeMs = [0,100,110,150,180,300].
+    //
+    // Block gpxIndexes=[2,3], bMin=110, bMax=180.
+    // Anchor search skips blockSet {2,3}:
+    //   prevAnchor = pt1(T0+100) — last spine < 110
+    //   nextAnchor = pt5(T0+300) — first spine > 180
+    // tPrev=100, tNext=300. socketOk: 110>=100 && 180<=300 ✓
+    // Pierce: pt4(T0+150) not in block, 150>100 && 150<300 → pierced=true → vetoed.
     const pts = [
       makePoint({ gpxIndex: 0, timeMs: T0 +   0 }),
       makePoint({ gpxIndex: 1, timeMs: T0 + 100 }),
-      // block members
-      makePoint({ gpxIndex: 2, timeMs: T0 +  20 }),
-      makePoint({ gpxIndex: 3, timeMs: T0 +  30 }),
-      // PIERCING spine point — has timeMs in (t_prev=100, t_next=300) but not in block
-      makePoint({ gpxIndex: 4, timeMs: T0 + 150 }),
+      makePoint({ gpxIndex: 2, timeMs: T0 + 110 }), // block member
+      makePoint({ gpxIndex: 4, timeMs: T0 + 150 }), // INTRUDER — not in block, inside corridor
+      makePoint({ gpxIndex: 3, timeMs: T0 + 180 }), // block member
       makePoint({ gpxIndex: 5, timeMs: T0 + 300 }),
     ];
     const spine = computeSpineIntervals(pts);

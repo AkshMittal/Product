@@ -3,7 +3,7 @@
 /**
  * Comprehensive fixture validation test runner.
  *
- * Loads all correction layer fixtures from fixtures/correction/**/*.gpx
+ * Loads all correction layer fixtures from fixtures/correction/ (recursive)
  * Parses each with jsdom's DOMParser
  * Runs through correction pipeline
  * Validates against expected results extracted from XML comments

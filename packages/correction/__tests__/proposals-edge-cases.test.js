@@ -30,11 +30,10 @@ describe('block-proposal: empty / trivial', () => {
     expect(props).toHaveLength(0);
   });
 
-  test('single belowAnchor point in run → 1-element block proposal', () => {
+  test('single belowAnchor point → no block proposal (deferred to singleton)', () => {
     const pts = cleanTrack(5);
     const props = buildBlockProposals(pts, new Set([2]), 0);
-    expect(props).toHaveLength(1);
-    expect(props[0].gpxIndexes).toEqual([2]);
+    expect(props).toHaveLength(0);
   });
 
   test('all points belowAnchor → single block spanning entire segment', () => {
@@ -54,18 +53,16 @@ describe('block-proposal: run grouping', () => {
     expect(props[1].gpxIndexes).toEqual([5, 6]);
   });
 
-  test('belowAnchor at very last point closes the run correctly', () => {
+  test('belowAnchor at very last point only → no block (deferred to singleton)', () => {
     const pts = cleanTrack(5);
     const props = buildBlockProposals(pts, new Set([4]), 0);
-    expect(props).toHaveLength(1);
-    expect(props[0].gpxIndexes).toEqual([4]);
+    expect(props).toHaveLength(0);
   });
 
-  test('belowAnchor at very first point starts the run correctly', () => {
+  test('belowAnchor at very first point only → no block (deferred to singleton)', () => {
     const pts = cleanTrack(5);
     const props = buildBlockProposals(pts, new Set([0]), 0);
-    expect(props).toHaveLength(1);
-    expect(props[0].gpxIndexes).toEqual([0]);
+    expect(props).toHaveLength(0);
   });
 });
 

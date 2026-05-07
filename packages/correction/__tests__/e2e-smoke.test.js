@@ -146,17 +146,18 @@ describe('e2e: partition invariant', () => {
 });
 
 describe('e2e: passLog invariant', () => {
-  test('clean track: passLog has one entry per segment', () => {
+  test('clean track: passLog is empty (correction-idle, no Phase 1 entered)', () => {
     const result = runCorrection({}, CLEAN_TRACK, {});
     assertProposalInvariant(result);
-    expect(result.passLog).toHaveLength(1); // one segment
-    expect(result.passLog[0].trkSegIndex).toBe(0);
+    expect(Array.isArray(result.passLog)).toBe(true);
+    expect(result.passLog).toHaveLength(0);
   });
 
-  test('multi-segment track: passLog has two entries', () => {
+  test('multi-segment clean track: passLog is empty (all segments idle)', () => {
     const result = runCorrection({}, MULTI_SEG_TRACK, {});
     assertProposalInvariant(result);
-    expect(result.passLog).toHaveLength(2);
+    expect(Array.isArray(result.passLog)).toBe(true);
+    expect(result.passLog).toHaveLength(0);
   });
 
   test('passLog exitReason is a known value', () => {
