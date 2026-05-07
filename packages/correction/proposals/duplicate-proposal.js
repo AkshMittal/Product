@@ -211,9 +211,8 @@ function detectCrossSegmentDuplicates(workingOrderedPoints, workingState) {
     var segArr = Array.from(segs);
     detections.push({ timeMs: t, gpxIndexes: giArr, trkSegIndexes: segArr });
     for (var k = 0; k < group.length; k++) {
-      ws.addExcludedFromTrust(workingState, group[k].gpxIndex, 'cross_segment_duplicate', {
-        timeMs: t, peerSegments: segArr.filter(function(s) { return s !== group[k].trkSegIndex; })
-      });
+      ws.addDrop(workingState, group[k].gpxIndex, 'cross_segment_duplicate', 'pre-segment');
+      ws.removeFromWorking(workingState, group[k].gpxIndex);
     }
   });
   return detections;

@@ -27,6 +27,9 @@
  *      ≥2 trkSegIndex values (these should normally have been moved to
  *      excludedFromTrust 'cross_segment_duplicate' by Phase 1's
  *      detectCrossSegmentDuplicates; if any survive, we surface them).
+ *      Note: post-CR-04, detectCrossSegmentDuplicates drops these points
+ *      (drops[] + removeFromWorking) so survivors here indicate a gap in
+ *      pre-segment detection coverage.
  *
  *   5. coverage: { segments: number, totalPoints: number,
  *                  trustedSurvivingCount: number, droppedCount: number,

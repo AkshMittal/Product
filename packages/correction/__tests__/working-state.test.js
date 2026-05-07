@@ -224,13 +224,13 @@ describe('addDrop', () => {
     expect(state.drops[2].gpxIndex).toBe(4);
   });
 
-  it('same gpxIndex can be dropped twice — no dedup', () => {
+  it('dedup guard: second drop for same gpxIndex is silently ignored', () => {
     const state = freshState(3);
     addDrop(state, 1, 'adjacent-exact-duplicate', 'stageA');
     addDrop(state, 1, 'adjacent-exact-duplicate', 'stageB');
-    expect(state.drops).toHaveLength(2);
+    expect(state.drops).toHaveLength(1);
     expect(state.drops[0].gpxIndex).toBe(1);
-    expect(state.drops[1].gpxIndex).toBe(1);
+    expect(state.drops[0].stage).toBe('stageA');
   });
 
   it('does not mutate workingOrderedPoints when a drop is recorded', () => {
@@ -245,45 +245,30 @@ describe('addDrop', () => {
 describe('addExcludedFromTrust', () => {
   const VALID_REASON = 'same_time_non_winner';
   const VALID_REASON_2 = 'insert_competition_loser';
+  const STAGE = 'phase1_pass_1';
 
-  it('creates entry with reasons[] array (not a reason string)', () => {
+  it('creates entry with singular reason + stage strings', () => {
     const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON);
+    addExcludedFromTrust(state, 1, VALID_REASON, STAGE);
     expect(state.excludedFromTrust).toHaveLength(1);
     const entry = state.excludedFromTrust[0];
-    expect(Array.isArray(entry.reasons)).toBe(true);
-    expect(entry.reasons).toContain(VALID_REASON);
-    expect(entry).not.toHaveProperty('reason'); // must NOT have singular 'reason'
+    expect(entry.reason).toBe(VALID_REASON);
+    expect(entry.stage).toBe(STAGE);
+    expect(entry.gpxIndex).toBe(1);
   });
 
-  it('entry has gpxIndex field', () => {
+  it('dedup guard: second call for same gpxIndex is silently ignored', () => {
     const state = freshState(3);
-    addExcludedFromTrust(state, 2, VALID_REASON);
-    expect(state.excludedFromTrust[0].gpxIndex).toBe(2);
-  });
-
-  it('idempotent: same (gpxIndex, reason) added twice → only one entry in reasons[]', () => {
-    const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON);
-    addExcludedFromTrust(state, 1, VALID_REASON);
+    addExcludedFromTrust(state, 1, VALID_REASON, STAGE);
+    addExcludedFromTrust(state, 1, VALID_REASON_2, STAGE);
     expect(state.excludedFromTrust).toHaveLength(1);
-    expect(state.excludedFromTrust[0].reasons).toHaveLength(1);
-  });
-
-  it('different reasons for same gpxIndex → both appear in one entry reasons[]', () => {
-    const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON);
-    addExcludedFromTrust(state, 1, VALID_REASON_2);
-    expect(state.excludedFromTrust).toHaveLength(1);
-    expect(state.excludedFromTrust[0].reasons).toHaveLength(2);
-    expect(state.excludedFromTrust[0].reasons).toContain(VALID_REASON);
-    expect(state.excludedFromTrust[0].reasons).toContain(VALID_REASON_2);
+    expect(state.excludedFromTrust[0].reason).toBe(VALID_REASON);
   });
 
   it('different gpxIndexes → separate entries', () => {
     const state = freshState(5);
-    addExcludedFromTrust(state, 1, VALID_REASON);
-    addExcludedFromTrust(state, 3, VALID_REASON);
+    addExcludedFromTrust(state, 1, VALID_REASON, STAGE);
+    addExcludedFromTrust(state, 3, VALID_REASON, STAGE);
     expect(state.excludedFromTrust).toHaveLength(2);
     expect(state.excludedFromTrust[0].gpxIndex).toBe(1);
     expect(state.excludedFromTrust[1].gpxIndex).toBe(3);
@@ -291,57 +276,42 @@ describe('addExcludedFromTrust', () => {
 
   it('throws on invalid reason string', () => {
     const state = freshState(3);
-    expect(() => addExcludedFromTrust(state, 1, 'not-a-real-reason')).toThrow();
+    expect(() => addExcludedFromTrust(state, 1, 'not-a-real-reason', STAGE)).toThrow();
   });
 
   it('throws on null reason', () => {
     const state = freshState(3);
-    expect(() => addExcludedFromTrust(state, 1, null)).toThrow();
+    expect(() => addExcludedFromTrust(state, 1, null, STAGE)).toThrow();
   });
 
   it('throws on undefined reason', () => {
     const state = freshState(3);
-    expect(() => addExcludedFromTrust(state, 1, undefined)).toThrow();
+    expect(() => addExcludedFromTrust(state, 1, undefined, STAGE)).toThrow();
   });
 
   it('throws for empty string reason', () => {
     const state = freshState(3);
-    expect(() => addExcludedFromTrust(state, 1, '')).toThrow();
+    expect(() => addExcludedFromTrust(state, 1, '', STAGE)).toThrow();
   });
 
-  it('details merged shallowly onto new entry', () => {
+  it('details stored on entry', () => {
     const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON, { foo: 'bar' });
+    addExcludedFromTrust(state, 1, VALID_REASON, STAGE, { foo: 'bar' });
     expect(state.excludedFromTrust[0].details).toEqual({ foo: 'bar' });
-  });
-
-  it('details merged shallowly onto existing entry — new keys added', () => {
-    const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON, { foo: 'bar' });
-    addExcludedFromTrust(state, 1, VALID_REASON_2, { baz: 'qux' });
-    expect(state.excludedFromTrust[0].details).toMatchObject({ foo: 'bar', baz: 'qux' });
-  });
-
-  it('details merge overwrites existing key on second call', () => {
-    const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON, { score: 1 });
-    addExcludedFromTrust(state, 1, VALID_REASON_2, { score: 2 });
-    expect(state.excludedFromTrust[0].details.score).toBe(2);
   });
 
   it('no details field when none provided', () => {
     const state = freshState(3);
-    addExcludedFromTrust(state, 1, VALID_REASON);
+    addExcludedFromTrust(state, 1, VALID_REASON, STAGE);
     expect(state.excludedFromTrust[0].details).toBeUndefined();
   });
 
-  it('accepts all 12 valid EXCLUDED_REASONS values', () => {
+  it('accepts all valid EXCLUDED_REASONS values', () => {
     const { EXCLUDED_REASONS } = require('../state/schema-enums');
     const state = freshState(3);
     const reasons = Object.values(EXCLUDED_REASONS);
-    expect(reasons).toHaveLength(12);
     for (const r of reasons) {
-      expect(() => addExcludedFromTrust(state, 99, r)).not.toThrow();
+      expect(() => addExcludedFromTrust(state, 99, r, STAGE)).not.toThrow();
     }
   });
 });

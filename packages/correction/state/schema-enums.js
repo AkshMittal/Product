@@ -11,8 +11,9 @@
 // ── Drop reasons (ADR-0012) ─────────────────────────────────────────────────
 // Only two valid drop reasons.
 var DROP_REASONS = Object.freeze({
-  ADJACENT_EXACT_DUPLICATE: 'adjacent-exact-duplicate',
-  DUPLICATE_CHUNK_SEGMENT:  'duplicate_chunk_segment'
+  ADJACENT_EXACT_DUPLICATE:  'adjacent-exact-duplicate',
+  DUPLICATE_CHUNK_SEGMENT:   'duplicate_chunk_segment',
+  CROSS_SEGMENT_DUPLICATE:   'cross_segment_duplicate'
 });
 var DROP_REASON_SET = new Set(Object.values(DROP_REASONS));
 
@@ -21,9 +22,9 @@ var EXCLUDED_REASONS = Object.freeze({
   SAME_TIME_NON_WINNER:         'same_time_non_winner',
   INSERT_COMPETITION_LOSER:     'insert_competition_loser',
   EXACT_GROUP_UNRESOLVED:       'exact_group_unresolved',
-  CROSS_SEGMENT_DUPLICATE:      'cross_segment_duplicate',
   OUT_OF_SEGMENT_SCOPE:         'out_of_segment_scope',
   EDGE_UNRESOLVED:              'edge_unresolved',
+  EDGE_DEFERRED_STABLE:         'edge_deferred_stable',
   OVERLAP_BLOCK_MEMBER:         'overlap_block_member',
   COUPLING_BLOCKED_SUBJECT:     'coupling_blocked_subject',
   BLOCK_KINEMATIC_GUARD_FAILED: 'block_kinematic_guard_failed',

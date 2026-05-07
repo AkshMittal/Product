@@ -80,8 +80,8 @@ function makeBlockFindingProposal(opts) {
     isEdgeProposal:                  !!opts.isEdgeProposal,
     gpxIndexes:                      opts.gpxIndexes.slice(),
     hasInternalMonotonicityViolation: !!opts.hasInternalMonotonicityViolation,
-    bMin:           null,
-    bMax:           null,
+    bMin:           (typeof opts.bMin === 'number' && isFinite(opts.bMin)) ? opts.bMin : null,
+    bMax:           (typeof opts.bMax === 'number' && isFinite(opts.bMax)) ? opts.bMax : null,
     prevGpxIndex:   null,
     nextGpxIndex:   null,
     tPrev:          null,
@@ -122,11 +122,11 @@ function assertValidProposal(proposal) {
     throw new Error('invalid proposal.kind: ' + proposal.kind);
   }
   if (typeof proposal.applied !== 'boolean') throw new Error('proposal.applied must be boolean');
-  if (proposal.applied === false && (proposal.skipReason === undefined || proposal.skipReason === null)) {
-    throw new Error('proposal.applied=false must have skipReason');
-  }
   if (proposal.applied === true && proposal.skipReason !== null && proposal.skipReason !== undefined) {
     throw new Error('proposal.applied=true must NOT have skipReason');
+  }
+  if (proposal.applied === false && (proposal.skipReason === null || proposal.skipReason === undefined)) {
+    throw new Error('proposal.applied=false must have skipReason');
   }
   if (proposal.kind === 'insert') {
     if (!Array.isArray(proposal.candidateGpxIndexes) || proposal.candidateGpxIndexes.length === 0) {

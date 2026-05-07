@@ -144,11 +144,11 @@ function detectCoupling(proposals, workingOrderedPoints) {
       if (hit !== null) {
         var side = Parrive.has(hit) ? 'arriving' : (Pleave.has(hit) ? 'leaving' : 'arriving');
         edges.push({
-          blockedProposalId:    P.id,
-          disturbanceSourceId:  Q.id,
-          disturbedGpxIndex:    hit,
-          side:                 side,
-          trkSegIndex:          P.trkSegIndex
+          proposalIdA:       P.id,
+          proposalIdB:       Q.id,
+          disturbedGpxIndex: hit,
+          side:              side,
+          trkSegIndex:       P.trkSegIndex
         });
         adjacency.get(P.id).add(Q.id);
         adjacency.get(Q.id).add(P.id);
@@ -167,7 +167,7 @@ function detectCoupling(proposals, workingOrderedPoints) {
     var ra = find(a), rb = find(b);
     if (ra !== rb) parent.set(ra, rb);
   }
-  edges.forEach(function(e) { union(e.blockedProposalId, e.disturbanceSourceId); });
+  edges.forEach(function(e) { union(e.proposalIdA, e.proposalIdB); });
 
   var regionMap = new Map();
   proposals.forEach(function(p) {
@@ -178,7 +178,7 @@ function detectCoupling(proposals, workingOrderedPoints) {
 
   var coupledRegions = [];
   regionMap.forEach(function(ids) {
-    var regionEdges = edges.filter(function(e) { return ids.indexOf(e.blockedProposalId) >= 0; });
+    var regionEdges = edges.filter(function(e) { return ids.indexOf(e.proposalIdA) >= 0 || ids.indexOf(e.proposalIdB) >= 0; });
     if (ids.length > 1 || regionEdges.length > 0) {
       var zoneUnion = new Set();
       ids.forEach(function(id) { (zones.get(id) || new Set()).forEach(function(gi) { zoneUnion.add(gi); }); });
@@ -197,7 +197,10 @@ function detectCoupling(proposals, workingOrderedPoints) {
   });
 
   var blockedSet = new Set();
-  edges.forEach(function(e) { blockedSet.add(e.blockedProposalId); });
+  edges.forEach(function(e) {
+    blockedSet.add(e.proposalIdA);
+    blockedSet.add(e.proposalIdB);
+  });
   var couplingBlockedProposalIds = proposals
     .filter(function(p) { return blockedSet.has(p.id); })
     .map(function(p) { return p.id; });

@@ -48,6 +48,8 @@ function buildBlockProposals(workingOrderedPoints, belowAnchorGpxIndexes, trkSeg
 
   function finaliseBlock() {
     if (currentBlock.length === 0) return;
+    // Length-1 runs are singletons, not blocks — let singleton-proposal handle them.
+    if (currentBlock.length === 1) { currentBlock = []; return; }
 
     // hasInternalMonotonicityViolation: true iff any consecutive pair has Δt <= 0.
     var hasInternalMonotonicityViolation = false;
@@ -88,7 +90,9 @@ function buildBlockProposals(workingOrderedPoints, belowAnchorGpxIndexes, trkSeg
       trkSegIndex:                     trkSegIndex,
       gpxIndexes:                      currentBlock.map(function(p) { return p.gpxIndex; }),
       hasInternalMonotonicityViolation: hasInternalMonotonicityViolation,
-      isEdgeProposal:                  isEdgeProposal
+      isEdgeProposal:                  isEdgeProposal,
+      bMin:                            blockMin,
+      bMax:                            blockMax
     }));
 
     currentBlock = [];

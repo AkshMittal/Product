@@ -160,8 +160,8 @@ function runEdgeReconciliation(workingState, spineResult, boundaryClassification
                                    proposalId: slots.firstEdge.id, boundary: inB });
         // MVP: leave applied=false but mark as deferred-stable; we don't mutate.
         slots.firstEdge.applied    = false;
-        slots.firstEdge.skipReason = 'edge_unresolved';
-        excludeEdgeMembers(slots.firstEdge, workingState, 'edge_unresolved',
+        slots.firstEdge.skipReason = 'edge_deferred_stable';
+        excludeEdgeMembers(slots.firstEdge, workingState, 'edge_deferred_stable',
           { reason: 'phase2_mvp_no_apply', boundary: inB || null });
       } else {
         unstableEdge(workingState, segIdx, 'firstEdge', slots.firstEdge, inB,
@@ -177,8 +177,8 @@ function runEdgeReconciliation(workingState, spineResult, boundaryClassification
         edgesResolvedStable.push({ trkSegIndex: segIdx, side: 'lastEdge',
                                    proposalId: slots.lastEdge.id, boundary: outB });
         slots.lastEdge.applied    = false;
-        slots.lastEdge.skipReason = 'edge_unresolved';
-        excludeEdgeMembers(slots.lastEdge, workingState, 'edge_unresolved',
+        slots.lastEdge.skipReason = 'edge_deferred_stable';
+        excludeEdgeMembers(slots.lastEdge, workingState, 'edge_deferred_stable',
           { reason: 'phase2_mvp_no_apply', boundary: outB || null });
       } else {
         unstableEdge(workingState, segIdx, 'lastEdge', slots.lastEdge, outB,
@@ -252,7 +252,7 @@ function excludeEdgeMembers(proposal, workingState, reason, details) {
   var workingSet = new Set(workingState.workingOrderedPoints.map(function(p) { return p.gpxIndex; }));
   function mark(gi) {
     if (!workingSet.has(gi)) return;
-    ws.addExcludedFromTrust(workingState, gi, reason,
+    ws.addExcludedFromTrust(workingState, gi, reason, 'edge-reconciliation',
       Object.assign({ proposalId: proposal.id }, details || {}));
   }
   if (proposal.kind === 'insert') {

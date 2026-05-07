@@ -52,6 +52,8 @@
  * }} args
  * @returns {Object}
  */
+var schema = require('../state/proposal-schema');
+
 function buildCorrectionExport(args) {
   var workingState = args.workingState;
   var spineResult  = args.spineResult || { spinePointsBySegment: new Map(), envelopeBySegment: new Map() };
@@ -212,6 +214,7 @@ function verifyPartition(ingestedSet, dropSet, excludedSet, workingSet) {
 }
 
 function serialiseProposal(p) {
+  schema.assertValidProposal(p);
   var out = {
     id:             p.id,
     kind:           p.kind,

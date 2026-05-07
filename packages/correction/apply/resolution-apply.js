@@ -75,7 +75,7 @@ function applyProposals(proposals, overlapVetoedProposalIds, couplingBlockedProp
       applyInsert(proposal, ptOf, workingState, thresholdKph, passLabel, passIndex);
     } else {
       proposal.applied    = false;
-      proposal.skipReason = 'overlap_vetoed';
+      proposal.skipReason = 'unknown_kind';
     }
     workingState.proposals.push(proposal);
   }
@@ -149,7 +149,7 @@ function applyBlockFinding(proposal, blockResMap, ptOf, workingState, thresholdK
   if (!passed) {
     for (var gi = 0; gi < proposal.gpxIndexes.length; gi++) {
       ws.addExcludedFromTrust(workingState, proposal.gpxIndexes[gi],
-        'block_kinematic_guard_failed', { proposalId: proposal.id, kinematics: kinematics });
+        'block_kinematic_guard_failed', passLabel, { proposalId: proposal.id, kinematics: kinematics });
     }
     ws.addAnnotation(workingState, {
       scope:    'proposal',
@@ -197,15 +197,20 @@ function applyBlockFinding(proposal, blockResMap, ptOf, workingState, thresholdK
 function applyInsert(proposal, ptOf, workingState, thresholdKph, passLabel, passIndex) {
   var candidateGpxIndexes = proposal.candidateGpxIndexes || [];
 
-  // isExactGroup: MVP flag-only — no mutation, members → excludedFromTrust.
+  // isExactGroup: MVP flag-only — no kinematic check, drop all but lowest gpxIndex.
   if (proposal.isExactGroup) {
+    var sorted = candidateGpxIndexes.slice().sort(function(a, b) { return a - b; });
+    var keeper = sorted[0];
     for (var ei = 0; ei < candidateGpxIndexes.length; ei++) {
-      ws.addExcludedFromTrust(workingState, candidateGpxIndexes[ei],
-        'exact_group_unresolved', { proposalId: proposal.id });
+      var idx = candidateGpxIndexes[ei];
+      if (idx !== keeper) {
+        ws.addDrop(workingState, idx, 'adjacent-exact-duplicate', passLabel);
+        ws.removeFromWorking(workingState, idx);
+      }
     }
-    proposal.applied    = false;
-    proposal.skipReason = 'exact_group_flag_only';
-    proposal.winner     = null;
+    proposal.applied    = true;
+    proposal.skipReason = null;
+    proposal.winner     = keeper;
     return;
   }
 
@@ -236,7 +241,7 @@ function applyInsert(proposal, ptOf, workingState, thresholdKph, passLabel, pass
     var k = guard.computeKinematicCheck(prevAnchorPt, candPt, nextAnchorPt, thresholdKph);
     if (!k || !k.passed) {
       ws.addExcludedFromTrust(workingState, candidateGpxIndexes[0],
-        'insert_kinematic_guard_failed',
+        'insert_kinematic_guard_failed', passLabel,
         { proposalId: proposal.id, kinematics: k });
       ws.addAnnotation(workingState, {
         scope:    'proposal',
@@ -299,7 +304,7 @@ function applyInsert(proposal, ptOf, workingState, thresholdKph, passLabel, pass
   for (var li = 0; li < enriched.length; li++) {
     var e = enriched[li];
     if (e.gi === winnerEntry.gi) continue;
-    ws.addExcludedFromTrust(workingState, e.gi, 'insert_competition_loser',
+    ws.addExcludedFromTrust(workingState, e.gi, 'insert_competition_loser', passLabel,
       { proposalId: proposal.id, kinematics: e.kinematics });
   }
   moveCandidateToTarget(workingState, winnerEntry.gi, proposal, passLabel, passIndex);

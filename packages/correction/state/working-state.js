@@ -8,7 +8,7 @@
  *
  *   workingOrderedPoints  Array<Point>  — current traversal order (mutated by pipeline)
  *   drops                 Array<Drop>   — { gpxIndex, reason, stage }; reason ∈ DROP_REASONS
- *   excludedFromTrust     Array<Excl>   — { gpxIndex, reasons:[], details? }; UPSERTED per gpxIndex
+ *   excludedFromTrust     Array<Excl>   — { gpxIndex, reason, stage, details? }
  *   annotations           Array<Annot>  — { scope, scopeRef, kind, details? }
  *   rearrangements        Array<Rearr>  — { kind, passIndex, trkSegIndex, gpxIndexes, stage, ... }
  *   stagedEdgeProposals   Map<segIdx, { lastEdge?, firstEdge? }> — edge proposals deferred to Phase 2
@@ -66,38 +66,32 @@ function markAnomalyResolved(state, gpxIndex) {
  */
 function addDrop(state, gpxIndex, reason, stage) {
   enums.assertDropReason(reason);
+  for (var i = 0; i < state.drops.length; i++) {
+    if (state.drops[i].gpxIndex === gpxIndex) return;
+  }
   state.drops.push({ gpxIndex: gpxIndex, reason: reason, stage: stage });
 }
 
 // ── excludedFromTrust[] ─────────────────────────────────────────────────────
 /**
- * Upsert an excludedFromTrust entry. ADR-0012: one entry per gpxIndex with reasons[] array.
- * Idempotent on (gpxIndex, reason): adding the same reason twice is a no-op.
+ * Add an excludedFromTrust entry. ADR-0012: schema { gpxIndex, reason, stage, details? }.
  * @param {Object} state
  * @param {number} gpxIndex
  * @param {string} reason   - one of enums.EXCLUDED_REASONS
- * @param {Object} [details] - optional structured details (merged shallow)
+ * @param {string} stage    - e.g. 'pre-segment', 'phase1_pass_3', 'edge-reconciliation'
+ * @param {Object} [details] - optional structured details
  */
-function addExcludedFromTrust(state, gpxIndex, reason, details) {
+function addExcludedFromTrust(state, gpxIndex, reason, stage, details) {
   enums.assertExcludedReason(reason);
-  var existing = null;
   for (var i = 0; i < state.excludedFromTrust.length; i++) {
-    if (state.excludedFromTrust[i].gpxIndex === gpxIndex) {
-      existing = state.excludedFromTrust[i];
-      break;
-    }
+    if (state.excludedFromTrust[i].gpxIndex === gpxIndex) return;
   }
-  if (!existing) {
-    existing = { gpxIndex: gpxIndex, reasons: [reason] };
-    state.excludedFromTrust.push(existing);
-  } else {
-    if (existing.reasons.indexOf(reason) < 0) {
-      existing.reasons.push(reason);
-    }
-  }
-  if (details) {
-    existing.details = Object.assign({}, existing.details || {}, details);
-  }
+  state.excludedFromTrust.push({
+    gpxIndex: gpxIndex,
+    reason: reason,
+    stage: stage,
+    details: details
+  });
 }
 
 // ── annotations[] ───────────────────────────────────────────────────────────
