@@ -358,3 +358,32 @@ Sections citing ADRs use short form (e.g. "ADR-0011"). Plan section cites use `�
 20. **Implement `rearrangements` collection** throughout (deterministic-export-fix, resolution-apply, phase2).
 
 End of audit.
+
+---
+
+## Post-MVP Findings — Real-data pipeline run (hikr.org, 12,141 tracks, 2026-05-07)
+
+### Fixed this session
+- **Block minimum size enforced (≥2 points).** 1-point `belowAnchor` runs were being claimed by block-finding, starving singleton-proposal of all candidates. Fix: `finaliseBlock()` now discards length-1 runs. Singletons now fire: 31 tracks, 21 applied.
+
+### Known gaps to fix post-MVP
+
+**1. Blocks stall at segment edges (high priority)**
+206 of 379 skipped block proposals have `skipReason: edge_unresolved`. Phase 2 MVP only converts unstable edges to `excludedFromTrust` — it does not apply stable edges. A large share of real backward-time runs touch segment boundaries and go entirely unresolved. Post-MVP: implement Phase 2 stable-edge application surface (noted as future work in edge-reconciliation.js).
+
+**2. Competition proposals dominated by coupling_blocked (medium priority)**
+2,254 of 2,976 skipped competition inserts are vetoed by `coupling_blocked`. The bilateral disturbance zone gate is firing very aggressively on real data — 120 tracks affected, only 236/2,976 proposals applied. Review coupling-detection thresholds against real-data distributions before treating this as correct behaviour.
+
+**3. nonAdjacentRepeat has no dedicated correction path (low priority)**
+Points tagged `nonAdjacentRepeat` in the audit are captured by block-finding (as `belowAnchor`) when inside a multi-point run, but their duplicate-competition resolution is always vetoed by overlap-detection because the block's corridor covers the same timeMs. If the block is then `edge_unresolved`, the nonAdjacentRepeat point ends up only in `excludedFromTrust` with no competition winner selected. No re-attempt after block disposal.
+
+**4. Singleton still structurally dead for edge cases**
+Singletons only receive `belowAnchor` points not in `blockMemberSet`. Any isolated `belowAnchor` point at a segment edge becomes an edge-proposal singleton → `edge_unresolved`. Same root cause as gap #1 — edge application not implemented.
+
+### Observed data stats (reference)
+- 9,108 / 12,141 tracks clean (75%)
+- 834 multi-segment tracks (7%)
+- 99 tracks: all-timestamps-uniform → geometry-only early exit
+- 436 segments: geometry-only within multi-segment files that have timestamps elsewhere
+- 97 segments: timestamp-sparse (coverage < 0.8)
+- 1 pipeline error: malformed GPX XML (unquoted attribute, hikr post `Bifertenstock via Bänderweg`)
