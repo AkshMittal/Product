@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>pc-geometry-only-all-same-time</name>
+    <trkseg>
+      <!-- All 5 points share the same timestamp.
+           parseableTimestampPointCount = 5, consecutiveTimestampPairsCount = 4,
+           positiveTimeDeltaCount = 0, hasAnyPositiveTimeDelta = false.
+           Branch: parseable > 0 BUT hasAnyPositiveTimeDelta === false AND NOT isFullyReversed
+           Expected: mode = 'geometry-only', reason = 'all-timestamps-uniform'.
+           Note: isFullyReversed requires Δt < 0; Δt = 0 is NOT a strict decrease. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

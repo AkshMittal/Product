@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>cg-adjacent-exact-drop-never-disturbs</name>
+    <trkseg>
+      <!-- An adjacent-exact-drop proposal has an EMPTY disturbance zone.
+           Even if there are other proposals nearby, the adj-exact-drop cannot disturb them,
+           and they cannot be blocked BY the adj-exact-drop.
+           Adjacent dup at T+60 (two identical consecutive points).
+           A singleton insert at T+30 with brackets around the adj-dup location.
+           Expected: adj-exact-drop and singleton are both INDEPENDENT (no coupling edge formed
+           from the adj-exact-drop). The singleton may still be independently gated by overlap. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <!-- Singleton (belowAnchor): T+30 -->
+      <trkpt lat="47.0005" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <!-- Adjacent exact duplicate pair at T+60 -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>od-different-lat-no-drop</name>
+    <trkseg>
+      <!-- Same timeMs and lon, but DIFFERENT lat.
+           Equality requires same lat AND same lon — failing lat check means no dedupe.
+           Expected: both points survive; no drops.
+           Adversarial: tests that the lat check is not skipped even when time/lon match. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0001" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

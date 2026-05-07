@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bc-three-segment-chain-ordering</name>
+    <trkseg>
+      <!-- Segment 0 in stream: chronologically THIRD (times 14:00–14:10).
+           minTimeMs = 14:00. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T14:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T14:10:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1 in stream: chronologically FIRST (times 10:00–10:10).
+           Backward from seg 0: lastT(seg0)=14:10, firstT(seg1)=10:00 → backward ~4.17h, no tz.
+           seg1.max(10:10) < seg0.min(14:00) → non-overlapping → chunk_ordering. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele><time>2024-01-01T10:10:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 2 in stream: chronologically SECOND (times 12:00–12:10).
+           Backward from seg 1: lastT(seg1)=10:10, firstT(seg2)=12:00 → gapMs > 0 → forward gap.
+           Actually seg2 comes AFTER seg1 in stream. lastT(seg1)=10:10 < firstT(seg2)=12:00.
+           → forward, same day → same_day.
+           Tests: boundary 0→1 = chunk_ordering, boundary 1→2 = same_day.
+           Deterministic-export-fix should reorder segments by minTimeMs: seg1(10:00), seg2(12:00), seg0(14:00). -->
+      <trkpt lat="47.2000" lon="8.2000"><ele>520</ele><time>2024-01-01T12:00:00Z</time></trkpt>
+      <trkpt lat="47.2020" lon="8.2000"><ele>522</ele><time>2024-01-01T12:10:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

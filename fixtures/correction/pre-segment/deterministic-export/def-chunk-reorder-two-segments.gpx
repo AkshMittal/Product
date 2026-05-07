@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>def-chunk-reorder-two-segments</name>
+    <trkseg>
+      <!-- Segment 0 in stream: minTimeMs = 14:00, maxTimeMs = 14:10. LATER chunk. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T14:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T14:05:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T14:10:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1 in stream: minTimeMs = 10:00, maxTimeMs = 10:10. EARLIER chunk.
+           Boundary: backward jump ~4.17h → chunk_ordering (non-overlapping).
+           applyDeterministicExportFixes should reorder: seg1 (min=10:00) before seg0 (min=14:00).
+           Expected: workingOrderedPoints reordered: [seg1 points, seg0 points].
+           Rearrangement kind='segment-chunk-reorder' emitted. Annotation 'chunk_ordering_resolved'. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>511</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele><time>2024-01-01T10:10:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

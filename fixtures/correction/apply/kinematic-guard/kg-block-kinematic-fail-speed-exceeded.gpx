@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>kg-block-kinematic-fail-speed-exceeded</name>
+    <trkseg>
+      <!-- Block scenario where kinematic guard FAILS (speed > 80 kph).
+           prevAnchor at (47.0000, 8.0000) T+0.
+           Block: (47.0090, 8.0000) T+30s — distance ≈ 1000m in 30s = 120 kph >> 80 kph FAIL.
+           Expected: block members → excludedFromTrust 'block_kinematic_guard_failed'.
+           Annotation 'block_reorder_kinematic_guard_failed'. proposal.applied=false. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <!-- nextAnchor: slightly further, T+120s -->
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <!-- Block: 1 km from prev at T+30s → 120 kph → FAIL -->
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0110" lon="8.0000"><ele>511</ele><time>2024-01-01T10:02:30Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -172,6 +172,79 @@ function auditTimestamps(points) {
     ? (lastValidTimestampMs - firstValidTimestampMs) / 1000
     : null;
 
+  // ── Per-segment summary ────────────────────────────────────────────────────
+  // Group accepted points by trkSegIndex and compute per-segment temporal stats.
+  // ADR-correction-0013: raw per-segment payloads; no classification.
+  // Shape: { trkSegIndex, tagCounts, tagIndex, monotonicity,
+  //          consecutiveTimestampPairsCount, positiveTimeDeltaCount,
+  //          parseableTimestampPointCount, hasAnyPositiveTimeDelta }
+  const segMap = new Map();
+  for (let i = 0; i < points.length; i++) {
+    const seg = points[i].trkSegIndex;
+    if (!segMap.has(seg)) {
+      segMap.set(seg, {
+        trkSegIndex: seg,
+        tagCounts: { missing: 0, unparsable: 0, adjacentDuplicate: 0, belowAnchor: 0, belowPrevValid: 0, nonAdjacentRepeat: 0 },
+        tagIndex: { missing: [], unparsable: [], adjacentDuplicate: [], belowAnchor: [], belowPrevValid: [], nonAdjacentRepeat: [] },
+        violationCount: 0,
+        consecutivePairs: 0,
+        positiveDeltas: 0,
+        parseableCount: 0,
+        hasPositive: false,
+        prevParseableTimeMs: null
+      });
+    }
+  }
+  // Consecutive-pair counts: stream-order scan within each segment.
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i];
+    const ok = typeof pt.timeMs === 'number' && isFinite(pt.timeMs) && pt.timeMs > 0;
+    const entry = segMap.get(pt.trkSegIndex);
+    if (!entry) continue;
+    if (ok) {
+      entry.parseableCount++;
+      if (entry.prevParseableTimeMs !== null) {
+        entry.consecutivePairs++;
+        if (pt.timeMs > entry.prevParseableTimeMs) {
+          entry.positiveDeltas++;
+          entry.hasPositive = true;
+        }
+      }
+      entry.prevParseableTimeMs = pt.timeMs;
+    }
+  }
+  // Per-segment tag arrays from pointAnnotations.
+  for (let i = 0; i < pointAnnotations.length; i++) {
+    const ann = pointAnnotations[i];
+    const pt  = pointByGpxIndex.get(ann.gpxIndex);
+    if (!pt) continue;
+    const entry = segMap.get(pt.trkSegIndex);
+    if (!entry) continue;
+    if (ann.missing)           { entry.tagCounts.missing++;           entry.tagIndex.missing.push(ann.gpxIndex); }
+    if (ann.unparsable)        { entry.tagCounts.unparsable++;        entry.tagIndex.unparsable.push(ann.gpxIndex); }
+    if (ann.adjacentDuplicate) { entry.tagCounts.adjacentDuplicate++; entry.tagIndex.adjacentDuplicate.push(ann.gpxIndex); }
+    if (ann.belowAnchor)       { entry.tagCounts.belowAnchor++;       entry.tagIndex.belowAnchor.push(ann.gpxIndex); entry.violationCount++; }
+    if (ann.belowPrevValid)    { entry.tagCounts.belowPrevValid++;    entry.tagIndex.belowPrevValid.push(ann.gpxIndex); }
+    if (ann.nonAdjacentRepeat) { entry.tagCounts.nonAdjacentRepeat++; entry.tagIndex.nonAdjacentRepeat.push(ann.gpxIndex); }
+  }
+  const perSegment = Array.from(segMap.values())
+    .sort(function(a, b) { return a.trkSegIndex - b.trkSegIndex; })
+    .map(function(entry) {
+      return {
+        trkSegIndex:                    entry.trkSegIndex,
+        tagCounts:                      entry.tagCounts,
+        tagIndex:                       entry.tagIndex,
+        monotonicity: {
+          hasViolation:                 entry.violationCount > 0,
+          violationCount:               entry.violationCount
+        },
+        consecutiveTimestampPairsCount: entry.consecutivePairs,
+        positiveTimeDeltaCount:         entry.positiveDeltas,
+        parseableTimestampPointCount:   entry.parseableCount,
+        hasAnyPositiveTimeDelta:        entry.hasPositive
+      };
+    });
+
   return {
     audit: {
       temporal: {
@@ -189,7 +262,8 @@ function auditTimestamps(points) {
           nonAdjacentRepeat: tagIndex.nonAdjacentRepeat.length
         },
         tagIndex,
-        pointAnnotations
+        pointAnnotations,
+        perSegment
       }
     }
   };

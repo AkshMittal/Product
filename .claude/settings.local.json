@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/DELL/Desktop/**)",
+      "Read(//c/Users/DELL/Documents/**)",
+      "Read(//c/Users/DELL/Downloads/**)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npm install *)",
+      "PowerShell(\\(Get-Content E:\\\\Product-correction\\\\.graphify_impl_semantic.json | ConvertFrom-Json\\).nodes.Count; \\(Get-Content E:\\\\Product-correction\\\\.graphify_impl_semantic.json | ConvertFrom-Json\\).edges.Count; \\(Get-Content E:\\\\Product-correction\\\\.graphify_impl_semantic.json | ConvertFrom-Json\\).hyperedges.Count)",
+      "PowerShell(D:\\\\python\\\\python.exe -m pip install mcp -q 2>&1 | Select-Object -Last 5)",
+      "PowerShell(D:\\\\python\\\\python.exe -m graphify.serve --help 2>&1 | Select-Object -First 10)",
+      "mcp__graphify-correction__query_graph",
+      "Bash(node -e \"const r = require\\('./packages/correction/runner/correction-runner'\\); console.log\\(Object.keys\\(r\\)\\)\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "graphify-correction"
+  ]
+}

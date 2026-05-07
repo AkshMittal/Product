@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bp-block-internal-monotonicity-violation</name>
+    <trkseg>
+      <!-- Stream: T+0, T+180(anchor), T+60, T+30, T+90, T+240.
+           belowAnchor: T+60, T+30, T+90 (all below anchor 180 — consecutive run of 3).
+           Block members: [T+60, T+30, T+90].
+           Internal pairs: (T+60, T+30)=Δt<0 → hasInternalMonotonicityViolation=true.
+           Expected: one block-finding proposal with hasInternalMonotonicityViolation=true.
+           Overlap gate will veto this (block_internal_monotonicity_fail). -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0005" lon="8.0000"><ele>501</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0015" lon="8.0000"><ele>502</ele><time>2024-01-01T10:01:30Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

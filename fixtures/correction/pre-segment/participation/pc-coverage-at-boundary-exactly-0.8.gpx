@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>pc-coverage-at-boundary-exactly-0.8</name>
+    <trkseg>
+      <!-- 5 consecutive pairs, 4 positive, 1 flat (same time not a decrease so not fully-reversed).
+           coverageRatio = 4 / 5 = 0.8 exactly.
+           Condition is coverage < minRatio (strict less-than). 0.8 < 0.8 is FALSE.
+           Expected: mode = 'full' (NOT sparse — at the boundary, strict < means full wins).
+           Edge case: tests the strict-less-than boundary.
+           Seq: T, T+60, T+120, T+180, T+180 (repeat), T+240
+           Pairs: +,+,+,0,+ → positiveTimeDeltaCount=4, consecutiveTimestampPairsCount=5 -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>cg-independent-two-proposals</name>
+    <trkseg>
+      <!-- Two singleton belowAnchors separated by enough spine points that their
+           disturbance zones don't overlap.
+           P1: targets T+60, brackets [gpxIndex 0, gpxIndex 3] (T+0, T+120).
+           P2: targets T+180, brackets [gpxIndex 4, gpxIndex 6] (T+150, T+240).
+           P1's kinRefs={0,3}. P2's distZone = neighbors of P2 candidate (gpxIndex 5) + brackets.
+           P1's refs are 0 and 3. P2's distZone would include neighbors of gpxIndex 5 ± bracket.
+           As long as P1's refs (0,3) are NOT in P2's distZone, they're independent.
+           Expected: couplingBlockedProposalIds=[], independentProposalIds=[both]. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <!-- P1 singleton: T+60 belowAnchor -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0025" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:30Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <!-- P2 singleton: T+180 belowAnchor, between T+150 and T+240 -->
+      <trkpt lat="47.0035" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:30Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

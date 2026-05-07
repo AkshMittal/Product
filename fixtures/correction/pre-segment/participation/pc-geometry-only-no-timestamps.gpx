@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>pc-geometry-only-no-timestamps</name>
+    <trkseg>
+      <!-- Zero <time> elements present. parseableTimestampPointCount === 0.
+           Expected: participation.mode = 'geometry-only', reason = 'no-parseable-timestamps'
+           Edge: points exist (geometry), but no temporal data at all. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

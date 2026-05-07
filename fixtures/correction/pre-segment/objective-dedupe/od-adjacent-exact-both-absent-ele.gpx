@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>od-adjacent-exact-both-absent-ele</name>
+    <trkseg>
+      <!-- Points 0 and 1: same time+lat+lon, BOTH have no <ele> element (eleAbsent=true).
+           Elevation table: both absent → drop curr (point 1); survivor keeps null.
+           Expected: point 1 dropped, point 0 survives with ele=null. -->
+      <trkpt lat="47.0000" lon="8.0000"><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0000" lon="8.0000"><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

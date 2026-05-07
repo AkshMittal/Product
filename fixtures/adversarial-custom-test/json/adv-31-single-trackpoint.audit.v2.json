@@ -1,33 +1,43 @@
 {
   "metadata": {
     "schemaVersion": "2.0.0",
-    "generatedAtUtc": "2026-04-04T10:34:29.191Z",
+    "generatedAtUtc": "2026-04-23T19:49:42.067Z",
     "source": {
       "fileName": "adv-31-single-trackpoint.gpx"
     },
     "summary": {
-      "totalPointCount": 1
+      "totalPointCount": 0
     }
   },
   "audit": {
     "ingestion": {
       "counts": {
-        "totalPointCount": 1,
-        "validPointCount": 1,
-        "rejectedPointCount": 0,
-        "pointTypeCounts": {
-          "wpt": 0,
-          "rtept": 0,
-          "trkpt": 1
-        }
+        "totalTrkptCount": 1,
+        "validTrkptCount": 1,
+        "rejectedTrkptCount": 0,
+        "trkSegmentCount": 1,
+        "waypointCount": 0,
+        "routeCount": 0
       },
       "context": {
-        "hasMultiplePointTypes": false,
-        "hasAnyTimestampValues": true
+        "hasAnyTimestampValues": true,
+        "hasWaypoints": false,
+        "hasRoutes": false,
+        "hasMultipleSegments": false
       },
       "rejections": {
         "events": []
-      }
+      },
+      "segmentSummaries": [],
+      "segmentBoundaries": [
+        {
+          "trkSegIndex": 0,
+          "firstGpxIndex": 0,
+          "lastGpxIndex": 0,
+          "firstTimeMs": 1771027200000,
+          "lastTimeMs": 1771027200000
+        }
+      ]
     },
     "temporal": {
       "totalPointsEvaluated": 1,
@@ -51,7 +61,24 @@
         "belowPrevValid": [],
         "nonAdjacentRepeat": []
       },
-      "pointAnnotations": []
+      "pointAnnotations": [],
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "tagCounts": {
+            "missing": 0,
+            "unparsable": 0,
+            "adjacentDuplicate": 0,
+            "belowAnchor": 0,
+            "belowPrevValid": 0,
+            "nonAdjacentRepeat": 0
+          },
+          "monotonicity": {
+            "hasViolation": false,
+            "violationCount": 0
+          }
+        }
+      ]
     },
     "sampling": {
       "time": {
@@ -98,7 +125,24 @@
         "clustering": null,
         "normalization": null,
         "timeConditionedDeltaCount": 0
-      }
+      },
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "time": {
+            "positiveDeltaCount": 0,
+            "minMs": null,
+            "maxMs": null,
+            "medianMs": null
+          },
+          "distance": {
+            "deltaCount": 0,
+            "minMeters": null,
+            "maxMeters": null,
+            "medianMeters": null
+          }
+        }
+      ]
     },
     "motion": {
       "summary": {
@@ -143,7 +187,20 @@
         "outOfBounds": [],
         "adjacentDuplicate": []
       },
-      "pointAnnotations": []
+      "pointAnnotations": [],
+      "perSegment": [
+        {
+          "trkSegIndex": 0,
+          "totalPointsEvaluated": 1,
+          "validElevationPointCount": 1,
+          "tagCounts": {
+            "missing": 0,
+            "unparsable": 0,
+            "outOfBounds": 0,
+            "adjacentDuplicate": 0
+          }
+        }
+      ]
     }
   }
 }

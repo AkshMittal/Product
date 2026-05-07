@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>og-singleton-block-conflict-both-vetoed</name>
+    <trkseg>
+      <!-- Block: T+60, T+120 (bMin=60, bMax=120).
+           Singleton insert: targetTimeMs = T+90 → falls inside [T+60, T+120].
+           Cross-kind conflict: insert.targetTimeMs ∈ [bMin, bMax] → veto BOTH.
+           Expected: both insert and block-finding vetoed with annotation
+           'overlap_singleton_block_conflict' on each. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0025" lon="8.0000"><ele>503</ele><time>2024-01-01T10:02:30Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <!-- Block members: T+60, T+120 -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <!-- Singleton insert at T+90 — inside block envelope -->
+      <trkpt lat="47.0015" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:30Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>kg-insert-length1-gating-fail</name>
+    <trkseg>
+      <!-- Singleton insert GATING → FAIL → candidate → excludedFromTrust.
+           prevAnchor: (47.0000, 8.0000) T+0.
+           candidate: (47.0090, 8.0000) T+30s — 1 km in 30s = 120 kph > 80 kph FAIL.
+           nextAnchor: (47.0095, 8.0000) T+60s.
+           Expected: proposal.applied=false, skipReason='kinematic_guard_failed'.
+           Candidate → excludedFromTrust 'insert_kinematic_guard_failed'.
+           Annotation 'insert_kinematic_guard_failed'. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0095" lon="8.0000"><ele>509</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- singleton 1km from prev at T+30s → 120 kph → FAIL -->
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:01:30Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

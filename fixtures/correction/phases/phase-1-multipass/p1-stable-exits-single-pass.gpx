@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>p1-stable-exits-single-pass</name>
+    <trkseg>
+      <!-- One singleton belowAnchor that passes kinematic guard and seals the segment.
+           After pass 1: proposal applied → point moved. Verification pass: no new proposals → stable.
+           Expected: exitReason='stable', iterationsRun=1 (or 2 if verify pass counted).
+           Speeds well below 80 kph: 500m in 60s = 30 kph. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:01:40Z</time></trkpt>
+      <!-- belowAnchor singleton: T+60s -->
+      <trkpt lat="47.0045" lon="8.0000"><ele>504</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:02:10Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

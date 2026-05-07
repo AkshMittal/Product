@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>rc-global-reversal-rejected</name>
+    <trkseg>
+      <!-- Mixed sequence: not fully reversed, not fully forward.
+           Reversing the array would create NEW violations.
+           Original: T=10,T=50,T=30,T=70 (30 is belowAnchor under 50).
+           Reversed: T=70,T=30,T=50,T=10 → still has violations (30<70, 10<50).
+           Global hypothesis fails → revert; emit 'reversal_unconfirmed' session annotation.
+           Expected: globalAccepted=false, session annotation 'reversal_unconfirmed'. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:10Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:00:50Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:01:10Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

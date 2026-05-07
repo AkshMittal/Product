@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>sp-no-next-anchor-at-segment-end</name>
+    <trkseg>
+      <!-- Stream: T+0, T+120(anchor), T+60(belowAnchor) — singleton is the LAST point.
+           Walking right: no further points in same segment → nextAnchor=null.
+           Walking left: nearest usable time is T+120 → prevAnchor = point at T+120.
+           Expected: insert proposal with tPrev=T+120, tNext=null, bracketGpxIndexes=[1].
+           isEdgeProposal=true (no right neighbor → lastEdge). -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

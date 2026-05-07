@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>og-singleton-singleton-corridor-conflict</name>
+    <trkseg>
+      <!-- Two singleton belowAnchor points with overlapping bracket corridors.
+           Insert P1: tPrev=T+0, tNext=T+240, targetTimeMs=T+60.
+           Insert P2: tPrev=T+0, tNext=T+240, targetTimeMs=T+120.
+           Overlap window: max(0,0)=0 to min(240,240)=240 → (0,240).
+           Both targets T+60 and T+120 fall in (0,240) → conflict!
+           Expected: both P1 and P2 vetoed with annotation 'overlap_singleton_singleton_conflict'.
+           Adversarial: tests that corridor overlap between TWO inserts triggers mutual veto. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <!-- Singleton 1: T+60 belowAnchor -->
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- Singleton 2: T+120 belowAnchor -->
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

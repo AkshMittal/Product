@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>def-timezone-flag-only</name>
+    <trkseg>
+      <!-- Segment 0: ends 11:00 UTC. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:55:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T11:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: starts 10:00 UTC (exactly 1h backward → timestamp_discontinuity).
+           applyDeterministicExportFixes step 3: FLAG ONLY — emit annotation, NO drops, NO reorder.
+           Expected: annotation 'timestamp_discontinuity' on seg 1 with suspectedTimezoneOffsetHours=1.
+           workingOrderedPoints unchanged. droppedSegments=[]. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>511</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

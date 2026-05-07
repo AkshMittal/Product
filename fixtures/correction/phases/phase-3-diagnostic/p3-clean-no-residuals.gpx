@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>p3-clean-no-residuals</name>
+    <trkseg>
+      <!-- Fully monotonic segment. Phase 1+2 made no corrections needed.
+           Phase 3 sweep: residualBelowAnchor=[], residualNonMonotonicSegments=[],
+           residualSameTimeGroups=[], residualCrossSegmentSameTime=[].
+           Expected: all residual arrays empty; coverage reflects full surviving count.
+           Tests that phase 3 correctly identifies zero residuals on a clean track. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

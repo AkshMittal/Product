@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "graphify-correction": {
+      "command": "D:\\python\\python.exe",
+      "args": ["-m", "graphify.serve", "E:\\Product-correction\\graphify-out\\graph.json"]
+    }
+  }
+}

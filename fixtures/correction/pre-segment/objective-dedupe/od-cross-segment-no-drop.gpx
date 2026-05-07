@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>od-cross-segment-no-drop</name>
+    <trkseg>
+      <!-- Segment 0 last point: lat=47.0000 lon=8.0000 time=10:00 ele=500. -->
+      <trkpt lat="47.0000" lon="8.0010"><ele>499</ele><time>2024-01-01T09:59:00Z</time></trkpt>
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1 first point: IDENTICAL time+lat+lon+ele to seg 0's last point.
+           But: different trkSegIndex! The hard wall condition (curr.trkSegIndex !== prev.trkSegIndex)
+           means this pair is skipped entirely.
+           Expected: NO drop; both points survive. Objective-dedupe only within ONE trkSegIndex.
+           This is a cross-segment exact duplicate — handled by detectCrossSegmentDuplicates, not here. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

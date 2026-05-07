@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>od-adjacent-exact-ele-mismatch-keep-both</name>
+    <trkseg>
+      <!-- Point 0 (prev): usable ele=500.
+           Point 1 (curr): same time+lat+lon, usable ele=520 (DIFFERENT value).
+           Elevation table: both usable BUT values differ → NO drop; emit annotation
+           'adjacent_duplicate_ele_mismatch'.
+           Expected: both points survive; annotation emitted with aEle=500, bEle=520.
+           Edge case: the ONE path in the elevation table that does NOT drop. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0000" lon="8.0000"><ele>520</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

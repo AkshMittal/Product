@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bc-timezone-discontinuity-1h</name>
+    <trkseg>
+      <!-- Segment 0: ends at 11:00 UTC. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:50:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:55:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T11:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: starts at 10:00 UTC.
+           lastT(seg0) = 11:00, firstT(seg1) = 10:00 → backward jump of exactly 1 hour.
+           deltaHours = 1.0. nearestWhole = 1. |1.0 - 1| = 0.0 < tzTol(0.1) → timezone_discontinuity.
+           suspectedTimezoneOffsetHours = 1.
+           Expected: classification = 'timestamp_discontinuity', suspectedTimezoneOffsetHours = 1. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>511</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele><time>2024-01-01T10:10:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

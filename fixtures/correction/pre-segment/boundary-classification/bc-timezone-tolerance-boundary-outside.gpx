@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bc-timezone-tolerance-boundary-outside</name>
+    <trkseg>
+      <!-- Segment 0: ends at 11:00 UTC. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:50:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T11:00:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: starts at 09:51 UTC.
+           deltaHours = (11:00 - 09:51) = 1h 9min = 1.15h.
+           nearestWhole = 1. |1.15 - 1| = 0.15 > tzTol(0.1) → NOT timezone_discontinuity.
+           Ranges: seg0=[10:50,11:00], seg1=[09:51,09:56]. Non-overlapping (seg1.max < seg0.min).
+           Expected: classification = 'chunk_ordering' (backward, non-overlapping, not tz).
+           Adversarial: tests that tolerance is STRICTLY enforced (0.15 > 0.1 = rejected). -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-01T09:51:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele><time>2024-01-01T09:56:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

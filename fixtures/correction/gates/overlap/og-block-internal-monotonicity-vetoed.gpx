@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>og-block-internal-monotonicity-vetoed</name>
+    <trkseg>
+      <!-- Block with hasInternalMonotonicityViolation=true → immediately vetoed by overlap gate.
+           Block members: T+60, T+30 (decreasing pair → violation).
+           Expected: overlapStatus='overlap', annotation 'block_internal_monotonicity_fail'.
+           Proposal NOT in overlapBlockResolution → apply skips it. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0005" lon="8.0000"><ele>501</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

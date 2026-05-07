@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bc-cross-day-gap</name>
+    <trkseg>
+      <!-- Segment 0: ends at 23:55 on Jan 1 -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T23:50:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T23:53:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T23:55:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: starts at 00:10 on Jan 2 — crosses midnight.
+           gapMs > 0, lastT = Jan 1 23:55, firstT = Jan 2 00:10 → different UTC calendar days.
+           Expected: classification = 'cross_day', isBoundaryGap = true. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>510</ele><time>2024-01-02T00:10:00Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1000"><ele>511</ele><time>2024-01-02T00:13:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1000"><ele>512</ele><time>2024-01-02T00:16:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

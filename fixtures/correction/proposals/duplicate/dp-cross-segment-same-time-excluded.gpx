@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>dp-cross-segment-same-time-excluded</name>
+    <trkseg>
+      <!-- Segment 0: includes a point at T=10:01:00 (gpxIndex 1). -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0010"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0020"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <!-- Segment 1: includes a point at T=10:01:00 (gpxIndex 4) — SAME timeMs, different segment.
+           detectCrossSegmentDuplicates: finds group of 2 with same timeMs spanning 2 trkSegIndexes.
+           Both gpxIndexes → excludedFromTrust with reason 'cross_segment_duplicate'.
+           Expected: excludedFromTrust has entries for gpxIndex=1 and gpxIndex=4.
+           No proposal emitted. -->
+      <trkpt lat="47.1000" lon="8.1000"><ele>600</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.1010" lon="8.1010"><ele>601</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.1020" lon="8.1020"><ele>602</ele><time>2024-01-01T10:01:30Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

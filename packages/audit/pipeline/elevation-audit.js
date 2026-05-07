@@ -105,6 +105,47 @@ function auditElevation(points, params) {
     prevValidEle = ele;
   }
 
+  // ── Per-segment summary ────────────────────────────────────────────────────
+  // ADR-correction-0013: raw per-segment payloads; correction layer classifies.
+  var eleGpxToSeg = new Map();
+  for (var epi = 0; epi < points.length; epi++) {
+    eleGpxToSeg.set(points[epi].gpxIndex, points[epi].trkSegIndex);
+  }
+  var eleSegMap = new Map();
+  for (var esi = 0; esi < points.length; esi++) {
+    var eleSeg = points[esi].trkSegIndex;
+    if (!eleSegMap.has(eleSeg)) {
+      eleSegMap.set(eleSeg, {
+        trkSegIndex: eleSeg,
+        totalPointsEvaluated: 0,
+        validElevationPointCount: 0,
+        tagCounts: { missing: 0, unparsable: 0, outOfBounds: 0, adjacentDuplicate: 0 }
+      });
+    }
+    eleSegMap.get(eleSeg).totalPointsEvaluated++;
+  }
+  for (var eai = 0; eai < pointAnnotations.length; eai++) {
+    var eann = pointAnnotations[eai];
+    var eannSeg = eleGpxToSeg.get(eann.gpxIndex);
+    if (eannSeg === undefined || !eleSegMap.has(eannSeg)) continue;
+    var eEntry = eleSegMap.get(eannSeg);
+    if (eann.missing)            eEntry.tagCounts.missing++;
+    if (eann.unparsable)         eEntry.tagCounts.unparsable++;
+    if (eann.outOfBounds)        eEntry.tagCounts.outOfBounds++;
+    if (eann.adjacentDuplicate)  eEntry.tagCounts.adjacentDuplicate++;
+  }
+  // Count valid elevation points per segment (not from annotations — need a pass)
+  for (var evi = 0; evi < points.length; evi++) {
+    var evpt = points[evi];
+    var evSeg = eleGpxToSeg.get(evpt.gpxIndex);
+    if (evSeg === undefined || !eleSegMap.has(evSeg)) continue;
+    if (typeof evpt.ele === 'number' && isFinite(evpt.ele) && evpt.eleAbsent !== true &&
+        evpt.ele >= validFloorM && evpt.ele <= validCeilingM) {
+      eleSegMap.get(evSeg).validElevationPointCount++;
+    }
+  }
+  var elevationPerSegment = Array.from(eleSegMap.values()).sort(function(a, b) { return a.trkSegIndex - b.trkSegIndex; });
+
   return {
     audit: {
       elevation: {
@@ -121,7 +162,8 @@ function auditElevation(points, params) {
           adjacentDuplicate: tagIndex.adjacentDuplicate.length
         },
         tagIndex: tagIndex,
-        pointAnnotations: pointAnnotations
+        pointAnnotations: pointAnnotations,
+        perSegment: elevationPerSegment
       }
     }
   };

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>p3-residual-backward-step-surfaced</name>
+    <trkseg>
+      <!-- A backward step that phases 1+2 could NOT resolve (e.g. stalemate).
+           The point at T+30 is belowAnchor under T+60, but kinematic guard prevented its fix.
+           Phase 3 sweep in final workingOrderedPoints:
+             Sees consecutive pair (T+60, T+30) where T+30 < T+60 → violation.
+           Expected: residualBelowAnchor has one entry for the backward point.
+           residualNonMonotonicSegments shows trkSegIndex=0, violations=1.
+           Phase 3 is READ-ONLY — workingOrderedPoints unchanged after sweep. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0090" lon="8.0000"><ele>509</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <!-- This point has T+30s but appears AFTER T+60s in working order — residual backward step. -->
+      <trkpt lat="47.0045" lon="8.0000"><ele>504</ele><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="47.0100" lon="8.0000"><ele>510</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

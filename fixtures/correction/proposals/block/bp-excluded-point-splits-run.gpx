@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>bp-excluded-point-splits-run</name>
+    <trkseg>
+      <!-- Stream: T+0, T+300(anchor), T+60, T+120(EXCLUDED), T+180, T+240, T+360.
+           belowAnchor: T+60, T+120, T+180, T+240 (all below 300).
+           But T+120 is in excludedSet → it breaks the contiguous run.
+           Expected: TWO block proposals:
+             block1 = [gpxIndex 2] with time T+60 (terminated by excluded point)
+             block2 = [gpxIndex 4, 5] with times [T+180, T+240] (after excluded point).
+           This tests that excluded points break block continuity per the finaliseBlock logic. -->
+      <trkpt lat="47.0000" lon="8.0000"><ele>500</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="47.0050" lon="8.0000"><ele>505</ele><time>2024-01-01T10:05:00Z</time></trkpt>
+      <trkpt lat="47.0010" lon="8.0000"><ele>501</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="47.0020" lon="8.0000"><ele>502</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+      <trkpt lat="47.0030" lon="8.0000"><ele>503</ele><time>2024-01-01T10:03:00Z</time></trkpt>
+      <trkpt lat="47.0040" lon="8.0000"><ele>504</ele><time>2024-01-01T10:04:00Z</time></trkpt>
+      <trkpt lat="47.0060" lon="8.0000"><ele>506</ele><time>2024-01-01T10:06:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
